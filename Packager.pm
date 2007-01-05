@@ -252,12 +252,12 @@ sub makeXPI
   }
 
   chdir('tmp');
-  print `zip -rX9 -b .. $xpiFile @files`;
+  print `zip -rX9 ../temp_xpi_file.xpi @files`;
   chdir('..');
 
-  $self->fixZipPermissions($xpiFile);
+  $self->fixZipPermissions("temp_xpi_file.xpi");
   
-  rename("tmp/$xpiFile", "$xpiFile");
+  rename("temp_xpi_file.xpi", $xpiFile);
 
   $self->rm_rec('tmp');
 }
