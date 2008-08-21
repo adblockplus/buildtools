@@ -255,7 +255,7 @@ sub makeXPI
   print `zip -rX9 ../temp_xpi_file.xpi @files`;
   chdir('..');
 
-  $self->fixZipPermissions("temp_xpi_file.xpi");
+  $self->fixZipPermissions("temp_xpi_file.xpi") if $^O =~ /Win32/i;
   
   rename("temp_xpi_file.xpi", $xpiFile);
 
