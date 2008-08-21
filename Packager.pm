@@ -62,7 +62,15 @@ sub rm_rec
 
 sub cp
 {
-  my ($self, $fromFile, $toFile) = @_;
+  my ($self, $fromFile, $toFile, $exclude) = @_;
+
+  if ($exclude)
+  {
+    foreach my $file (@$exclude)
+    {
+      return if index($fromFile, $file) >= 0;
+    }
+  }
 
   my $textMode = ($fromFile =~ /\.(manifest|xul|js|xml|xhtml|rdf|dtd|properties|css)$/);
   my $extendedTextMode = ($fromFile =~ /\.(?:js|rdf|manifest)$/);
@@ -108,7 +116,15 @@ sub cp
 
 sub cp_rec
 {
-  my ($self, $fromDir, $toDir) = @_;
+  my ($self, $fromDir, $toDir, $exclude) = @_;
+
+  if ($exclude)
+  {
+    foreach my $file (@$exclude)
+    {
+      return if index($fromDir, $file) >= 0;
+    }
+  }
 
   my @files;
   if ($fromDir =~ /\blocale$/ && exists $self->{locales})
@@ -130,11 +146,11 @@ sub cp_rec
     {
       if (-d "$fromDir/$file")
       {
-        $self->cp_rec("$fromDir/$file", "$toDir/$file");
+        $self->cp_rec("$fromDir/$file", "$toDir/$file", $exclude);
       }
       else
       {
-        $self->cp("$fromDir/$file", "$toDir/$file");
+        $self->cp("$fromDir/$file", "$toDir/$file", $exclude);
       }
     }
   }
@@ -208,15 +224,29 @@ sub makeJAR
 
   mkdir('tmp');
 
+  my @include = ();
+  my @exclude = ();
   foreach my $file (@files)
   {
-    if (-d $file)
+    if ($file =~ s/^-//)
     {
-      $self->cp_rec($file, "tmp/$file");
+      push @exclude, $file;
     }
     else
     {
-      $self->cp($file, "tmp/$file");
+      push @include, $file;
+    }
+  }
+
+  foreach my $file (@include)
+  {
+    if (-d $file)
+    {
+      $self->cp_rec($file, "tmp/$file", \@exclude);
+    }
+    else
+    {
+      $self->cp($file, "tmp/$file", \@exclude);
     }
   }
 
