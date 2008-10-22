@@ -251,7 +251,7 @@ sub makeJAR
   }
 
   chdir('tmp');
-  print `zip -rX0 $jarFile @files`;
+  print `zip -rX0 $jarFile @include`;
   chdir('..');
 
   rename("tmp/$jarFile", "$jarFile");
