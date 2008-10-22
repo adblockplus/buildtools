@@ -28,7 +28,7 @@ sub readLocales
   my ($self, $localesDir) = @_;
 
   opendir(local *DIR, $localesDir) or die "Could not open locales directory $localesDir";
-  my @locales = grep {!/[^\w\-]/ && !/CVS/} readdir(DIR);
+  my @locales = grep {!/[^\w\-]/} readdir(DIR);
   closedir(DIR);
   
   @locales = sort {$a eq "en-US" ? -1 : ($b eq "en-US" ? 1 : $a cmp $b)} @locales;
@@ -142,7 +142,7 @@ sub cp_rec
   mkdir($toDir);
   foreach my $file (@files)
   {
-    if ($file =~ /[^.]/ && $file ne 'CVS')
+    if ($file =~ /[^.]/)
     {
       if (-d "$fromDir/$file")
       {
