@@ -251,12 +251,135 @@ sub makeJAR
   }
 
   chdir('tmp');
+  $self->fixLocales();
   print `zip -rX0 $jarFile @include`;
   chdir('..');
 
   rename("tmp/$jarFile", "$jarFile");
   
   $self->rm_rec('tmp');
+}
+
+sub fixLocales()
+{
+  my $self = shift;
+
+  # Add missing files
+  opendir(local *DIR, "locale/en-US") or return;
+  foreach my $file (readdir(DIR))
+  {
+    next if $file =~ /^\./;
+
+    foreach my $locale (@{$self->{locales}})
+    {
+      next if $locale eq "en-US";
+
+      if (-f "locale/$locale/$file")
+      {
+        if ($file =~ /\.dtd$/)
+        {
+          $self->fixDTDFile("locale/$locale/$file", "locale/en-US/$file");
+        }
+        elsif ($file =~ /\.properties$/)
+        {
+          $self->fixPropertiesFile("locale/$locale/$file", "locale/en-US/$file");
+        }
+      }
+      else
+      {
+        $self->cp("locale/en-US/$file", "locale/$locale/$file");
+      }
+    }
+  }
+  closedir(DIR);
+
+  # Remove extra files
+  foreach my $locale (@{$self->{locales}})
+  {
+    next if $locale eq "en-US";
+
+    opendir(local *DIR, "locale/$locale") or next;
+    foreach my $file (readdir(DIR))
+    {
+      next if $file =~ /^\./;
+
+      unlink("locale/$locale/$file") unless -f "locale/en-US/$file";
+    }
+    closedir(DIR);
+  }
+}
+
+my $S = qr/[\x20\x09\x0D\x0A]/;
+my $Name = qr/[A-Za-z_:][\w.\-:]*/;
+my $Reference = qr/&$Name;|&#\d+;|&#x[\da-fA-F]+;/;
+my $PEReference = qr/%$Name;/;
+my $EntityValue = qr/"(?:[^%&"]|$PEReference|$Reference)*"|'(?:[^%&']|$PEReference|$Reference)*'/;
+
+sub fixDTDFile
+{
+  my ($self, $file, $referenceFile) = @_;
+
+  my $data = $self->readFile($file);
+  my $reference = $self->readFile($referenceFile);
+
+  my $changed = 0;
+  $data .= "\n" unless $data =~ /\n$/s;
+  while ($reference =~ /<!ENTITY$S+($Name)$S+$EntityValue$S*>/gs)
+  {
+    my ($match, $name) = ($&, $1);
+    unless ($data =~ /<!ENTITY$S+$name$S+$EntityValue$S*>/s)
+    {
+      $data .= "$match\n";
+      $changed = 1;
+    }
+  }
+
+  $self->writeFile($file, $data) if $changed;
+}
+
+sub fixPropertiesFile
+{
+  my ($self, $file, $referenceFile) = @_;
+
+  my $data = $self->readFile($file);
+  my $reference = $self->readFile($referenceFile);
+
+  my $changed = 0;
+  $data .= "\n" unless $data =~ /\n$/s;
+  while ($reference =~ /^\s*(?![!#])(\S+)\s*=\s*.+$/mg)
+  {
+    my ($match, $name) = ($&, $1);
+    unless ($data =~ /^\s*(?![!#])($name)\s*=\s*.+$/m)
+    {
+      $data .= "$match\n";
+      $changed = 1;
+    }
+  }
+
+  $self->writeFile($file, $data) if $changed;
+}
+
+sub readFile
+{
+  my ($self, $file) = @_;
+
+  open(local *FILE, "<", $file) || return undef;
+  binmode(FILE);
+  local $/;
+  my $result = <FILE>;
+  close(FILE);
+
+  return $result;
+}
+
+sub writeFile
+{
+  my ($self, $file, $contents) = @_;
+
+  open(local *FILE, ">", $file) || return;
+  binmode(FILE);
+  print FILE $contents;
+  close(FILE);
 }
 
 sub makeXPI
