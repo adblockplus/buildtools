@@ -19,7 +19,11 @@ sub readVersion
   open(local *FILE, $versionFile) or die "Could not open version file $versionFile";
   $self->{version} = <FILE>;
   $self->{version} =~ s/[^\w\.]//gs;
-  $self->{version} .= $self->{devbuild} if exists $self->{devbuild};
+  if (exists $self->{devbuild})
+  {
+    $self->{version} .= ".0" while ($self->{version} =~ tr/././ < 2);
+    $self->{version} .= $self->{devbuild};
+  }
   close(FILE);
 }
 
