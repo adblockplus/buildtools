@@ -29,10 +29,10 @@ sub readVersion
 
 sub readLocales
 {
-  my ($self, $localesDir) = @_;
+  my ($self, $localesDir, $includeIncomplete) = @_;
 
   opendir(local *DIR, $localesDir) or die "Could not open locales directory $localesDir";
-  my @locales = grep {!/[^\w\-]/ && !-e("$localesDir/$_/.incomplete")} readdir(DIR);
+  my @locales = grep {!/[^\w\-]/ && ($includeIncomplete || !-e("$localesDir/$_/.incomplete"))} readdir(DIR);
   closedir(DIR);
   
   @locales = sort {$a eq "en-US" ? -1 : ($b eq "en-US" ? 1 : $a cmp $b)} @locales;
