@@ -7,7 +7,11 @@ sub new
 {
   my ($class, $params) = @_;
 
-  $params->{build} = `hg tip --template '{node|short}'` unless exists($params->{build});
+  unless (exists($params->{build}))
+  {
+    $params->{build} = `hg id -i`;
+    $params->{build} =~ s/\W//gs;
+  }
 
   my $self = bless($params, $class);
 
