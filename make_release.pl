@@ -38,7 +38,7 @@ print VERSION $ARGV[0];
 close(VERSION);
 
 @ARGV = ("../downloads/$baseName-$version.xpi");
-do '../create_xpi.pl';
+do 'buildtools/create_xpi.pl';
 die $@ if $@;
 
 die "Failed to determine current directory name" unless cwd() =~ /([^\\\/]+)[\\\/]?$/;
