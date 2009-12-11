@@ -44,16 +44,20 @@ die $@ if $@;
 die "Failed to determine current directory name" unless cwd() =~ /([^\\\/]+)[\\\/]?$/;
 my $dir = $1;
 
-chdir('..');
-system("hg add downloads/$baseName-$version.xpi");
-system(qq(hg commit -m "Releasing $extensionName $version" downloads $dir));
+system("hg add -R ../downloads ../downloads/$baseName-$version.xpi");
+system(qq(hg commit -m "Releasing $extensionName $version"));
+system(qq(hg commit -R ../downloads -m "Releasing $extensionName $version"));
 
 my $branch = $version;
 $branch =~ s/\./_/g;
 $branch = $BRANCH_NAME."_".$branch."_RELEASE";
 system(qq(hg tag $branch));
+system(qq(hg tag -R ../downloads $branch));
+system(qq(hg tag -R ../buildtools $branch));
 
-#system(qq(hg push));
+system(qq(hg push));
+system(qq(hg push -R ../downloads));
+system(qq(hg push -R ../buildtools));
 
 sub readFile
 {
