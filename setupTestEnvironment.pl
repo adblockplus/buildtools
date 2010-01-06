@@ -20,14 +20,13 @@
 use strict;
 use warnings;
 use Cwd;
+use lib qw(buildtools);
+use Packager;
 
-my $version = readFile("version");
-$version =~ s/[^\w\.]//gs;
-
-opendir(local* LOCALES, "chrome/locale") || die "Could not read directory chrome/locales";
-my @locales = grep {!/[^\w\-]/} readdir(LOCALES);
-@locales = sort {$a eq "en-US" ? -1 : ($b eq "en-US" ? 1 : $a cmp $b)} @locales; 
-closedir(LOCALES);
+my $pkg = Packager->new();
+$pkg->readVersion('version');
+$pkg->readLocales('chrome/locale');
+$pkg->readLocaleData('chrome/locale');
 
 my @files = ();
 my $installManifest = fixupFile(readFile("install.rdf"));
@@ -142,12 +141,15 @@ sub fixupFile
 {
   my $str = shift;
 
-  $str =~ s/{{VERSION}}/$version/g;
+  $str =~ s/{{VERSION}}/$pkg->{version}/g;
   $str =~ s/{{BUILD}}//g;
+  $str =~ s/{{NAME}}/$pkg->{name}/g;
+  $str =~ s/{{DESCRIPTION}}/$pkg->{description}/g;
+  $str =~ s/{{LOCALIZED}}/$pkg->{localizedInfo}/g;
   $str =~ s/^.*{{LOCALE}}.*$/
     my @result = ();
     my $template = $&;
-    foreach my $locale (@locales)
+    foreach my $locale (@{$pkg->{locales}})
     {
       push(@result, $template);
       $result[-1] =~ s~{{LOCALE}}~$locale~g;

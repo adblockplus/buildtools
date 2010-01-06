@@ -46,6 +46,61 @@ sub readLocales
   $self->{locales} = \@locales;
 }
 
+sub readLocaleData
+{
+  my ($self, $localesDir) = @_;
+
+  $self->{localeData} = {};
+  $self->{name} = '';
+  $self->{description} = '';
+
+  foreach my $locale (@{$self->{locales}})
+  {
+    my $data = $self->readFile("$localesDir/$locale/meta.properties");
+    next unless defined $data;
+
+    $self->{localeData}{$locale} = {id => $locale};
+    while ($data =~ /^\s*(?![!#])(\S+)\s*=\s*(.+)$/mg)
+    {
+      if ($1 eq "name" || $1 eq "description" || $1 eq "translator")
+      {
+        $self->{localeData}{$locale}{$1} = $2;
+      }
+    }
+  }
+
+  if (exists($self->{localeData}{"en-US"}))
+  {
+    $self->{name} = $self->{localeData}{"en-US"}{name} if exists($self->{localeData}{"en-US"}{name});
+    $self->{description} = $self->{localeData}{"en-US"}{description} if exists($self->{localeData}{"en-US"}{description});
+    delete $self->{localeData}{"en-US"};
+  }
+
+  my $info = "";
+  foreach my $locale (values %{$self->{localeData}})
+  {
+    next unless (exists($locale->{translator}) && $locale->{translator}) ||
+                (exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name}) ||
+                (exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description});
+
+    my $translator = (exists($locale->{translator}) && $locale->{translator} ? "\t\t\t<em:translator>$locale->{translator}</em:translator>" : "");
+    $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name};
+    $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description};
+
+    $info .= <<EOT;
+\t<em:localized>
+\t\t<Description>
+\t\t\t<em:locale>$locale->{id}</em:locale>
+\t\t\t<em:name>$locale->{name}</em:name>
+\t\t\t<em:description>$locale->{description}</em:description>
+$translator
+\t\t</Description>
+\t</em:localized>
+EOT
+  }
+  $self->{localizedInfo} = $info;
+}
+
 sub rm_rec
 {
   my ($self, $dir) = @_;
@@ -95,6 +150,9 @@ sub cp
       s/^((?:  )+)/"\t" x (length($1)\/2)/e;
       s/\{\{VERSION\}\}/$self->{version}/g if $extendedTextMode;
       s/\{\{BUILD\}\}/$self->{build}/g if $extendedTextMode;
+      s/\{\{NAME\}\}/$self->{name}/g if $extendedTextMode;
+      s/\{\{DESCRIPTION\}\}/$self->{description}/g if $extendedTextMode;
+      s/\{\{LOCALIZED\}\}/$self->{localizedInfo}/g if $extendedTextMode;
       if ($extendedTextMode && /\{\{LOCALE\}\}/)
       {
         my $loc = "";
