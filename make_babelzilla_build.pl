@@ -1,14 +1,16 @@
 #!/usr/bin/perl
 
 #############################################################################
-# This script will create an extension build. Usually, this script          #
-# shouldn't be run directly, use make_devbuild.pl instead.                  #
+# This script will create a special development build meant only for upload #
+# to Babelzilla.                                                            #
 #############################################################################
 
 use strict;
 use warnings;
 use lib qw(buildtools);
 use Packager;
+
+sub Packager::fixLocales() {}
 
 my $manifest = readFile("chrome.manifest");
 unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
@@ -18,39 +20,39 @@ unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
 my $baseName = $1;
 
 my %params = ();
+$params{version} = shift @ARGV;
+die "Please specify version number on command line" unless $params{version};
 
-my $xpiFile = shift @ARGV || "$baseName.xpi";
-if (@ARGV && $ARGV[0] =~ /^\+/)
-{
-  $params{devbuild} = $ARGV[0];
-  shift @ARGV;
-}
-else
-{
-  $params{postprocess_line} = \&removeTimeLine;
-}
-
-$params{locales} = \@ARGV if @ARGV;
+my $xpiFile = "$baseName-$params{version}.xpi";
 
 my $pkg = Packager->new(\%params);
-$pkg->readVersion('version');
-$pkg->readLocales('chrome/locale') unless exists $params{locales};
+$pkg->readLocales('chrome/locale', 1);
 $pkg->readLocaleData('chrome/locale');
 
 chdir('chrome');
-$pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
+$pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete');
 chdir('..');
 
 my @files = grep {-e $_} ('components', 'defaults', 'install.rdf', 'chrome.manifest', 'icon.png');
 
+my $targetAppNum = 0;
+$pkg->{postprocess_line} = \&postprocessInstallRDF;
 $pkg->makeXPI($xpiFile, "chrome/$baseName.jar", @files);
 unlink("chrome/$baseName.jar");
 
-sub removeTimeLine
+sub postprocessInstallRDF
 {
   my ($file, $line) = @_;
 
-  return "\n" if $file =~ /\.js$/ && $line =~ /\btimeLine\.(\w+)\(/;
+  return $line unless $file eq "install.rdf";
+
+  if ($line =~ /\btargetApplication\b/)
+  {
+    $targetAppNum++;
+    return "" if $targetAppNum > 6;
+  }
+
+  return "" if $targetAppNum > 6 && $targetAppNum % 2 == 1;
 
   return $line;
 }
