@@ -13,6 +13,8 @@ my %keepAccessKeys = map {$_ => $_} (
 my @placeholders = (
   '--',
   '%S',
+  '[link]',
+  '[/link]',
 );
 
 sub testLocales
@@ -168,14 +170,23 @@ sub parseDTDFile
   my $PEReference = qr/%$Name;/;
   my $EntityValue = qr/\"((?:[^%&\"]|$PEReference|$Reference)*)\"|'((?:[^%&']|$PEReference|$Reference)*)'/;
 
+  sub processEntityValue
+  {
+    my $text = shift;
+    $text =~ s/&#(\d+);/chr($1)/ge;
+    $text =~ s/&#x([\da-fA-F]+);/chr(hex($1))/ge;
+    $text =~ s/&apos;/'/g;
+    return $text;
+  }
+
   # Remove comments
   $data =~ s/<!--([^\-]|-[^\-])*-->//gs;
 
   # Process entities
   while ($data =~ /<!ENTITY$S+($Name)$S+$EntityValue$S*>/gs)
   {
-    $result{$1} = $2 || $3;
-    $result{$1} =~ s/&apos;/'/g;
+    my ($name, $value) = ($1, $2 || $3);
+    $result{$name} = processEntityValue($value);
   }
 
   # Remove entities
