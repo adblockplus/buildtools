@@ -112,6 +112,18 @@ EOT
   $self->{localizedInfo} = $info;
 }
 
+sub readNameFromManifest
+{
+  my ($self, $installManifestFile) = @_;
+
+  my $installRDF = $self->readFile($installManifestFile);
+  return unless $installRDF;
+
+  $installRDF =~ s/<em:(requires|targetApplication)>.*?<\/em:\1>//gs;
+
+  $self->{name} = $1 if $installRDF =~ /<em:name>\s*([^<>]+?)\s*<\/em:name>/;
+}
+
 sub rm_rec
 {
   my ($self, $dir) = @_;

@@ -7,26 +7,21 @@
 #############################################################################
 
 use strict;
-use Cwd;
+use lib qw(buildtools);
+use Packager;
 
 our $BRANCH_NAME;
 
 die "This script cannot be called directly, please call the script for a particular extension" unless $BRANCH_NAME;
 
-my $manifest = readFile("chrome.manifest");
-unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
-{
-  die "Could not find JAR file name in chrome.manifest";
-}
-my $baseName = $1;
+my $pkg = Packager->new({locales => ['en-US']});
+$pkg->readBasename('chrome.manifest');
+$pkg->readLocaleData('chrome/locale');
+$pkg->readNameFromManifest('install.rdf') unless $pkg->{name};
+die "Could not extract extension name" unless $pkg->{name};
 
-my $installRDF = readFile("install.rdf");
-$installRDF =~ s/<em:(requires|targetApplication)>.*?<\/em:\1>//gs;
-unless ($installRDF =~ /<em:name>\s*([^<>]+?)\s*<\/em:name>/)
-{
-  die "Could not find extension name in install.rdf";
-}
-my $extensionName = $1;
+my $baseName = $pkg->{baseName};
+my $extensionName = $pkg->{name};
 
 die "Version number not specified" unless @ARGV;
 
@@ -40,9 +35,6 @@ close(VERSION);
 @ARGV = ("../downloads/$baseName-$version.xpi");
 do 'buildtools/create_xpi.pl';
 die $@ if $@;
-
-die "Failed to determine current directory name" unless cwd() =~ /([^\\\/]+)[\\\/]?$/;
-my $dir = $1;
 
 system("hg add -R ../downloads ../downloads/$baseName-$version.xpi");
 system(qq(hg commit -m "Releasing $extensionName $version"));
@@ -58,16 +50,3 @@ system(qq(hg tag -R ../buildtools $branch));
 system(qq(hg push));
 system(qq(hg push -R ../downloads));
 system(qq(hg push -R ../buildtools));
-
-sub readFile
-{
-  my $file = shift;
-
-  open(local *FILE, "<", $file) || die "Could not read file '$file'";
-  binmode(FILE);
-  local $/;
-  my $result = <FILE>;
-  close(FILE);
-
-  return $result;
-}
