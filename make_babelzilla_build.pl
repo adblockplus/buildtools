@@ -12,22 +12,17 @@ use Packager;
 
 sub Packager::fixLocales() {}
 
-my $manifest = readFile("chrome.manifest");
-unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
-{
-  die "Could not find JAR file name in chrome.manifest";
-}
-my $baseName = $1;
-
 my %params = ();
 $params{version} = shift @ARGV;
 die "Please specify version number on command line" unless $params{version};
 
-my $xpiFile = "$baseName-$params{version}.xpi";
-
 my $pkg = Packager->new(\%params);
+$pkg->readBasename('chrome.manifest');
 $pkg->readLocales('chrome/locale', 1);
 $pkg->readLocaleData('chrome/locale');
+
+my $baseName = $pkg->{baseName};
+my $xpiFile = "$baseName-$params{version}.xpi";
 
 chdir('chrome');
 $pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete');
@@ -55,17 +50,4 @@ sub postprocessInstallRDF
   return "" if $targetAppNum > 6 && $targetAppNum % 2 == 1;
 
   return $line;
-}
-
-sub readFile
-{
-  my $file = shift;
-
-  open(local *FILE, "<", $file) || die "Could not read file '$file'";
-  binmode(FILE);
-  local $/;
-  my $result = <FILE>;
-  close(FILE);
-
-  return $result;
 }

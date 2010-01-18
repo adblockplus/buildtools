@@ -21,18 +21,15 @@
 #############################################################################
 
 use strict;
+use lib qw(buildtools);
+use Packager;
 
-my $manifest = readFile("chrome.manifest");
-unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
-{
-  die "Could not find JAR file name in chrome.manifest";
-}
-my $baseName = $1;
+my $pkg = Packager->new();
+$pkg->readBasename('chrome.manifest');
+$pkg->readVersion('version');
 
-open(VERSION, "version");
-my $version = <VERSION>;
-$version =~ s/[^\w\.]//gs;
-close(VERSION);
+my $baseName = $pkg->{baseName};
+my $version = $pkg->{version};
 
 # Pad the version with zeroes to get version comparisons
 # right (1.2+ > 1.2.1 but 1.2.0+ < 1.2.1)
@@ -45,16 +42,3 @@ my $locale = (@ARGV ? "-" . join("-", @ARGV) : "");
 @ARGV = ("$baseName-$version+.$build$locale.xpi", "+.$build", @ARGV);
 do 'buildtools/create_xpi.pl';
 die $@ if $@;
-
-sub readFile
-{
-  my $file = shift;
-
-  open(local *FILE, "<", $file) || die "Could not read file '$file'";
-  binmode(FILE);
-  local $/;
-  my $result = <FILE>;
-  close(FILE);
-
-  return $result;
-}
