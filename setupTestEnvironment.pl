@@ -38,9 +38,6 @@ my $cleanManifest = $installManifest;
 $cleanManifest =~ s/<(\w+:)?targetApplication>.*?<\/\1targetApplication>//gs;
 $cleanManifest =~ s/<(\w+:)?requires>.*?<\/\1requires>//gs;
 
-die "Failed to extract extension name from install manifest" unless $cleanManifest =~ /<(\w+:)?name>([^<>]+)<\/\1name>/;
-my $name = $2;
-
 die "Failed to extract extension ID from install manifest" unless $cleanManifest =~ /<(\w+:)?id>([^<>]+)<\/\1id>/;
 my $id = $2;
 
@@ -65,7 +62,7 @@ unless (@dirs)
   print STDERR <<EOT;
 This script requires a file with the name .profileDirs to be in the current
 directory. Please create this file and specify the directories of the profiles
-where you want to install a test version of $name, one per line.
+where you want to install a test version of the extension, one per line.
 For example:
 
   c:\\Documents and Setting\\<user>\\Application Data\\Mozilla\\Firefox\\Profiles\\<seed>.default
