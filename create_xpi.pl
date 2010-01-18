@@ -10,16 +10,9 @@ use warnings;
 use lib qw(buildtools);
 use Packager;
 
-my $manifest = readFile("chrome.manifest");
-unless ($manifest =~ /\bjar:chrome\/(\S+?)\.jar\b/)
-{
-  die "Could not find JAR file name in chrome.manifest";
-}
-my $baseName = $1;
-
 my %params = ();
 
-my $xpiFile = shift @ARGV || "$baseName.xpi";
+my $xpiFile = shift @ARGV;
 if (@ARGV && $ARGV[0] =~ /^\+/)
 {
   $params{devbuild} = $ARGV[0];
@@ -34,17 +27,20 @@ $params{locales} = \@ARGV if @ARGV;
 
 my $pkg = Packager->new(\%params);
 $pkg->readVersion('version');
+$pkg->readBasename('chrome.manifest');
 $pkg->readLocales('chrome/locale') unless exists $params{locales};
 $pkg->readLocaleData('chrome/locale');
 
+$xpiFile = "$pkg->{baseName}.xpi" unless $xpiFile;
+
 chdir('chrome');
-$pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
+$pkg->makeJAR("$pkg->{baseName}.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
 chdir('..');
 
 my @files = grep {-e $_} ('components', 'defaults', 'install.rdf', 'chrome.manifest', 'icon.png');
 
-$pkg->makeXPI($xpiFile, "chrome/$baseName.jar", @files);
-unlink("chrome/$baseName.jar");
+$pkg->makeXPI($xpiFile, "chrome/$pkg->{baseName}.jar", @files);
+unlink("chrome/$pkg->{baseName}.jar");
 
 sub removeTimeLine
 {
@@ -53,17 +49,4 @@ sub removeTimeLine
   return "\n" if $file =~ /\.js$/ && $line =~ /\btimeLine\.(\w+)\(/;
 
   return $line;
-}
-
-sub readFile
-{
-  my $file = shift;
-
-  open(local *FILE, "<", $file) || die "Could not read file '$file'";
-  binmode(FILE);
-  local $/;
-  my $result = <FILE>;
-  close(FILE);
-
-  return $result;
 }
