@@ -33,6 +33,17 @@ sub readVersion
   close(FILE);
 }
 
+sub readBasename
+{
+  my ($self, $manifestFile) = @_;
+
+  my $data = $self->readFile($manifestFile);
+  die "Could not open manifest file $manifestFile" unless defined $data;
+  die "Could not find JAR file name in $manifestFile" unless $data =~ /\bjar:chrome\/(\S+?)\.jar\b/;
+
+  $self->{baseName} = $1;
+}
+
 sub readLocales
 {
   my ($self, $localesDir, $includeIncomplete) = @_;
