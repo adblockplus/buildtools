@@ -5,7 +5,9 @@ use warnings;
 
 my %keepAccessKeys = map {$_ => $_} (
   'ja-JP',
+  'ja',
   'ko-KR',
+  'ko',
   'zh-CN',
   'zh-TW',
 );
