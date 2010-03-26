@@ -88,13 +88,22 @@ sub readLocaleData
   }
 
   my $info = "";
+  my %translators = ();
   foreach my $locale (values %{$self->{localeData}})
   {
     next unless (exists($locale->{translator}) && $locale->{translator}) ||
                 (exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name}) ||
                 (exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description});
 
-    my $translator = (exists($locale->{translator}) && $locale->{translator} ? "\t\t\t<em:translator>$locale->{translator}</em:translator>" : "");
+    if (exists($locale->{translator}))
+    {
+      foreach my $translator (split(/,/, $locale->{translator}))
+      {
+        $translator =~ s/^\s+//g;
+        $translator =~ s/\s+$//g;
+        $translators{$translator} = 1 if $translator ne "";
+      }
+    }
     $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name};
     $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description};
 
@@ -104,11 +113,20 @@ sub readLocaleData
 \t\t\t<em:locale>$locale->{id}</em:locale>
 \t\t\t<em:name>$locale->{name}</em:name>
 \t\t\t<em:description>$locale->{description}</em:description>
-$translator
 \t\t</Description>
 \t</em:localized>
 EOT
   }
+
+  $info .= "\n";
+
+  foreach my $translator (sort keys %translators)
+  {
+    $info .= <<EOT;
+\t<em:translator>$translator</em:translator>
+EOT
+  }
+
   $self->{localizedInfo} = $info;
 }
 
