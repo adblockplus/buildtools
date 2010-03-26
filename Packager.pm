@@ -107,12 +107,16 @@ sub readLocaleData
     $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name};
     $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description};
 
+    my $id = $self->encodeXML($locale->{id});
+    my $name = $self->encodeXML($locale->{name});
+    my $description = $self->encodeXML($locale->{description});
+
     $info .= <<EOT;
 \t<em:localized>
 \t\t<Description>
-\t\t\t<em:locale>$locale->{id}</em:locale>
-\t\t\t<em:name>$locale->{name}</em:name>
-\t\t\t<em:description>$locale->{description}</em:description>
+\t\t\t<em:locale>$id</em:locale>
+\t\t\t<em:name>$name</em:name>
+\t\t\t<em:description>$description</em:description>
 \t\t</Description>
 \t</em:localized>
 EOT
@@ -122,6 +126,7 @@ EOT
 
   foreach my $translator (sort keys %translators)
   {
+    $translator = $self->encodeXML($translator);
     $info .= <<EOT;
 \t<em:translator>$translator</em:translator>
 EOT
@@ -269,6 +274,16 @@ sub cp_rec
       }
     }
   }
+}
+
+sub encodeXML
+{
+  my ($self, $str) = @_;
+  $str =~ s/&/&amp;/g;
+  $str =~ s/</&lt;/g;
+  $str =~ s/>/&gt;/g;
+  $str =~ s/"/&quot;/g; #"
+  return $str;
 }
 
 sub createFileDir
