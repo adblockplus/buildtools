@@ -182,8 +182,8 @@ sub cp
     }
   }
 
-  my $textMode = ($fromFile =~ /\.(manifest|xul|js|xml|xhtml|rdf|dtd|properties|css)$/);
-  my $extendedTextMode = ($fromFile =~ /\.(?:js|rdf|manifest)$/);
+  my $textMode = ($fromFile =~ /\.(manifest|xul|jsm?|xml|xhtml|rdf|dtd|properties|css)$/);
+  my $extendedTextMode = ($fromFile =~ /\.(?:jsm?|rdf|manifest)$/);
 
   open(local *FROM, $fromFile) or return;
   open(local *TO, ">$toFile") or return;
