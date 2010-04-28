@@ -73,7 +73,7 @@ sub readLocaleData
     $self->{localeData}{$locale} = {id => $locale};
     while ($data =~ /^\s*(?![!#])(\S+)\s*=\s*(.+)$/mg)
     {
-      if ($1 eq "name" || $1 eq "description" || $1 eq "translator")
+      if ($1 eq "name" || $1 eq "description" || $1 eq "translator" || $1 eq "description.short" || $1 eq "description.long")
       {
         $self->{localeData}{$locale}{$1} = $2;
       }
@@ -84,7 +84,6 @@ sub readLocaleData
   {
     $self->{name} = $self->{localeData}{"en-US"}{name} if exists($self->{localeData}{"en-US"}{name});
     $self->{description} = $self->{localeData}{"en-US"}{description} if exists($self->{localeData}{"en-US"}{description});
-    delete $self->{localeData}{"en-US"};
   }
 
   my $info = "";
