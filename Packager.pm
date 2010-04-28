@@ -88,7 +88,7 @@ sub readLocaleData
 
   my $info = "";
   my %translators = ();
-  foreach my $locale (values %{$self->{localeData}})
+  foreach my $locale (sort {$a->{id} cmp $b->{id}} values %{$self->{localeData}})
   {
     next unless (exists($locale->{translator}) && $locale->{translator}) ||
                 (exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name}) ||
