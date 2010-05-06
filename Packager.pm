@@ -27,8 +27,12 @@ sub readVersion
   $self->{version} =~ s/[^\w\.]//gs;
   if (exists $self->{devbuild})
   {
-    $self->{version} .= ".0" while ($self->{version} =~ tr/././ < 2);
-    $self->{version} .= $self->{devbuild};
+    unless ($self->{version} =~ /\D$/)
+    {
+      $self->{version} .= ".0" while ($self->{version} =~ tr/././ < 2);
+      $self->{version} .= "+";
+    }
+    $self->{version} .= "." . $self->{devbuild};
   }
   close(FILE);
 }

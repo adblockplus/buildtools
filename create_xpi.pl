@@ -13,7 +13,7 @@ use Packager;
 my %params = ();
 
 my $xpiFile = shift @ARGV;
-if (@ARGV && $ARGV[0] =~ /^\+/)
+if (@ARGV && $ARGV[0] =~ /^\d+$/)
 {
   $params{devbuild} = $ARGV[0];
   shift @ARGV;
