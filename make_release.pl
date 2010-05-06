@@ -29,7 +29,7 @@ my $version = $ARGV[0];
 $version =~ s/[^\w\.]//gs;
 
 open(VERSION, ">version");
-print VERSION $ARGV[0];
+print VERSION "$ARGV[0]\n";
 close(VERSION);
 
 @ARGV = ("../downloads/$baseName-$version.xpi");
