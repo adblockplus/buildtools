@@ -37,7 +37,7 @@ chdir('chrome');
 $pkg->makeJAR("$pkg->{baseName}.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
 chdir('..');
 
-my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'install.rdf', 'chrome.manifest', 'icon.png');
+my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'install.rdf', 'bootstrap.js', 'chrome.manifest', 'icon.png');
 @files = grep {$_ ne "modules/TimeLine.jsm"} @files unless exists($params{devbuild});
 
 $pkg->makeXPI($xpiFile, "chrome/$pkg->{baseName}.jar", @files);
