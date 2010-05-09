@@ -32,6 +32,7 @@ my @files = ();
 my $installManifest = fixupFile(readFile("install.rdf"));
 push @files, ["install.rdf", $installManifest];
 
+push @files, ["bootstrap.js", readFile("bootstrap.js")] if -f "bootstrap.js";
 push @files, ["icon.png", readFile("icon.png")] if -f "icon.png";
 
 my $cleanManifest = $installManifest;
