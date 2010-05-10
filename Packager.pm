@@ -216,7 +216,7 @@ sub cp
 
       if ($self->{devbuild} && $fromFile =~ /\binstall\.rdf$/ && /^(\s*)<em:version>/)
       {
-        $_ .= "$1<em:updateURL>https://adblockplus.org/devbuilds/update.rdf</em:updateURL>\n";
+        $_ .= "$1<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/update.rdf?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>\n";
       }
 
       $_ = $self->{postprocess_line}->($fromFile, $_) if exists $self->{postprocess_line};
