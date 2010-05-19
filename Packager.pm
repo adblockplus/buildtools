@@ -68,6 +68,7 @@ sub readLocaleData
   $self->{localeData} = {};
   $self->{name} = '';
   $self->{description} = '';
+  $self->{homepage} = '';
 
   foreach my $locale (@{$self->{locales}})
   {
@@ -77,7 +78,7 @@ sub readLocaleData
     $self->{localeData}{$locale} = {id => $locale};
     while ($data =~ /^\s*(?![!#])(\S+)\s*=\s*(.+)$/mg)
     {
-      if ($1 eq "name" || $1 eq "description" || $1 eq "translator" || $1 eq "description.short" || $1 eq "description.long")
+      if ($1 eq "name" || $1 eq "description" || $1 eq "homepage" || $1 eq "translator" || $1 eq "description.short" || $1 eq "description.long")
       {
         $self->{localeData}{$locale}{$1} = $2;
       }
@@ -88,16 +89,13 @@ sub readLocaleData
   {
     $self->{name} = $self->{localeData}{"en-US"}{name} if exists($self->{localeData}{"en-US"}{name});
     $self->{description} = $self->{localeData}{"en-US"}{description} if exists($self->{localeData}{"en-US"}{description});
+    $self->{homepage} = $self->{localeData}{"en-US"}{homepage} if exists($self->{localeData}{"en-US"}{homepage});
   }
 
   my $info = "";
   my %translators = ();
   foreach my $locale (sort {$a->{id} cmp $b->{id}} values %{$self->{localeData}})
   {
-    next unless (exists($locale->{translator}) && $locale->{translator}) ||
-                (exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name}) ||
-                (exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description});
-
     if (exists($locale->{translator}))
     {
       foreach my $translator (split(/,/, $locale->{translator}))
@@ -109,10 +107,12 @@ sub readLocaleData
     }
     $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name};
     $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description};
+    $locale->{homepage} = $self->{homepage} unless exists($locale->{homepage}) && $locale->{homepage} && $locale->{homepage} ne $self->{homepage};
 
     my $id = $self->encodeXML($locale->{id});
     my $name = $self->encodeXML($locale->{name});
     my $description = $self->encodeXML($locale->{description});
+    my $homepage = $self->encodeXML($locale->{homepage});
 
     $info .= <<EOT;
 \t<em:localized>
@@ -120,6 +120,7 @@ sub readLocaleData
 \t\t\t<em:locale>$id</em:locale>
 \t\t\t<em:name>$name</em:name>
 \t\t\t<em:description>$description</em:description>
+\t\t\t<em:homepageURL>$homepage</em:homepageURL>
 \t\t</Description>
 \t</em:localized>
 EOT
@@ -201,6 +202,7 @@ sub cp
       s/\{\{BUILD\}\}/$self->{build}/g if $extendedTextMode;
       s/\{\{NAME\}\}/$self->{name}/g if $extendedTextMode;
       s/\{\{DESCRIPTION\}\}/$self->{description}/g if $extendedTextMode;
+      s/\{\{HOMEPAGE\}\}/$self->{homepage}/g if $extendedTextMode;
       s/\{\{LOCALIZED\}\}/$self->{localizedInfo}/g if $extendedTextMode;
       if ($extendedTextMode && /\{\{LOCALE\}\}/)
       {

@@ -144,6 +144,7 @@ sub fixupFile
   $str =~ s/{{BUILD}}//g;
   $str =~ s/{{NAME}}/$pkg->{name}/g;
   $str =~ s/{{DESCRIPTION}}/$pkg->{description}/g;
+  $str =~ s/{{HOMEPAGE}}/$pkg->{homepage}/g;
   $str =~ s/{{LOCALIZED}}/$pkg->{localizedInfo}/g;
   $str =~ s/^.*{{LOCALE}}.*$/
     my @result = ();
