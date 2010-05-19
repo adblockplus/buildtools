@@ -13,22 +13,25 @@ use Packager;
 sub Packager::fixLocales() {}
 
 my %params = ();
-$params{version} = shift @ARGV;
-die "Please specify version number on command line" unless $params{version};
+
+my ($sec, $min, $hour, $day, $mon, $year) = localtime;
+$params{devbuild} = sprintf("%04i%02i%02i", $year+1900, $mon+1, $day);
 
 my $pkg = Packager->new(\%params);
 $pkg->readBasename('chrome.manifest');
+$pkg->readVersion('version');
 $pkg->readLocales('chrome/locale', 1);
 $pkg->readLocaleData('chrome/locale');
 
 my $baseName = $pkg->{baseName};
-my $xpiFile = "$baseName-$params{version}.xpi";
+my $version = $pkg->{version};
+my $xpiFile = "$baseName-$version.xpi";
 
 chdir('chrome');
 $pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete');
 chdir('..');
 
-my @files = grep {-e $_} ('components', 'modules', 'defaults', 'install.rdf', 'bootstrap.js', 'chrome.manifest', 'icon.png');
+my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'install.rdf', 'bootstrap.js', 'chrome.manifest', 'icon.png');
 
 my $targetAppNum = 0;
 $pkg->{postprocess_line} = \&postprocessInstallRDF;
