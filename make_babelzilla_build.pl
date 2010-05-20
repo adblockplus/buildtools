@@ -52,5 +52,7 @@ sub postprocessInstallRDF
 
   return "" if $targetAppNum > 6 && $targetAppNum % 2 == 1;
 
+  return "" if $line =~ /\blocalized\b/;
+
   return $line;
 }
