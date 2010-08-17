@@ -21,7 +21,7 @@ my $pkg = Packager->new(\%params);
 $pkg->readBasename('chrome.manifest');
 $pkg->readVersion('version');
 $pkg->readLocales('chrome/locale', 1);
-$pkg->readLocaleData('chrome/locale');
+$pkg->readLocaleData('chrome/locale', 'install.rdf');
 
 my $baseName = $pkg->{baseName};
 my $version = $pkg->{version};

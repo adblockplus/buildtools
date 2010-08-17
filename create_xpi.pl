@@ -29,7 +29,7 @@ my $pkg = Packager->new(\%params);
 $pkg->readVersion('version');
 $pkg->readBasename('chrome.manifest');
 $pkg->readLocales('chrome/locale') unless exists $params{locales};
-$pkg->readLocaleData('chrome/locale');
+$pkg->readLocaleData('chrome/locale', 'install.rdf');
 
 $xpiFile = "$pkg->{baseName}.xpi" unless $xpiFile;
 

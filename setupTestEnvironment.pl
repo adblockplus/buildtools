@@ -26,7 +26,7 @@ use Packager;
 my $pkg = Packager->new();
 $pkg->readVersion('version');
 $pkg->readLocales('chrome/locale');
-$pkg->readLocaleData('chrome/locale');
+$pkg->readLocaleData('chrome/locale', 'install.rdf');
 
 my @files = ();
 my $installManifest = fixupFile(readFile("install.rdf"));
