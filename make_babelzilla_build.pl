@@ -19,7 +19,7 @@ die "Please specify version number on command line" unless $params{version};
 my $pkg = Packager->new(\%params);
 $pkg->readBasename('chrome.manifest');
 $pkg->readLocales('chrome/locale', 1);
-$pkg->readLocaleData('chrome/locale');
+$pkg->readLocaleData('chrome/locale', 'install.rdf');
 
 my $baseName = $pkg->{baseName};
 my $xpiFile = "$baseName-$params{version}.xpi";

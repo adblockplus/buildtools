@@ -16,7 +16,7 @@ die "This script cannot be called directly, please call the script for a particu
 
 my $pkg = Packager->new({locales => ['en-US']});
 $pkg->readBasename('chrome.manifest');
-$pkg->readLocaleData('chrome/locale');
+$pkg->readLocaleData('chrome/locale', 'install.rdf');
 $pkg->readNameFromManifest('install.rdf') unless $pkg->{name};
 die "Could not extract extension name" unless $pkg->{name};
 

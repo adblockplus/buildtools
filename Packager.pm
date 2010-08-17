@@ -59,11 +59,13 @@ sub readLocales
 
 sub readLocaleData
 {
-  my ($self, $localesDir) = @_;
+  my ($self, $localesDir, $installManifestFile) = @_;
 
   $self->{localeData} = {};
   $self->{name} = '';
   $self->{description} = '';
+  $self->{homepage} = '';
+  $self->{author} = '';
 
   foreach my $locale (@{$self->{locales}})
   {
@@ -84,6 +86,14 @@ sub readLocaleData
   {
     $self->{name} = $self->{localeData}{"en-US"}{name} if exists($self->{localeData}{"en-US"}{name});
     $self->{description} = $self->{localeData}{"en-US"}{description} if exists($self->{localeData}{"en-US"}{description});
+  }
+
+  # HACK: Read author name and homepage from install manifest
+  if (defined($installManifestFile))
+  {
+    my $installRDF = $self->readFile($installManifestFile);
+    $self->{author} = $1 if $installRDF && $installRDF =~ /<em:creator>\s*([^<>]+?)\s*<\/em:creator>/;
+    $self->{homepage} = $1 if $installRDF && $installRDF =~ /<em:homepageURL>\s*([^<>]+?)\s*<\/em:homepageURL>/;
   }
 
   my $info = "";
@@ -110,12 +120,18 @@ sub readLocaleData
     my $name = $self->encodeXML($locale->{name});
     my $description = $self->encodeXML($locale->{description});
 
+    # Duplicate author and homepage in each locale to work around bug 416350
+    my $author = $self->encodeXML($self->{author});
+    my $homepage = $self->encodeXML($self->{homepage});
+
     $info .= <<EOT;
 \t<em:localized>
 \t\t<Description>
 \t\t\t<em:locale>$id</em:locale>
 \t\t\t<em:name>$name</em:name>
 \t\t\t<em:description>$description</em:description>
+\t\t\t<em:creator>$author</em:creator>
+\t\t\t<em:homepageURL>$homepage</em:homepageURL>
 \t\t</Description>
 \t</em:localized>
 EOT
