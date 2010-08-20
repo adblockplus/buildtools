@@ -28,24 +28,34 @@ die "Version number not specified" unless @ARGV;
 my $version = $ARGV[0];
 $version =~ s/[^\w\.]//gs;
 
+my $branch = $version;
+$branch =~ s/\./_/g;
+$branch = $BRANCH_NAME."_".$branch."_RELEASE";
+
 open(VERSION, ">version");
 print VERSION "$ARGV[0]\n";
 close(VERSION);
+
+system(qq(hg commit -m "Releasing $extensionName $version"));
+system(qq(hg tag $branch));
+system(qq(hg tag -R ../buildtools $branch));
 
 @ARGV = ("../downloads/$baseName-$version.xpi");
 do 'buildtools/create_xpi.pl';
 die $@ if $@;
 
-system("hg add -R ../downloads ../downloads/$baseName-$version.xpi");
-system(qq(hg commit -m "Releasing $extensionName $version"));
-system(qq(hg commit -R ../downloads -m "Releasing $extensionName $version"));
+system('hg', 'archive', '-X', '.hgtags', 'tmp');
+system('hg', 'archive', '-R', 'buildtools', '-X', 'buildtools/.hgtags', 'tmp/buildtools');
 
-my $branch = $version;
-$branch =~ s/\./_/g;
-$branch = $BRANCH_NAME."_".$branch."_RELEASE";
-system(qq(hg tag $branch));
+opendir(local *TMP, 'tmp');
+system('tar', 'czf', "../downloads/$baseName-$version-source.tgz", '--directory=tmp', '--numeric-owner', grep {/[^.]/} readdir(TMP));
+closedir(TMP);
+$pkg->rm_rec('tmp');
+
+system("hg add -R ../downloads ../downloads/$baseName-$version.xpi");
+system("hg add -R ../downloads ../downloads/$baseName-$version-source.tgz");
+system(qq(hg commit -R ../downloads -m "Releasing $extensionName $version"));
 system(qq(hg tag -R ../downloads $branch));
-system(qq(hg tag -R ../buildtools $branch));
 
 system(qq(hg push));
 system(qq(hg push -R ../downloads));
