@@ -92,7 +92,8 @@ foreach my $dir (@dirs)
   }
 
   my $baseDir = "$dir/extensions/$id";
-  rm_rec($baseDir);
+  rm_rec($baseDir);           # Unpacked extension
+  unlink("$baseDir.xpi");     # Installed as XPI in Gecko 2.0
 
   mkdir($baseDir);
 
