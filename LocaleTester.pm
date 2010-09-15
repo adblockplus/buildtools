@@ -47,7 +47,7 @@ sub testLocales
   
     compareLocales($locale, $currentLocale, $referenceLocale) unless $currentLocale == $referenceLocale;
   
-    foreach my $entry (@{$params{must_differ}})
+    foreach my $entry (@{$params{mustDiffer}})
     {
       my %values = ();
       foreach my $key (@$entry)
@@ -61,7 +61,7 @@ sub testLocales
       }
     }
   
-    foreach my $entry (@{$params{must_equal}})
+    foreach my $entry (@{$params{mustEqual}})
     {
       my $stdValue;
       my $stdName;
