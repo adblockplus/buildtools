@@ -24,23 +24,15 @@ use lib qw(buildtools);
 use Packager;
 
 my $pkg = Packager->new();
-$pkg->readVersion('version');
+$pkg->readMetadata('metadata');
 $pkg->readLocales('chrome/locale');
-$pkg->readLocaleData('chrome/locale', 'install.rdf');
+$pkg->readLocaleData('chrome/locale');
 
 my @files = ();
-my $installManifest = fixupFile(readFile("install.rdf"));
-push @files, ["install.rdf", $installManifest];
-
 push @files, ["bootstrap.js", readFile("bootstrap.js")] if -f "bootstrap.js";
 push @files, ["icon.png", readFile("icon.png")] if -f "icon.png";
 
-my $cleanManifest = $installManifest;
-$cleanManifest =~ s/<(\w+:)?targetApplication>.*?<\/\1targetApplication>//gs;
-$cleanManifest =~ s/<(\w+:)?requires>.*?<\/\1requires>//gs;
-
-die "Failed to extract extension ID from install manifest" unless $cleanManifest =~ /<(\w+:)?id>([^<>]+)<\/\1id>/;
-my $id = $2;
+my $id = $pkg->{settings}{general}{id};
 
 my $chromeManifest = fixupFile(readFile("chrome.manifest"));
 my $baseURL = cwd;
@@ -112,6 +104,8 @@ foreach my $dir (@dirs)
 
     writeFile("$baseDir/$filename", $content);
   }
+
+  $pkg->writeManifest("$baseDir/install.rdf");
 }
 
 sub readFile
@@ -143,10 +137,6 @@ sub fixupFile
 
   $str =~ s/{{VERSION}}/$pkg->{version}/g;
   $str =~ s/{{BUILD}}//g;
-  $str =~ s/{{NAME}}/$pkg->{name}/g;
-  $str =~ s/{{DESCRIPTION}}/$pkg->{description}/g;
-  $str =~ s/{{HOMEPAGE}}/$pkg->{homepage}/g;
-  $str =~ s/{{LOCALIZED}}/$pkg->{localizedInfo}/g;
   $str =~ s/^.*{{LOCALE}}.*$/
     my @result = ();
     my $template = $&;

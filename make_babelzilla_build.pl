@@ -18,12 +18,16 @@ my ($sec, $min, $hour, $day, $mon, $year) = localtime;
 $params{devbuild} = sprintf("%04i%02i%02i", $year+1900, $mon+1, $day);
 
 my $pkg = Packager->new(\%params);
-$pkg->readBasename('chrome.manifest');
-$pkg->readVersion('version');
+$pkg->readMetadata('metadata');
 $pkg->readLocales('chrome/locale', 1);
-$pkg->readLocaleData('chrome/locale', 'install.rdf');
+$pkg->readLocaleData('chrome/locale');
 
-my $baseName = $pkg->{baseName};
+foreach my $app (keys %{$pkg->{settings}{compat}})
+{
+  delete $pkg->{settings}{compat}{$app} unless $app eq 'firefox' || $app eq 'thunderbird' || $app eq 'seamonkey'
+}
+
+my $baseName = $pkg->{settings}{general}{basename};
 my $version = $pkg->{version};
 my $xpiFile = "$baseName-$version.xpi";
 
@@ -31,28 +35,7 @@ chdir('chrome');
 $pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete');
 chdir('..');
 
-my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'install.rdf', 'bootstrap.js', 'chrome.manifest', 'icon.png');
+my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png');
 
-my $targetAppNum = 0;
-$pkg->{postprocess_line} = \&postprocessInstallRDF;
 $pkg->makeXPI($xpiFile, "chrome/$baseName.jar", @files);
 unlink("chrome/$baseName.jar");
-
-sub postprocessInstallRDF
-{
-  my ($file, $line) = @_;
-
-  return $line unless $file eq "install.rdf";
-
-  if ($line =~ /\btargetApplication\b/)
-  {
-    $targetAppNum++;
-    return "" if $targetAppNum > 6;
-  }
-
-  return "" if $targetAppNum > 6 && $targetAppNum % 2 == 1;
-
-  return "" if $line =~ /\blocalized\b/;
-
-  return $line;
-}
