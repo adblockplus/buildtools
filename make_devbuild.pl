@@ -25,10 +25,9 @@ use lib qw(buildtools);
 use Packager;
 
 my $pkg = Packager->new();
-$pkg->readBasename('chrome.manifest');
-$pkg->readVersion('version');
+$pkg->readMetadata('metadata');
 
-my $baseName = $pkg->{baseName};
+my $baseName = $pkg->{settings}{general}{basename};
 my $version = $pkg->{version};
 
 unless ($version =~ /\D$/)

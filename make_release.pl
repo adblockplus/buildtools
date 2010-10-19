@@ -10,17 +10,14 @@ use strict;
 use lib qw(buildtools);
 use Packager;
 
-our $BRANCH_NAME;
-
-die "This script cannot be called directly, please call the script for a particular extension" unless $BRANCH_NAME;
-
 my $pkg = Packager->new({locales => ['en-US']});
-$pkg->readBasename('chrome.manifest');
-$pkg->readLocaleData('chrome/locale', 'install.rdf');
-$pkg->readNameFromManifest('install.rdf') unless $pkg->{name};
+$pkg->readMetadata('metadata');
+$pkg->readLocaleData('chrome/locale');
 die "Could not extract extension name" unless $pkg->{name};
 
-my $baseName = $pkg->{baseName};
+die "Branch name not defined in metadata file" unless exists($pkg->{settings}{general}{branchname});
+
+my $baseName = $pkg->{settings}{general}{basename};
 my $extensionName = $pkg->{name};
 
 die "Version number not specified" unless @ARGV;
@@ -30,11 +27,21 @@ $version =~ s/[^\w\.]//gs;
 
 my $branch = $version;
 $branch =~ s/\./_/g;
-$branch = $BRANCH_NAME."_".$branch."_RELEASE";
+$branch = $pkg->{settings}{general}{branchname}."_".$branch."_RELEASE";
 
-open(VERSION, ">version");
-print VERSION "$ARGV[0]\n";
-close(VERSION);
+open(local *OLD, '<', 'metadata');
+open(local *NEW, '>', 'metadata_new');
+binmode(OLD);
+binmode(NEW);
+while (<OLD>)
+{
+  s/^(\s*version\s*=\s*).*/$1$ARGV[0]/;
+  print NEW $_;
+}
+close(NEW);
+close(OLD);
+unlink('metadata');
+rename('metadata_new', 'metadata');
 
 system(qq(hg commit -m "Releasing $extensionName $version"));
 system(qq(hg tag $branch));

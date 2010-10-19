@@ -26,22 +26,22 @@ else
 $params{locales} = \@ARGV if @ARGV;
 
 my $pkg = Packager->new(\%params);
-$pkg->readVersion('version');
-$pkg->readBasename('chrome.manifest');
+$pkg->readMetadata('metadata');
 $pkg->readLocales('chrome/locale') unless exists $params{locales};
-$pkg->readLocaleData('chrome/locale', 'install.rdf');
+$pkg->readLocaleData('chrome/locale');
 
-$xpiFile = "$pkg->{baseName}.xpi" unless $xpiFile;
+my $baseName = $pkg->{settings}{general}{basename};
+$xpiFile = "$baseName.xpi" unless $xpiFile;
 
 chdir('chrome');
-$pkg->makeJAR("$pkg->{baseName}.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
+$pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete', '-/meta.properties');
 chdir('..');
 
-my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'install.rdf', 'bootstrap.js', 'chrome.manifest', 'icon.png');
+my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png');
 @files = grep {$_ ne "modules/TimeLine.jsm"} @files unless exists($params{devbuild});
 
-$pkg->makeXPI($xpiFile, "chrome/$pkg->{baseName}.jar", @files);
-unlink("chrome/$pkg->{baseName}.jar");
+$pkg->makeXPI($xpiFile, "chrome/$baseName.jar", @files);
+unlink("chrome/$baseName.jar");
 
 sub removeTimeLine
 {

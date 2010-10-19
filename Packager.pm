@@ -3,6 +3,20 @@ package Packager;
 use strict;
 use warnings;
 
+my %apps =
+(
+  conkeror => '{a79fe89b-6662-4ff4-8e88-09950ad4dfde}',
+  emusic => 'dlm@emusic.com',
+  fennec => '{a23983c0-fd0e-11dc-95ff-0800200c9a66}',
+  firefox => '{ec8030f7-c20a-464f-9b0e-13a3a9e97384}',
+  midbrowser => '{aa5ca914-c309-495d-91cf-3141bbb04115}',
+  prism => 'prism@developer.mozilla.org',
+  seamonkey => '{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}',
+  songbird => 'songbird@songbirdnest.com',
+  thunderbird => '{3550f703-e582-4d05-9a08-453d09bdfdc6}',
+  toolkit => 'toolkit@mozilla.org',
+);
+
 sub new
 {
   my ($class, $params) = @_;
@@ -18,13 +32,55 @@ sub new
   return $self;
 }
 
-sub readVersion
+sub readMetadata
 {
-  my ($self, $versionFile) = @_;
+  my ($self, $metadataFile) = @_;
 
-  open(local *FILE, $versionFile) or die "Could not open version file $versionFile";
-  $self->{version} = <FILE>;
-  $self->{version} =~ s/[^\w\.]//gs;
+  my $data = $self->readFile($metadataFile);
+  die "Could not read metadata file $metadataFile" unless defined $data;
+
+  $self->{settings} = {};
+  my $curSection;
+  my %lists = map {$_ => 1} qw(contributor);
+  foreach my $line (split(/[\r\n]+/, $data))
+  {
+    $line =~ s/#.*//;
+    $line =~ s/^\s+//;
+    $line =~ s/\s+$//;
+    next unless length($line);
+
+    if ($line =~ /^\[(.*)\]$/)
+    {
+      $curSection = $1;
+    }
+    elsif ($line =~ /(.+)=(.*)/)
+    {
+      if (defined $curSection)
+      {
+        $self->{settings}{$curSection} = {} unless exists $self->{settings}{$curSection};
+        if (exists($lists{$1}))
+        {
+          $self->{settings}{$curSection}{$1} = [] unless exists $self->{settings}{$curSection}{$1};
+          push @{$self->{settings}{$curSection}{$1}}, $2;
+        }
+        else
+        {
+          $self->{settings}{$curSection}{$1} = $2;
+        }
+      }
+      else
+      {
+        warn "Setting outside section in metadata file: $line";
+      }
+    }
+    else
+    {
+      warn "Unrecognized line in metadata file: $line";
+    }
+  }
+
+  warn "Version not set in metadata file" unless exists($self->{settings}{general}{version});
+  $self->{version} = $self->{settings}{general}{version};
   if (exists $self->{devbuild})
   {
     unless ($self->{version} =~ /\D$/)
@@ -34,18 +90,6 @@ sub readVersion
     }
     $self->{version} .= "." . $self->{devbuild};
   }
-  close(FILE);
-}
-
-sub readBasename
-{
-  my ($self, $manifestFile) = @_;
-
-  my $data = $self->readFile($manifestFile);
-  die "Could not open manifest file $manifestFile" unless defined $data;
-  die "Could not find JAR file name in $manifestFile" unless $data =~ /\bjar:chrome\/(\S+?)\.jar\b/;
-
-  $self->{baseName} = $1;
 }
 
 sub readLocales
@@ -63,7 +107,7 @@ sub readLocales
 
 sub readLocaleData
 {
-  my ($self, $localesDir, $installManifestFile) = @_;
+  my ($self, $localesDir) = @_;
 
   $self->{localeData} = {};
   $self->{name} = '';
@@ -90,77 +134,30 @@ sub readLocaleData
   {
     $self->{name} = $self->{localeData}{"en-US"}{name} if exists($self->{localeData}{"en-US"}{name});
     $self->{description} = $self->{localeData}{"en-US"}{description} if exists($self->{localeData}{"en-US"}{description});
-    $self->{homepage} = $self->{localeData}{"en-US"}{homepage} if exists($self->{localeData}{"en-US"}{homepage});
   }
+  $self->{homepage} = $self->{settings}{homepage}{default};
+  $self->{author} = $self->{settings}{general}{author};
 
-  # HACK: Read author name from install manifest
-  if (defined($installManifestFile))
+  # Fix up locale data if missing
+  foreach my $locale (values %{$self->{localeData}})
   {
-    my $installRDF = $self->readFile($installManifestFile);
-    $self->{author} = $1 if $installRDF && $installRDF =~ /<em:creator>\s*([^<>]+?)\s*<\/em:creator>/;
-  }
+    $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name};
+    $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description};
 
-  my $info = "";
-  my %translators = ();
-  foreach my $locale (sort {$a->{id} cmp $b->{id}} values %{$self->{localeData}})
-  {
-    if (exists($locale->{translator}))
+    if (exists($self->{settings}{homepage}{$locale->{id}}))
     {
-      foreach my $translator (split(/,/, $locale->{translator}))
-      {
-        $translator =~ s/^\s+//g;
-        $translator =~ s/\s+$//g;
-        $translators{$translator} = 1 if $translator ne "";
-      }
+      $locale->{homepage} = $self->{settings}{homepage}{$locale->{id}};
     }
-    $locale->{name} = $self->{name} unless exists($locale->{name}) && $locale->{name} && $locale->{name} ne $self->{name};
-    $locale->{description} = $self->{description} unless exists($locale->{description}) && $locale->{description} && $locale->{description} ne $self->{description};
-    $locale->{homepage} = $self->{homepage} unless exists($locale->{homepage}) && $locale->{homepage} && $locale->{homepage} ne $self->{homepage};
-
-    my $id = $self->encodeXML($locale->{id});
-    my $name = $self->encodeXML($locale->{name});
-    my $description = $self->encodeXML($locale->{description});
-    my $homepage = $self->encodeXML($locale->{homepage});
-
-    # Duplicate author in each locale to work around bug 416350
-    my $author = $self->encodeXML($self->{author});
-
-    $info .= <<EOT;
-\t<em:localized>
-\t\t<Description>
-\t\t\t<em:locale>$id</em:locale>
-\t\t\t<em:name>$name</em:name>
-\t\t\t<em:description>$description</em:description>
-\t\t\t<em:creator>$author</em:creator>
-\t\t\t<em:homepageURL>$homepage</em:homepageURL>
-\t\t</Description>
-\t</em:localized>
-EOT
+    elsif ($locale->{id} =~ /^(\w+)/ && exists($self->{settings}{homepage}{$1}))
+    {
+      $locale->{homepage} = $self->{settings}{homepage}{$1};
+    }
+    else
+    {
+      $locale->{homepage} = $self->{settings}{homepage}{default};
+    }
+    warn "Failed to get homepage for $locale->{id}" unless $locale->{homepage};
   }
-
-  $info .= "\n";
-
-  foreach my $translator (sort keys %translators)
-  {
-    $translator = $self->encodeXML($translator);
-    $info .= <<EOT;
-\t<em:translator>$translator</em:translator>
-EOT
-  }
-
-  $self->{localizedInfo} = $info;
-}
-
-sub readNameFromManifest
-{
-  my ($self, $installManifestFile) = @_;
-
-  my $installRDF = $self->readFile($installManifestFile);
-  return unless $installRDF;
-
-  $installRDF =~ s/<em:(requires|targetApplication)>.*?<\/em:\1>//gs;
-
-  $self->{name} = $1 if $installRDF =~ /<em:name>\s*([^<>]+?)\s*<\/em:name>/;
 }
 
 sub rm_rec
@@ -212,10 +209,6 @@ sub cp
       s/^((?:  )+)/"\t" x (length($1)\/2)/e;
       s/\{\{VERSION\}\}/$self->{version}/g if $extendedTextMode;
       s/\{\{BUILD\}\}/$self->{build}/g if $extendedTextMode;
-      s/\{\{NAME\}\}/$self->{name}/g if $extendedTextMode;
-      s/\{\{DESCRIPTION\}\}/$self->{description}/g if $extendedTextMode;
-      s/\{\{HOMEPAGE\}\}/$self->{homepage}/g if $extendedTextMode;
-      s/\{\{LOCALIZED\}\}/$self->{localizedInfo}/g if $extendedTextMode;
       if ($extendedTextMode && /\{\{LOCALE\}\}/)
       {
         my $loc = "";
@@ -226,11 +219,6 @@ sub cp
           $loc .= $tmp;
         }
         $_ = $loc;
-      }
-
-      if ($self->{devbuild} && $fromFile =~ /\binstall\.rdf$/ && /^(\s*)<em:version>/)
-      {
-        $_ .= "$1<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/update.rdf?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>\n";
       }
 
       $_ = $self->{postprocess_line}->($fromFile, $_) if exists $self->{postprocess_line};
@@ -362,6 +350,155 @@ sub fixZipPermissions
   unlink $fileName if $invalid;
 }
 
+sub writeManifest
+{
+  my ($self, $manifestFile) = @_;
+
+  my $id = $self->encodeXML($self->{settings}{general}{id});
+  my $version = $self->encodeXML($self->{version});
+  my $name = $self->encodeXML($self->{name});
+  my $description = $self->encodeXML($self->{description});
+  my $author = $self->encodeXML($self->{author});
+  my $homepage = $self->encodeXML($self->{homepage});
+
+  open(local *FILE, '>', $manifestFile) or die "Failed to write manifest file $manifestFile";
+  binmode(FILE);
+  print FILE <<"EOT";
+<?xml version="1.0"?>
+
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+\t\txmlns:em="http://www.mozilla.org/2004/em-rdf#">
+
+\t<Description about="urn:mozilla:install-manifest">
+
+\t\t<em:id>$id</em:id>
+\t\t<em:version>$version</em:version>
+\t\t<em:name>$name</em:name>
+\t\t<em:description>$description</em:description>
+\t\t<em:creator>$author</em:creator>
+\t\t<em:homepageURL>$homepage</em:homepageURL>
+\t\t<em:type>2</em:type>
+EOT
+
+  if ($self->{devbuild})
+  {
+    print FILE <<"EOT";
+\t\t<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/update.rdf?baseName=$self->{settings}{general}{basename}&reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>
+EOT
+  }
+
+  if (exists($self->{settings}{general}{icon}))
+  {
+    my $icon = $self->encodeXML($self->{settings}{general}{icon});
+    print FILE <<"EOT";
+\t\t<em:iconURL>$icon</em:iconURL>
+EOT
+  }
+  if (exists($self->{settings}{general}{about}))
+  {
+    my $about = $self->encodeXML($self->{settings}{general}{about});
+    print FILE <<"EOT";
+\t\t<em:aboutURL>$about</em:aboutURL>
+EOT
+  }
+  if (exists($self->{settings}{general}{options}))
+  {
+    my $options = $self->encodeXML($self->{settings}{general}{options});
+    print FILE <<"EOT";
+\t\t<em:optionsURL>$options</em:optionsURL> 
+EOT
+  }
+
+  print FILE "\n";
+
+  if (exists($self->{settings}{general}{contributor}))
+  {
+    foreach my $contributor (map {$self->encodeXML($_)} @{$self->{settings}{general}{contributor}})
+    {
+      print FILE <<"EOT";
+\t\t<em:contributor>$contributor</em:contributor>
+EOT
+    }
+    print FILE "\n";
+  }
+
+  my %translators = ();
+  foreach my $locale (values %{$self->{localeData}})
+  {
+    if (exists($locale->{translator}))
+    {
+      foreach my $translator (split(/,/, $locale->{translator}))
+      {
+        $translator =~ s/^\s+//g;
+        $translator =~ s/\s+$//g;
+        $translators{$translator} = 1 if $translator ne "";
+      }
+    }
+  }
+  foreach my $translator (sort keys %translators)
+  {
+    $translator = $self->encodeXML($translator);
+    print FILE <<"EOT";
+\t\t<em:translator>$translator</em:translator>
+EOT
+  }
+  print FILE "\n";
+
+  foreach my $locale (sort {$a->{id} cmp $b->{id}} values %{$self->{localeData}})
+  {
+    my $id = $self->encodeXML($locale->{id});
+    my $name = $self->encodeXML($locale->{name});
+    my $description = $self->encodeXML($locale->{description});
+    my $homepage = $self->encodeXML($locale->{homepage});
+
+    # Duplicate author in each locale to work around bug 416350
+    my $author = $self->encodeXML($self->{author});
+
+    print FILE <<"EOT";
+\t\t<em:localized>
+\t\t\t<Description>
+\t\t\t\t<em:locale>$id</em:locale>
+\t\t\t\t<em:name>$name</em:name>
+\t\t\t\t<em:description>$description</em:description>
+\t\t\t\t<em:creator>$author</em:creator>
+\t\t\t\t<em:homepageURL>$homepage</em:homepageURL>
+\t\t\t</Description>
+\t\t</em:localized>
+EOT
+  }
+  print FILE "\n";
+
+  foreach my $app (sort keys %{$self->{settings}{compat}})
+  {
+    if (!exists($apps{$app}))
+    {
+      warn "Unrecognized application in manifest: $app";
+      next;
+    }
+
+    my $id = $self->encodeXML($apps{$app});
+    my ($min, $max) = map {$self->encodeXML($_)} split(/\//, $self->{settings}{compat}{$app});
+
+    print FILE <<"EOT";
+\t\t<em:targetApplication>
+\t\t\t<Description>
+\t\t\t\t<!-- $app -->
+\t\t\t\t<em:id>$id</em:id>
+\t\t\t\t<em:minVersion>$min</em:minVersion>
+\t\t\t\t<em:maxVersion>$max</em:maxVersion>
+\t\t\t</Description>
+\t\t</em:targetApplication>
+EOT
+  }
+
+  print FILE <<"EOT";
+\t</Description>  
+</RDF>
+EOT
+
+  close(FILE);
+}
+
 sub makeJAR
 {
   my ($self, $jarFile, @files) = @_;
@@ -460,7 +597,7 @@ my $S = qr/[\x20\x09\x0D\x0A]/;
 my $Name = qr/[A-Za-z_:][\w.\-:]*/;
 my $Reference = qr/&$Name;|&#\d+;|&#x[\da-fA-F]+;/;
 my $PEReference = qr/%$Name;/;
-my $EntityValue = qr/"(?:[^%&"]|$PEReference|$Reference)*"|'(?:[^%&']|$PEReference|$Reference)*'/;
+my $EntityValue = qr/"(?:[^%&"]|$PEReference|$Reference)*"|'(?:[^%&']|$PEReference|$Reference)*'/;  #"
 
 sub fixDTDFile
 {
@@ -550,6 +687,9 @@ sub makeXPI
       $self->cp($file, "tmp/$file");
     }
   }
+
+  $self->writeManifest('tmp/install.rdf');
+  push @files, 'install.rdf';
 
   if (-f '.signature')
   {
