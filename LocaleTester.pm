@@ -53,7 +53,7 @@ sub testLocales
       foreach my $key (@$entry)
       {
         my ($dir, $file, $name) = split(/:/, $key);
-        next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name});
+        next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && $currentLocale->{"$dir:$file"}{$name};
         my $value = lc($currentLocale->{"$dir:$file"}{$name});
   
         print "$locale: values for '$values{$value}' and '$key' are identical, must differ\n" if exists $values{$value};
