@@ -22,6 +22,8 @@ $pkg->readMetadata('metadata');
 $pkg->readLocales('chrome/locale', 1);
 $pkg->readLocaleData('chrome/locale');
 
+$pkg->{localeData} = {};
+
 foreach my $app (keys %{$pkg->{settings}{compat}})
 {
   delete $pkg->{settings}{compat}{$app} unless $app eq 'firefox' || $app eq 'thunderbird' || $app eq 'seamonkey'
