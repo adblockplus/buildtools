@@ -630,10 +630,10 @@ sub fixPropertiesFile
 
   my $changed = 0;
   $data .= "\n" unless $data =~ /\n$/s;
-  while ($reference =~ /^\s*(?![!#])(\S+)\s*=\s*.+$/mg)
+  while ($reference =~ /^\s*(?![!#])(\S+)\s*=\s*?.*$/mg)
   {
     my ($match, $name) = ($&, $1);
-    unless ($data =~ /^\s*(?![!#])($name)\s*=\s*.+$/m)
+    unless ($data =~ /^\s*(?![!#])($name)\s*=\s*?.*$/m)
     {
       $data .= "$match\n";
       $changed = 1;
