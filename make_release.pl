@@ -44,8 +44,8 @@ unlink('metadata');
 rename('metadata_new', 'metadata');
 
 system(qq(hg commit -m "Releasing $extensionName $version"));
-system(qq(hg tag $branch));
-system(qq(hg tag -R ../buildtools $branch));
+system(qq(hg tag -f $branch));
+system(qq(hg tag -R ../buildtools -f $branch));
 
 @ARGV = ("../downloads/$baseName-$version.xpi");
 do 'buildtools/create_xpi.pl';
@@ -62,7 +62,7 @@ $pkg->rm_rec('tmp');
 system("hg add -R ../downloads ../downloads/$baseName-$version.xpi");
 system("hg add -R ../downloads ../downloads/$baseName-$version-source.tgz");
 system(qq(hg commit -R ../downloads -m "Releasing $extensionName $version"));
-system(qq(hg tag -R ../downloads $branch));
+system(qq(hg tag -R ../downloads -f $branch));
 
 system(qq(hg push));
 system(qq(hg push -R ../downloads));
