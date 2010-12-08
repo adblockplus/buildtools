@@ -56,7 +56,7 @@ sub testLocales
         next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && $currentLocale->{"$dir:$file"}{$name};
         my $value = lc($currentLocale->{"$dir:$file"}{$name});
   
-        print "$locale: values for '$values{$value}' and '$key' are identical, must differ\n" if exists $values{$value};
+        print "$locale: Values for '$values{$value}' and '$key' are identical, must differ\n" if exists $values{$value};
         $values{$value} = $key;
       }
     }
@@ -73,7 +73,7 @@ sub testLocales
   
         $stdValue = $value unless defined $stdValue;
         $stdName = $key unless defined $stdName;
-        print "$locale: values for '$stdName' and '$key' differ, must be equal\n" if $value ne $stdValue;
+        print "$locale: Values for '$stdName' and '$key' differ, must be equal\n" if $value ne $stdValue;
       }
     }
 
@@ -81,7 +81,7 @@ sub testLocales
     {
       my $maxLength = $params{lengthRestrictions}{$key};
       my ($dir, $file, $name) = split(/:/, $key);
-      print "$locale: value of '$key' is too long, must not be longer than $maxLength characters\n" if exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && length($currentLocale->{"$dir:$file"}{$name}) > $maxLength;
+      print "$locale: Value of '$key' is too long, must not be longer than $maxLength characters\n" if exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && length($currentLocale->{"$dir:$file"}{$name}) > $maxLength;
     }
   
     foreach my $file (keys %$currentLocale)
