@@ -38,8 +38,8 @@ unless ($version =~ /\D$/)
   $version .= "+";
 }
 
-my ($sec, $min, $hour, $day, $mon, $year) = localtime;
-my $build = sprintf("%04i%02i%02i", $year+1900, $mon+1, $day);
+my $build = `hg id -n`;
+$build =~ s/\D//g;
 
 my $locale = (@ARGV ? "-" . join("-", @ARGV) : "");
 @ARGV = ("$baseName-$version.$build$locale.xpi", $build, @ARGV);

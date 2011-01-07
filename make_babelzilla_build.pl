@@ -14,8 +14,8 @@ sub Packager::fixLocales() {}
 
 my %params = ();
 
-my ($sec, $min, $hour, $day, $mon, $year) = localtime;
-$params{devbuild} = sprintf("%04i%02i%02i", $year+1900, $mon+1, $day);
+$params{devbuild} = `hg id -n`;
+$params{devbuild} =~ s/\D//g;
 
 my $pkg = Packager->new(\%params);
 $pkg->readMetadata('metadata');
