@@ -30,7 +30,7 @@ $pkg->readMetadata('metadata');
 my $baseName = $pkg->{settings}{general}{basename};
 my $version = $pkg->{version};
 
-unless ($version =~ /\D$/)
+unless ($version =~ /[^\d\.]\d*$/)
 {
   # Pad the version with zeroes to get version comparisons
   # right (1.2+ > 1.2.1 but 1.2.0+ < 1.2.1)
