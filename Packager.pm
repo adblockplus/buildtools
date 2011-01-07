@@ -383,7 +383,7 @@ EOT
   if ($self->{devbuild})
   {
     print FILE <<"EOT";
-\t\t<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/update.rdf?baseName=$self->{settings}{general}{basename}&reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>
+\t\t<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/$self->{settings}{general}{basename}/update.rdf?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>
 EOT
   }
 
