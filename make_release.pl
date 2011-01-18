@@ -44,7 +44,7 @@ unlink('metadata');
 rename('metadata_new', 'metadata');
 
 system(qq(hg commit -m "Releasing $extensionName $version"));
-system(qq(hg tag -f $branch));
+system(qq(hg tag -f $version));
 system(qq(hg tag -R ../buildtools -f $branch));
 
 @ARGV = ("../downloads/$baseName-$version.xpi");
