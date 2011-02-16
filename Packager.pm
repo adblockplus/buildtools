@@ -380,10 +380,20 @@ sub writeManifest
 \t\t<em:type>2</em:type>
 EOT
 
+  my $updateURL;
   if ($self->{devbuild})
   {
+    $updateURL = "https://adblockplus.org/devbuilds/$self->{settings}{general}{basename}/update.rdf";
+  }
+  elsif (exists($self->{settings}{general}{updateURL}))
+  {
+    $updateURL = $self->{settings}{general}{updateURL};
+  }
+  if (defined $updateURL)
+  {
+    $updateURL = $self->encodeXML($updateURL . '?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%');
     print FILE <<"EOT";
-\t\t<em:updateURL><![CDATA[https://adblockplus.org/devbuilds/$self->{settings}{general}{basename}/update.rdf?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%]]></em:updateURL>
+\t\t<em:updateURL>$updateURL</em:updateURL>
 EOT
   }
 
