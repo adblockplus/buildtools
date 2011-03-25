@@ -83,11 +83,6 @@ sub readMetadata
   $self->{version} = $self->{settings}{general}{version};
   if (exists $self->{devbuild})
   {
-    unless ($self->{version} =~ /[^\d\.]\d*$/)
-    {
-      $self->{version} .= ".0" while ($self->{version} =~ tr/././ < 2);
-      $self->{version} .= "+";
-    }
     $self->{version} .= "." . $self->{devbuild};
   }
 }
