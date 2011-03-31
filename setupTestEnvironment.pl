@@ -31,6 +31,7 @@ $pkg->readLocaleData('chrome/locale');
 my @files = ();
 push @files, ["bootstrap.js", readFile("bootstrap.js")] if -f "bootstrap.js";
 push @files, ["icon.png", readFile("icon.png")] if -f "icon.png";
+push @files, ["icon64.png", readFile("icon64.png")] if -f "icon64.png";
 
 my $id = $pkg->{settings}{general}{id};
 

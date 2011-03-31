@@ -37,7 +37,7 @@ chdir('chrome');
 $pkg->makeJAR("$baseName.jar", 'content', 'skin', 'locale', '-/tests', '-/mochitest', '-/.incomplete');
 chdir('..');
 
-my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png');
+my @files = grep {-e $_} ('components', <modules/*.jsm>, 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png');
 
 $pkg->makeXPI($xpiFile, "chrome/$baseName.jar", @files);
 unlink("chrome/$baseName.jar");
