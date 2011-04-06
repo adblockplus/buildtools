@@ -717,7 +717,7 @@ sub makeXPI
   }
 
   chdir('tmp');
-  system('zip', '-rqDX9', '../temp_xpi_file.xpi', @files);
+  system('zip', '-rqDX1', '../temp_xpi_file.xpi', @files);
   chdir('..');
 
   $self->fixZipPermissions("temp_xpi_file.xpi") if $^O =~ /Win32/i;
