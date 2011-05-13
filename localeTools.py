@@ -14,6 +14,7 @@ def parseDTDString(data, path):
   result = {}
   parser = ParserCreate()
   parser.UseForeignDTD(True)
+  parser.SetParamEntityParsing(XML_PARAM_ENTITY_PARSING_ALWAYS)
 
   def ExternalEntityRefHandler(context, base, systemId, publicId):
     subparser = parser.ExternalEntityParserCreate(context, 'utf-8')
@@ -23,8 +24,6 @@ def parseDTDString(data, path):
   def EntityDeclHandler(entityName, is_parameter_entity, value, base, systemId, publicId, notationName):
     result[entityName] = value
 
-  parser.UseForeignDTD(True)
-  parser.SetParamEntityParsing(XML_PARAM_ENTITY_PARSING_ALWAYS)
   parser.ExternalEntityRefHandler = ExternalEntityRefHandler
   parser.EntityDeclHandler = EntityDeclHandler
   parser.Parse('<!DOCTYPE root SYSTEM "foo"><root/>', True)
