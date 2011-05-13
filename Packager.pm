@@ -41,7 +41,6 @@ sub readMetadata
 
   $self->{settings} = {};
   my $curSection;
-  my %lists = map {$_ => 1} qw(contributor);
   foreach my $line (split(/[\r\n]+/, $data))
   {
     $line =~ s/#.*//;
@@ -58,15 +57,7 @@ sub readMetadata
       if (defined $curSection)
       {
         $self->{settings}{$curSection} = {} unless exists $self->{settings}{$curSection};
-        if (exists($lists{$1}))
-        {
-          $self->{settings}{$curSection}{$1} = [] unless exists $self->{settings}{$curSection}{$1};
-          push @{$self->{settings}{$curSection}{$1}}, $2;
-        }
-        else
-        {
-          $self->{settings}{$curSection}{$1} = $2;
-        }
+        $self->{settings}{$curSection}{$1} = $2;
       }
       else
       {
@@ -416,10 +407,11 @@ EOT
 
   print FILE "\n";
 
-  if (exists($self->{settings}{general}{contributor}))
+  if (exists($self->{settings}{contributors}))
   {
-    foreach my $contributor (map {$self->encodeXML($_)} @{$self->{settings}{general}{contributor}})
+    foreach my $key (sort keys %{$self->{settings}{contributors}})
     {
+      my $contributor = $self->encodeXML($self->{settings}{contributors}{$key});
       print FILE <<"EOT";
 \t\t<em:contributor>$contributor</em:contributor>
 EOT
