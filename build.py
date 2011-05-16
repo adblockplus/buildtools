@@ -134,7 +134,10 @@ def showDescriptions(baseDir, scriptName, args):
     locales = packager.getLocales(baseDir, True)
 
   data = packager.readLocaleMetadata(baseDir, locales)
-  for localeCode, locale in data.iteritems():
+  localeCodes = data.keys()
+  localeCodes.sort()
+  for localeCode in localeCodes:
+    locale = data[localeCode]
     print ('''%s
 %s
 %s
