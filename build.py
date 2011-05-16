@@ -5,9 +5,10 @@
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
 
-import os, sys
+import os, sys, re, buildtools
 from getopt import getopt, GetoptError
 import buildtools.packager as packager
+import buildtools.releaseAutomation as releaseAutomation
 
 def usage_build(scriptName):
   print '''%(name)s build [options] [output_file]
@@ -150,6 +151,58 @@ def showDescriptions(baseDir, scriptName, args):
        locale['description.long'] if 'description.long' in locale else 'None',
       )).encode('utf-8')
 
+def usage_release(scriptName):
+  print '''%(name)s release [options] <version>
+
+Note: If you are not the project owner then you probably don't want to run this!
+
+Runs release automation: creates downloads for the new version, tags source code
+repository as well as downloads and buildtools repository.
+
+Options
+  -h          --help              Show this message and exit
+  -k file     --key=file          File containing private key and certificates
+                                  required to sign the release
+  -d dir      --downloads=dir     Directory containing downloads repository
+                                  (if omitted ../downloads is assumed)
+''' % {"name": scriptName}
+
+def runReleaseAutomation(baseDir, scriptName, args):
+  try:
+    opts, args = getopt(args, 'hk:d:', ['help', 'key=', 'downloads='])
+  except GetoptError, e:
+    print str(e)
+    usage_release(scriptName)
+    sys.exit(2)
+
+  buildtoolsRepo = buildtools.__path__[0]
+  keyFile = None
+  downloadsRepo = os.path.join(baseDir, '..', 'downloads')
+  for option, value in opts:
+    if option in ('-h', '--help'):
+      usage_release(scriptName)
+      return
+    elif option in ('-k', '--key'):
+      keyFile = value
+    elif option in ('-d', '--downloads'):
+      downloadsRepo = value
+
+  if len(args) == 0:
+    print 'No version number specified for the release'
+    usage_release(scriptName)
+    return
+  version = args[0]
+  if re.search(r'[^\w\.]', version):
+    print 'Wrong version number format'
+    usage_release(scriptName)
+    return
+
+  if keyFile == None:
+    print 'Warning: no key file specified, creating an unsigned release build\n'
+
+  releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
+
+
 def usage(scriptName):
   print '''Usage:
 
@@ -158,6 +211,7 @@ def usage(scriptName):
   %(name)s testenv [options] [profile_dir] ...    Set up test environment
   %(name)s showdesc [options]                     Print description strings for
                                                   all locales
+  %(name)s release [options] <version>            Run release automation
 
 For details on a command run:
 
@@ -184,6 +238,8 @@ No command given, assuming "build". For a list of commands run:
     setupTestEnvironment(baseDir, scriptName, args[1:])
   elif command == 'showdesc':
     showDescriptions(baseDir, scriptName, args[1:])
+  elif command == 'release':
+    runReleaseAutomation(baseDir, scriptName, args[1:])
   else:
     print 'Command %s is unrecognized' % command
     usage(scriptName)
