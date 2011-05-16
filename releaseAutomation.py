@@ -67,7 +67,6 @@ def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
   # Tag buildtools repository as well
   subprocess.Popen(['hg', 'tag', '-R', buildtoolsRepo, '-f', tagName]).communicate()
 
-  return
   # Push all changes
   subprocess.Popen(['hg', 'push', '-R', baseDir]).communicate()
   subprocess.Popen(['hg', 'push', '-R', downloadsRepo]).communicate()
