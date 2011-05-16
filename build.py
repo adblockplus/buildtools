@@ -101,12 +101,60 @@ def setupTestEnvironment(baseDir, scriptName, args):
   packager.setupTestEnvironment(baseDir, profileDirs)
 
 
+def usage_showdesc(scriptName):
+  print '''%(name)s showdesc [options]
+
+Display description strings for all locales as specified in the corresponding
+meta.properties files.
+
+Options
+  -h          --help              Show this message and exit
+  -l l1,l2,l3 --locales=l1,l2,l3  Only include the given locales
+''' % {"name": scriptName}
+
+def showDescriptions(baseDir, scriptName, args):
+  try:
+    opts, args = getopt(args, 'hl:', ['help', 'locales='])
+  except GetoptError, e:
+    print str(e)
+    usage_showdesc(scriptName)
+    sys.exit(2)
+
+  locales = None
+  for option, value in opts:
+    if option in ('-h', '--help'):
+      usage_showdesc(scriptName)
+      return
+    elif option in ('-l', '--locales'):
+      locales = value.split(',')
+
+  if locales == None:
+    locales = packager.getLocales(baseDir)
+  elif locales == 'all':
+    locales = packager.getLocales(baseDir, True)
+
+  data = packager.readLocaleMetadata(baseDir, locales)
+  for localeCode, locale in data.iteritems():
+    print ('''%s
+%s
+%s
+%s
+%s
+''' % (localeCode,
+       locale['name'] if 'name' in locale else 'None',
+       locale['description'] if 'description' in locale else 'None',
+       locale['description.short'] if 'description.short' in locale else 'None',
+       locale['description.long'] if 'description.long' in locale else 'None',
+      )).encode('utf-8')
+
 def usage(scriptName):
   print '''Usage:
 
   %(name)s help                                   Show this message
   %(name)s build [options] [output_file]          Create a build
   %(name)s testenv [options] [profile_dir] ...    Set up test environment
+  %(name)s showdesc [options]                     Print description strings for
+                                                  all locales
 
 For details on a command run:
 
@@ -131,6 +179,8 @@ No command given, assuming "build". For a list of commands run:
     runBuild(baseDir, scriptName, args[1:])
   elif command == 'testenv':
     setupTestEnvironment(baseDir, scriptName, args[1:])
+  elif command == 'showdesc':
+    showDescriptions(baseDir, scriptName, args[1:])
   else:
     print 'Command %s is unrecognized' % command
     usage(scriptName)
