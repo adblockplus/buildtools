@@ -176,7 +176,7 @@ No command given, assuming "build". For a list of commands run:
 ''' % scriptName
 
   command = args[0]
-  if command == 'help':
+  if command == 'help' or command == '--help' or command == '-h':
     usage(scriptName)
   elif command == 'build':
     runBuild(baseDir, scriptName, args[1:])
