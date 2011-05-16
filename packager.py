@@ -5,7 +5,7 @@
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
 
-import os, re, subprocess, jinja2, buildtools, codecs, hashlib, base64
+import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
@@ -49,6 +49,9 @@ def getChromeSubdirs(baseDir, locales):
 
 def getXPIFiles(baseDir):
   return [os.path.join(baseDir, file) for file in ('components', 'modules', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
+
+def getTestEnvFiles(baseDir):
+  return [os.path.join(baseDir, file) for file in ('components', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
 
 def getIgnoredFiles(params):
   result = ['tests', 'mochitest', '.incomplete', 'meta.properties']
@@ -300,3 +303,53 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if keyFile:
     signFiles(files, keyFile)
   writeXPI(files, outFile)
+
+def setupTestEnvironment(baseDir, profileDirs):
+  metadata = readMetadata(baseDir)
+  params = {
+    'locales': getLocales(baseDir, True),
+    'releaseBuild': True,
+    'buildNum': '',
+    'version': '99.9',
+    'metadata': metadata,
+    'limitMetadata': False,
+  }
+  files = {}
+  files['install.rdf'] = createManifest(baseDir, params)
+  for path in getTestEnvFiles(baseDir):
+    if os.path.exists(path):
+      readFile(files, params, path, os.path.basename(path))
+
+  if 'chrome.manifest' in files:
+    # Redirect manifest entries to the current directory
+    if sys.platform == 'win32':
+      import nturl2path
+      baseURL = 'file:' + nturl2path.pathname2url(os.path.abspath(baseDir))
+    else:
+      import urllib
+      baseURL = 'file://' + urllib.quote(os.path.abspath(baseDir))
+    files['chrome.manifest'] = re.sub(r'\bjar:chrome/\w+\.jar!', '%s/chrome' % baseURL, files['chrome.manifest'])
+    files['chrome.manifest'] = re.sub(r'\bresource\s+\S+\s+', r'\0%s/' % baseURL, files['chrome.manifest'])
+    files['chrome.manifest'] = re.sub(r'\b(content\s+\S+\s+)(\w+/)', r'\1%s/\2' % baseURL, files['chrome.manifest'])
+    if os.path.exists(os.path.join(baseDir, 'chrome', 'content', 'mochitest')):
+      files['chrome.manifest'] += 'content mochikit %s/chrome/content/mochitest/\n' % baseURL
+
+  id = metadata.get('general', 'id')
+  for dir in profileDirs:
+    # Remove packed XPI file if there is one
+    packedPath = os.path.join(dir, 'extensions', '%s.xpi' % id)
+    if os.path.isfile(packedPath):
+      os.remove(packedPath)
+
+    # Replace unpacked dir by new data
+    unpackedPath = os.path.join(dir, 'extensions', id)
+    if os.path.isdir(unpackedPath):
+      shutil.rmtree(unpackedPath)
+    for file, data in files.iteritems():
+      filePath = os.path.join(unpackedPath, *(file.split('/')))
+      parentDir = os.path.dirname(filePath)
+      if not os.path.exists(parentDir):
+        os.makedirs(parentDir)
+      handle = open(filePath, 'wb')
+      handle.write(data)
+      handle.close()
