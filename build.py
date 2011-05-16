@@ -16,6 +16,7 @@ Creates an extension build with given file name. If output_file is missing a
 default name will be chosen.
 
 Options:
+  -h          --help              Show this message and exit
   -l l1,l2,l3 --locales=l1,l2,l3  Only include the given locales (if omitted:
                                   all locales not marked as incomplete)
   -b num      --build=num         Use given build number (if omitted the build
@@ -70,6 +71,7 @@ profiles immediately after a restart without having to reinstall the extension.
 If no directories are given the list of directories is read from a file.
 
 Options
+  -h          --help              Show this message and exit
   -d file     --dirs=file         File listing profile directories to set up if
                                   none are given on command line (default is
                                   .profileDirs)
