@@ -54,7 +54,7 @@ def getTestEnvFiles(baseDir):
   return [os.path.join(baseDir, file) for file in ('components', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
 
 def getIgnoredFiles(params):
-  result = ['tests', 'mochitest', '.incomplete', 'meta.properties']
+  result = ['.incomplete', 'meta.properties']
   if params['releaseBuild']:
     result.append('TimeLine.jsm')
   return result
@@ -331,8 +331,8 @@ def setupTestEnvironment(baseDir, profileDirs):
     files['chrome.manifest'] = re.sub(r'\bjar:chrome/\w+\.jar!', '%s/chrome' % baseURL, files['chrome.manifest'])
     files['chrome.manifest'] = re.sub(r'\bresource\s+\S+\s+', r'\0%s/' % baseURL, files['chrome.manifest'])
     files['chrome.manifest'] = re.sub(r'\b(content\s+\S+\s+)(\w+/)', r'\1%s/\2' % baseURL, files['chrome.manifest'])
-    if os.path.exists(os.path.join(baseDir, 'chrome', 'content', 'mochitest')):
-      files['chrome.manifest'] += 'content mochikit %s/chrome/content/mochitest/\n' % baseURL
+    if os.path.exists(os.path.join(baseDir, 'mochitest')):
+      files['chrome.manifest'] += 'content mochikit %s/mochitest/\n' % baseURL
 
   id = metadata.get('general', 'id')
   for dir in profileDirs:
