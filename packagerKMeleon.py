@@ -134,9 +134,6 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if not releaseBuild:
     version += '.' + buildNum
 
-  if outFile == None:
-    outFile = packager.getDefaultFileName(baseDir, metadata, version, 'zip')
-
   params = {
     'locales': locales,
     'releaseBuild': releaseBuild,
@@ -178,5 +175,10 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
       key = 'defaults/pref/' + key[len('defaults/preferences/'):]
     newFiles[key] = value
   files = newFiles
+
+  # Allow local metadata to overrite settings from base extension
+  metadata.read(packager.getMetadataPath(baseDir))
+  if outFile == None:
+    outFile = packager.getDefaultFileName(baseDir, metadata, version, 'zip')
 
   packager.writeXPI(files, outFile)
