@@ -309,7 +309,7 @@ No command given, assuming "build". For a list of commands run:
       for option, value in opts:
         if option in ('-h', '--help'):
           usage(scriptName, type, command)
-        sys.exit()
+          sys.exit()
       commands[command](baseDir, scriptName, opts, args, type)
     else:
       print 'Command %s is not supported for this application type' % command
