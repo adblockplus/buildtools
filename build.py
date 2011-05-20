@@ -7,8 +7,6 @@
 
 import os, sys, re, buildtools
 from getopt import getopt, GetoptError
-import buildtools.packager as packager
-import buildtools.releaseAutomation as releaseAutomation
 
 class Command(object):
   name = property(lambda self: self._name)
@@ -162,10 +160,15 @@ def runBuild(baseDir, scriptName, opts, args, type):
       limitMetadata = True
   outFile = args[0] if len(args) > 0 else None
 
-  packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
-                       releaseBuild=releaseBuild, keyFile=keyFile,
-                       limitMetadata=limitMetadata)
-
+  if type == 'gecko':
+    import buildtools.packager as packager
+    packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
+                         releaseBuild=releaseBuild, keyFile=keyFile,
+                         limitMetadata=limitMetadata)
+  elif type == 'kmeleon':
+    import buildtools.packagerKMeleon as packagerKMeleon
+    packagerKMeleon.createBuild(baseDir, outFile=outFile, locales=locales,
+                                buildNum=buildNum, releaseBuild=releaseBuild)
 
 def setupTestEnvironment(baseDir, scriptName, opts, args, type):
   dirsFile = '.profileDirs'
@@ -178,6 +181,7 @@ def setupTestEnvironment(baseDir, scriptName, opts, args, type):
     handle = open(dirsFile, 'rb')
     profileDirs = map(str.strip, handle.readlines())
     handle.close()
+  import buildtools.packager as packager
   packager.setupTestEnvironment(baseDir, profileDirs)
 
 
@@ -187,6 +191,7 @@ def showDescriptions(baseDir, scriptName, opts, args, type):
     if option in ('-l', '--locales'):
       locales = value.split(',')
 
+  import buildtools.packager as packager
   if locales == None:
     locales = packager.getLocales(baseDir)
   elif locales == 'all':
@@ -233,6 +238,7 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
   if keyFile == None:
     print 'Warning: no key file specified, creating an unsigned release build\n'
 
+  import buildtools.releaseAutomation as releaseAutomation
   releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
 
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
@@ -247,7 +253,7 @@ with addCommand(runBuild, 'build') as command:
   command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file')
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Create a build for Babelzilla', long='babelzilla')
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'kmeleon')
 
 with addCommand(setupTestEnvironment, 'testenv') as command:
   command.shortDescription = 'Set up test environment'

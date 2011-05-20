@@ -26,8 +26,8 @@ KNOWN_APPS = {
 
 defaultLocale = 'en-US'
 
-def getDefaultFileName(baseDir, metadata, version):
-  return os.path.join(baseDir, '%s-%s.xpi' % (metadata.get('general', 'baseName'), version))
+def getDefaultFileName(baseDir, metadata, version, ext='xpi'):
+  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'baseName'), version, ext))
 
 def getMetadataPath(baseDir):
   return os.path.join(baseDir, 'metadata')
@@ -190,8 +190,7 @@ def fixupLocales(baseDir, files, params):
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
 
-def createChromeJar(baseDir, params):
-  files = {}
+def createChromeJar(baseDir, params, files={}):
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
       readFile(files, params, path, name)
