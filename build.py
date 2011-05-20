@@ -225,21 +225,25 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     elif option in ('-d', '--downloads'):
       downloadsRepo = value
 
-  if len(args) == 0:
-    print 'No version number specified for the release'
-    usage(scriptName, type, 'release')
-    return
-  version = args[0]
-  if re.search(r'[^\w\.]', version):
-    print 'Wrong version number format'
-    usage(scriptName, type, 'release')
-    return
+  if type == 'gecko':
+    if len(args) == 0:
+      print 'No version number specified for the release'
+      usage(scriptName, type, 'release')
+      return
+    version = args[0]
+    if re.search(r'[^\w\.]', version):
+      print 'Wrong version number format'
+      usage(scriptName, type, 'release')
+      return
 
-  if keyFile == None:
-    print 'Warning: no key file specified, creating an unsigned release build\n'
+    if keyFile == None:
+      print 'Warning: no key file specified, creating an unsigned release build\n'
 
-  import buildtools.releaseAutomation as releaseAutomation
-  releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
+    import buildtools.releaseAutomation as releaseAutomation
+    releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
+  else:
+    import buildtools.releaseAutomationKMeleon as releaseAutomationKMeleon
+    releaseAutomationKMeleon.run(baseDir, downloadsRepo, buildtoolsRepo)
 
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
   command.shortDescription = 'Show this message'
@@ -282,7 +286,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
   command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file')
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'kmeleon')
 
 def processArgs(baseDir, args, type='gecko'):
   global commands
