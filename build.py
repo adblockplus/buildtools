@@ -5,7 +5,7 @@
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
 
-import os, sys, re, buildtools
+import os, sys, re, subprocess, buildtools
 from getopt import getopt, GetoptError
 
 class Command(object):
@@ -215,6 +215,35 @@ def showDescriptions(baseDir, scriptName, opts, args, type):
       )).encode('utf-8')
 
 
+def generateDocs(baseDir, scriptName, opts, args, type):
+  if len(args) == 0:
+    print 'No target directory specified for the documentation'
+    usage(scriptName, type, 'docs')
+    return
+  targetDir = args[0]
+
+  toolkit = None
+  for option, value in opts:
+    if option in ('-t', '--toolkit'):
+      toolkit = value
+
+  if toolkit == None:
+    toolkit = os.path.join(baseDir, 'jsdoc-toolkit')
+    if not os.path.exists(toolkit):
+      subprocess.Popen(['hg', 'clone', 'https://hg.adblockplus.org/jsdoc-toolkit/', toolkit]).communicate()
+
+  command = [sys.executable,
+             os.path.join(toolkit, 'jsrun.py'),
+             '-t=' + os.path.join(toolkit, 'templates', 'jsdoc'),
+             '-d=' + targetDir,
+             '-a',
+             '-p',
+             '-x=js,jsm',
+             os.path.join(baseDir, 'modules'),
+             os.path.join(baseDir, 'components')]
+  subprocess.Popen(command).communicate()
+
+
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
   buildtoolsRepo = buildtools.__path__[0]
   keyFile = None
@@ -275,6 +304,13 @@ with addCommand(showDescriptions, 'showdesc') as command:
   command.description = 'Display description strings for all locales as specified in the corresponding meta.properties files.'
   command.addOption('Only include the given locales', short='l', long='locales', value='l1,l2,l3')
   command.params = '[options]'
+  command.supportedTypes = ('gecko')
+
+with addCommand(generateDocs, 'docs') as command:
+  command.shortDescription = 'Generate documentation'
+  command.description = 'Generate documentation files and write them into the specified directory.'
+  command.addOption('JsDoc Toolkit location', short='t', long='toolkit', value='dir')
+  command.params = '[options] <directory>'
   command.supportedTypes = ('gecko')
 
 with addCommand(runReleaseAutomation, 'release') as command:
