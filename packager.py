@@ -328,7 +328,7 @@ def setupTestEnvironment(baseDir, profileDirs):
       import urllib
       baseURL = 'file://' + urllib.quote(os.path.abspath(baseDir))
     files['chrome.manifest'] = re.sub(r'\bjar:chrome/\w+\.jar!', '%s/chrome' % baseURL, files['chrome.manifest'])
-    files['chrome.manifest'] = re.sub(r'\bresource\s+\S+\s+', r'\0%s/' % baseURL, files['chrome.manifest'])
+    files['chrome.manifest'] = re.sub(r'\b(resource\s+\S+\s+)', r'\1%s/' % baseURL, files['chrome.manifest'])
     files['chrome.manifest'] = re.sub(r'\b(content\s+\S+\s+)(\w+/)', r'\1%s/\2' % baseURL, files['chrome.manifest'])
     if os.path.exists(os.path.join(baseDir, 'mochitest')):
       files['chrome.manifest'] += 'content mochikit %s/mochitest/\n' % baseURL
