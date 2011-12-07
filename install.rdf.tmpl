@@ -30,6 +30,9 @@
     {%- if metadata.has_option('general', 'options') %}
     <em:optionsURL>{{metadata.get('general', 'options')}}</em:optionsURL>
     {%- endif %}
+    {%- if metadata.has_option('general', 'optionsType') %}
+    <em:optionsType>{{metadata.get('general', 'optionsType')}}</em:optionsType>
+    {%- endif %}
 
     {%- if metadata.has_section('contributors') %}
     {%- for option in metadata.options('contributors')|sort %}
