@@ -62,3 +62,22 @@ def generateStringEntry(key, value, path):
     return '<!ENTITY %s "%s">\n' % (cgi.escape(key, True), cgi.escape(value, True))
   else:
     return '%s=%s\n' % (key, value)
+
+def appendToFile(path, key, value):
+  fileHandle = codecs.open(path, 'ab', encoding='utf-8')
+  fileHandle.write(generateStringEntry(key, value, path))
+  fileHandle.close()
+
+def removeFromFile(path, key):
+  fileHandle = codecs.open(path, 'rb', encoding='utf-8')
+  data = fileHandle.read()
+  fileHandle.close()
+
+  if path.endswith('.dtd'):
+    data = re.sub(r'<!ENTITY\s+%s\s+"[^"]*">\s*' % key, '', data, re.S)
+  else:
+    data = re.sub(r'(^|\n)%s=[^\n]*\n' % key, r'\1', data, re.S)
+
+  fileHandle = codecs.open(path, 'wb', encoding='utf-8')
+  fileHandle.write(data)
+  fileHandle.close()
