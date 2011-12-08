@@ -190,7 +190,9 @@ def fixupLocales(baseDir, files, params):
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
 
-def createChromeJar(baseDir, params, files={}):
+def createChromeJar(baseDir, params, files=None):
+  if not files:
+    files = {}
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
       readFile(files, params, path, name)
