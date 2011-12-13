@@ -54,7 +54,9 @@ def getTestEnvFiles(baseDir):
   return [os.path.join(baseDir, file) for file in ('components', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
 
 def getIgnoredFiles(params):
-  result = ['.incomplete', 'meta.properties']
+  result = ['.incomplete']
+  if not params['limitMetadata']:
+    result.append('meta.properties')
   if params['releaseBuild']:
     result.append('TimeLine.jsm')
   return result
