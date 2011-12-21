@@ -301,7 +301,10 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   }
   files = {}
   files['install.rdf'] = createManifest(baseDir, params)
-  files['chrome/%s.jar' % metadata.get('general', 'baseName')] = createChromeJar(baseDir, params)
+  if metadata.has_option('general', 'nojar'):
+    readFile(files, params, os.path.join(baseDir, 'chrome'), 'chrome')
+  else:
+    files['chrome/%s.jar' % metadata.get('general', 'baseName')] = createChromeJar(baseDir, params)
   readXPIFiles(baseDir, params, files)
   if keyFile:
     signFiles(files, keyFile)
