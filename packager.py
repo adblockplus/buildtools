@@ -182,7 +182,10 @@ def fixupLocales(baseDir, files, params):
 
   for locale in params['locales']:
     for file in reference.iterkeys():
-      path = 'locale/%s/%s' % (locale, file)
+      if params['noJar']:
+        path = 'chrome/locale/%s/%s' % (locale, file)
+      else:
+        path = 'locale/%s/%s' % (locale, file)
       if path in files:
         data = localeTools.parseString(files[path].decode('utf-8'), path)
         for key, value in reference[file].iteritems():
@@ -297,11 +300,16 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'version': version.encode('utf-8'),
     'metadata': metadata,
     'limitMetadata': limitMetadata,
+    'noJar': metadata.has_option('general', 'nojar'),
   }
   files = {}
   files['install.rdf'] = createManifest(baseDir, params)
-  if metadata.has_option('general', 'nojar'):
-    readFile(files, params, os.path.join(baseDir, 'chrome'), 'chrome')
+  if params['noJar']:
+    for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
+      if os.path.isdir(path):
+        readFile(files, params, path, 'chrome/%s' % name)
+    if not params['limitMetadata']:
+      fixupLocales(baseDir, files, params)
   else:
     files['chrome/%s.jar' % metadata.get('general', 'baseName')] = createChromeJar(baseDir, params)
   readXPIFiles(baseDir, params, files)
