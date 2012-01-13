@@ -184,6 +184,21 @@ def setupTestEnvironment(baseDir, scriptName, opts, args, type):
   packager.setupTestEnvironment(baseDir, profileDirs)
 
 
+def runAutoInstall(baseDir, scriptName, opts, args, type):
+  if len(args) == 0:
+    print 'Port of the Extension Auto-Installer needs to be specified'
+    usage(scriptName, type, 'autoinstall')
+    return
+
+  if ':' in args[0]:
+    host, port = args[0].split(':', 1)
+  else:
+    host, port = ('localhost', args[0])
+
+  import buildtools.packager as packager
+  packager.autoInstall(baseDir, host, port)
+
+
 def showDescriptions(baseDir, scriptName, opts, args, type):
   locales = None
   for option, value in opts:
@@ -296,6 +311,12 @@ with addCommand(setupTestEnvironment, 'testenv') as command:
     'list of directories is read from a file.'
   command.addOption('File listing profile directories to set up if none are given on command line (default is .profileDirs)', short='d', long='dirs', value='file')
   command.params = '[options] [profile_dir] ...'
+  command.supportedTypes = ('gecko')
+
+with addCommand(runAutoInstall, 'autoinstall') as command:
+  command.shortDescription = 'Install extension automatically'
+  command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
+  command.params = '[<host>:]<port>'
   command.supportedTypes = ('gecko')
 
 with addCommand(showDescriptions, 'showdesc') as command:

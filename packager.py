@@ -4,7 +4,7 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil
+import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil, urllib
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
@@ -317,6 +317,11 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if keyFile:
     signFiles(files, keyFile)
   writeXPI(files, outFile)
+
+def autoInstall(baseDir, host, port):
+  fileBuffer = StringIO()
+  createBuild(baseDir, outFile=fileBuffer)
+  urllib.urlopen('http://%s:%s/' % (host, port), data=fileBuffer.getvalue())
 
 def setupTestEnvironment(baseDir, profileDirs):
   metadata = readMetadata(baseDir)
