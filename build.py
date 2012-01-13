@@ -191,7 +191,7 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
     return
 
   if ':' in args[0]:
-    host, port = args[0].split(':', 1)
+    host, port = args[0].rsplit(':', 1)
   else:
     host, port = ('localhost', args[0])
 
