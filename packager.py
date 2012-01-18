@@ -48,7 +48,11 @@ def getChromeSubdirs(baseDir, locales):
   return result
 
 def getXPIFiles(baseDir):
-  return [os.path.join(baseDir, file) for file in ('components', 'modules', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
+  for file in ('components', 'modules', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png'):
+    yield os.path.join(baseDir, file)
+  for file in os.listdir(baseDir):
+    if file.endswith('.js') or file.endswith('.xml'):
+      yield os.path.join(baseDir, file)
 
 def getTestEnvFiles(baseDir):
   return [os.path.join(baseDir, file) for file in ('components', 'defaults', 'bootstrap.js', 'chrome.manifest', 'icon.png', 'icon64.png')]
