@@ -169,21 +169,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packagerKMeleon.createBuild(baseDir, outFile=outFile, locales=locales,
                                 buildNum=buildNum, releaseBuild=releaseBuild)
 
-def setupTestEnvironment(baseDir, scriptName, opts, args, type):
-  dirsFile = '.profileDirs'
-  for option, value in opts:
-    if option in ('-d', '--dirs'):
-      dirsFile = value
-
-  profileDirs = args
-  if len(profileDirs) == 0:
-    handle = open(dirsFile, 'rb')
-    profileDirs = map(str.strip, handle.readlines())
-    handle.close()
-  import buildtools.packager as packager
-  packager.setupTestEnvironment(baseDir, profileDirs)
-
-
 def runAutoInstall(baseDir, scriptName, opts, args, type):
   if len(args) == 0:
     print 'Port of the Extension Auto-Installer needs to be specified'
@@ -301,17 +286,6 @@ with addCommand(runBuild, 'build') as command:
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Create a build for Babelzilla', long='babelzilla')
   command.supportedTypes = ('gecko', 'kmeleon')
-
-with addCommand(setupTestEnvironment, 'testenv') as command:
-  command.shortDescription = 'Set up test environment'
-  command.description = 'Sets up the extension in given profiles in such a way '\
-    'that most files are read from the current directory. Changes in the files '\
-    'here will be available to these profiles immediately after a restart '\
-    'without having to reinstall the extension. If no directories are given the '\
-    'list of directories is read from a file.'
-  command.addOption('File listing profile directories to set up if none are given on command line (default is .profileDirs)', short='d', long='dirs', value='file')
-  command.params = '[options] [profile_dir] ...'
-  command.supportedTypes = ('gecko')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
