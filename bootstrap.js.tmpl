@@ -1,0 +1,118 @@
+/*
+ * This Source Code is subject to the terms of the Mozilla Public License
+ * version 2.0 (the "License"). You can obtain a copy of the License at
+ * http://mozilla.org/MPL/2.0/.
+ */
+
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Cr = Components.results;
+const Cu = Components.utils;
+
+Cu.import("resource://gre/modules/Services.jsm");
+
+let addonData = null;
+
+function install(params, reason) {}
+function uninstall(params, reason) {}
+
+function startup(params, reason)
+{
+  {%- if hasChrome %}
+  if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
+    Components.manager.addBootstrappedManifestLocation(params.installPath);
+  {%- endif %}
+
+  addonData = params;
+  {%- if hasChromeRequires %}
+  Services.obs.addObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require", true);
+  {%- endif %}
+
+  require("appIntegration").AppIntegration.init();
+}
+
+function shutdown(params, reason)
+{
+  require("appIntegration").AppIntegration.shutdown();
+
+  {%- if chromeWindows %}
+  let windowNames = {{chromeWindows|json}};
+  for (let i = 0; i < windowNames.length; i++)
+  {
+    let enumerator = Services.wm.getEnumerator(windowNames[i]);
+    while (enumerator.hasMoreElements())
+    {
+      let window = enumerator.getNext().QueryInterface(Ci.nsIDOMWindow);
+      window.setTimeout("window.close()", 0); // Closing immediately might not work due to modal windows
+      try
+      {
+        window.close();
+      } catch(e) {}
+    }
+  }
+  {%- endif %}
+
+  {%- if hasChromeRequires %}
+  Services.obs.removeObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require");
+  {%- endif %}
+  addonData = null;
+  require.scopes = {__proto__: null};
+
+  {%- if hasChrome %}
+  if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
+    Components.manager.removeBootstrappedManifestLocation(params.installPath);
+  {%- endif %}
+}
+
+function require(module)
+{
+  let scopes = require.scopes;
+  if (!(module in scopes))
+  {
+    {%- if 'info' in requires %}
+    if (module == "info")
+    {
+      scopes[module] = {};
+      scopes[module].exports =
+      {
+        addonID: addonData.id,
+        addonVersion: addonData.version,
+        addonRoot: addonData.resourceURI.spec,
+      };
+    }
+    else
+    {
+    {%- endif %}
+      scopes[module] = {require: require, {% if hasUnrequires %}unrequire: unrequire, {% endif %}exports: {}};
+      Services.scriptloader.loadSubScript(addonData.resourceURI.spec + module + ".js", scopes[module]);
+    {%- if 'info' in requires %}
+    }
+    {%- endif %}
+  }
+  return scopes[module].exports;
+}
+require.scopes = {__proto__: null};
+
+{%- if hasUnrequires %}
+function unrequire(module)
+{
+  delete require.scopes[module];
+}
+{%- endif %}
+
+{%- if hasChromeRequires %}
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+
+let RequireObserver =
+{
+  observe: function(subject, topic, data)
+  {
+    if (topic == "{{metadata.get('general', 'basename')}}-require")
+    {
+      subject.wrappedJSObject.exports = require(data);
+    }
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsISupportsWeakReference, Ci.nsIObserver])
+};
+{%- endif %}

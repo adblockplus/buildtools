@@ -4,7 +4,7 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil, urllib
+import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil, urllib, json
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
@@ -217,6 +217,55 @@ def readXPIFiles(baseDir, params, files):
     if os.path.exists(path):
       readFile(files, params, path, os.path.basename(path))
 
+def addMissingFiles(baseDir, params, files):
+  hasChrome = False
+  hasChromeRequires = False
+  hasUnrequires = False
+  chromeWindows = []
+  requires = {}
+  for name, content in files.iteritems():
+    if name == 'chrome.manifest':
+      hasChrome = True
+    if name.startswith('chrome/content/') and name.endswith('.js') and re.search(r'\srequire\(', content):
+      hasChromeRequires = True
+    if not '/' in name and name.endswith('.js') and re.search(r'\sunrequire\(', content):
+      hasUnrequires = True
+    if name.endswith('.js'):
+      for match in re.finditer(r'\srequire\("(\w+)"\)', content):
+        requires[match.group(1)] = True
+    if name.endswith('.xul'):
+      match = re.search(r'<(?:window|dialog)\s[^>]*\bwindowtype="([^">]+)"', content)
+      if match:
+        chromeWindows.append(match.group(1))
+
+  while True:
+    missing = []
+    for module in requires:
+      moduleFile = module + '.js'
+      if not moduleFile in files:
+        path = os.path.join(buildtools.__path__[0], moduleFile)
+        if os.path.exists(path):
+          missing.append((path, moduleFile))
+    if not len(missing):
+      break
+    for path, moduleFile in missing:
+      readFile(files, params, path, moduleFile)
+      for match in re.finditer(r'\srequire\("(\w+)"\)', files[moduleFile]):
+        requires[match.group(1)] = True
+
+  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
+  env.filters['json'] = json.dumps
+  template = env.get_template('bootstrap.js.tmpl')
+  templateData = {
+    'hasChrome': hasChrome,
+    'hasChromeRequires': hasChromeRequires,
+    'hasUnrequires': hasUnrequires,
+    'chromeWindows': chromeWindows,
+    'requires': requires,
+    'metadata': params['metadata'],
+  }
+  files['bootstrap.js'] = processFile('bootstrap.js', template.render(templateData).encode('utf-8'), params)
+
 def signFiles(files, keyFile):
   import M2Crypto
   manifest = []
@@ -315,6 +364,8 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   else:
     files['chrome/%s.jar' % metadata.get('general', 'baseName')] = createChromeJar(baseDir, params)
   readXPIFiles(baseDir, params, files)
+  if metadata.has_option('general', 'restartless') and not 'bootstrap.js' in files:
+    addMissingFiles(baseDir, params, files)
   if keyFile:
     signFiles(files, keyFile)
   writeXPI(files, outFile)
