@@ -28,12 +28,12 @@ function startup(params, reason)
   Services.obs.addObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require", true);
   {%- endif %}
 
-  require("appIntegration").AppIntegration.init();
+  require("main").Main.init();
 }
 
 function shutdown(params, reason)
 {
-  require("appIntegration").AppIntegration.shutdown();
+  require("main").Main.shutdown();
 
   {%- if chromeWindows %}
   let windowNames = {{chromeWindows|json}};
