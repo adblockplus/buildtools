@@ -11,122 +11,152 @@ const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-let {addonRoot} = require("info");
+let {addonRoot, addonName} = require("info");
+let branchName = "extensions." + addonName + ".";
+let branch = Services.prefs.getBranch(branchName);
+let ignorePrefChanges = false;
 
-let Prefs = exports.Prefs =
+function init()
 {
-  branch: null,
-  ignorePrefChanges: false,
-
-  init: function(branchName, migrate)
+  // Load default preferences and set up properties for them
+  let defaultBranch = Services.prefs.getDefaultBranch(branchName);
+  let scope =
   {
-    if (this.branch)
-      return;
-    this.branch = Services.prefs.getBranch(branchName);
-
-    /**
-     * Sets up getter/setter on Prefs object for preference.
-     */
-    function defineProperty(/**String*/ name, defaultValue, /**Function*/ readFunc, /**Function*/ writeFunc)
+    pref: function(pref, value)
     {
-      let value = defaultValue;
-      this["_update_" + name] = function()
+      if (pref.substr(0, branchName.length) != branchName)
       {
-        try
-        {
-          value = readFunc(this.branch, name);
-        }
-        catch(e)
-        {
-          Cu.reportError(e);
-        }
-      };
-      Prefs.__defineGetter__(name, function() value);
-      Prefs.__defineSetter__(name, function(newValue)
-      {
-        if (value == newValue)
-          return value;
-
-        try
-        {
-          this.ignorePrefChanges = true;
-          writeFunc(this.branch, name, newValue);
-          value = newValue;
-        }
-        catch(e)
-        {
-          Cu.reportError(e);
-        }
-        finally
-        {
-          this.ignorePrefChanges = false;
-        }
-        return value;
-      });
-      this["_update_" + name]();
-    }
-
-    // Load default preferences and set up properties for them
-    let defaultBranch = Services.prefs.getDefaultBranch(branchName);
-    let typeMap =
-    {
-      boolean: [getBoolPref, setBoolPref],
-      number: [getIntPref, setIntPref],
-      string: [getCharPref, setCharPref],
-      object: [getJSONPref, setJSONPref]
-    };
-    let scope =
-    {
-      pref: function(pref, value)
-      {
-        if (pref.substr(0, branchName.length) != branchName)
-        {
-          Cu.reportError(new Error("Ignoring default preference " + pref + ", wrong branch."));
-          return;
-        }
-        pref = pref.substr(branchName.length);
-
-        let [getter, setter] = typeMap[typeof value];
-        setter(defaultBranch, pref, value);
-        defineProperty.call(Prefs, pref, false, getter, setter);
+        Cu.reportError(new Error("Ignoring default preference " + pref + ", wrong branch."));
+        return;
       }
-    };
-    Services.scriptloader.loadSubScript(addonRoot + "defaults/preferences/prefs.js", scope);
+      pref = pref.substr(branchName.length);
 
-    // Add preference change observer
+      let [getter, setter] = typeMap[typeof value];
+      setter(defaultBranch, pref, value);
+      defineProperty(pref, false, getter, setter);
+    }
+  };
+  Services.scriptloader.loadSubScript(addonRoot + "defaults/preferences/prefs.js", scope);
+
+  // Add preference change observer
+  try
+  {
+    branch.QueryInterface(Ci.nsIPrefBranch2).addObserver("", Prefs, true);
+    onShutdown.add(function() branch.removeObserver("", Prefs));
+  }
+  catch (e)
+  {
+    Cu.reportError(e);
+  }
+}
+
+/**
+ * Sets up getter/setter on Prefs object for preference.
+ */
+function defineProperty(/**String*/ name, defaultValue, /**Function*/ readFunc, /**Function*/ writeFunc)
+{
+  let value = defaultValue;
+  Prefs["_update_" + name] = function()
+  {
     try
     {
-      this.branch.QueryInterface(Ci.nsIPrefBranch2)
-                 .addObserver("", this, true);
-      onShutdown.add((function() this.branch.removeObserver("", this)).bind(this));
+      value = readFunc(branch, name);
+      triggerListeners(name);
     }
-    catch (e)
+    catch(e)
     {
       Cu.reportError(e);
     }
+  };
+  Prefs.__defineGetter__(name, function() value);
+  Prefs.__defineSetter__(name, function(newValue)
+  {
+    if (value == newValue)
+      return value;
 
-    // Migrate preferences stored under outdated names
-    if (migrate)
+    try
     {
-      for (let oldName in migrate)
-      {
-        let newName = migrate[oldName];
-        if (newName in this && Services.prefs.prefHasUserValue(oldName))
-        {
-          let [getter, setter] = typeMap[typeof this[newName]];
-          try
-          {
-            this[newName] = getter(Services.prefs, oldName);
-          } catch(e) {}
-          Services.prefs.clearUserPref(oldName);
-        }
-      }
+      ignorePrefChanges = true;
+      writeFunc(branch, name, newValue);
+      value = newValue;
+      triggerListeners(name);
     }
+    catch(e)
+    {
+      Cu.reportError(e);
+    }
+    finally
+    {
+      ignorePrefChanges = false;
+    }
+    return value;
+  });
+  Prefs["_update_" + name]();
+}
+
+let listeners = [];
+function triggerListeners(/**String*/ name)
+{
+  for (let i = 0; i < listeners.length; i++)
+  {
+    try
+    {
+      listeners[i](name);
+    }
+    catch(e)
+    {
+      Cu.reportError(e);
+    }
+  }
+}
+
+/**
+ * Manages the preferences for an extension, object properties corresponding
+ * to extension's preferences are added automatically. Setting the property
+ * will automatically change the preference, external preference changes are
+ * also recognized automatically.
+ */
+let Prefs = exports.Prefs =
+{
+  /**
+   * Migrates an old preference to a new name.
+   */
+  migrate: function(/**String*/ oldName, /**String*/ newName)
+  {
+    if (newName in this && Services.prefs.prefHasUserValue(oldName))
+    {
+      let [getter, setter] = typeMap[typeof this[newName]];
+      try
+      {
+        this[newName] = getter(Services.prefs, oldName);
+      } catch(e) {}
+      Services.prefs.clearUserPref(oldName);
+    }
+  },
+
+  /**
+   * Adds a preferences listener that will be fired whenever a preference
+   * changes.
+   */
+  addListener: function(/**Function*/ listener)
+  {
+    if (listeners.indexOf(listener) < 0)
+      listeners.push(listener);
+  },
+
+  /**
+   * Removes a preferences listener.
+   */
+  removeListener: function(/**Function*/ listener)
+  {
+    let index = listeners.indexOf(listener);
+    if (index >= 0)
+      listeners.splice(index, 1);
   },
 
   observe: function(subject, topic, data)
   {
-    if (this.ignorePrefChanges || topic != "nsPref:changed")
+    if (ignorePrefChanges || topic != "nsPref:changed")
       return;
 
     if ("_update_" + data in this)
@@ -134,6 +164,15 @@ let Prefs = exports.Prefs =
   },
 
   QueryInterface: XPCOMUtils.generateQI([Ci.nsISupportsWeakReference, Ci.nsIObserver])
+};
+
+// Getter/setter functions for difference preference types
+let typeMap =
+{
+  boolean: [getBoolPref, setBoolPref],
+  number: [getIntPref, setIntPref],
+  string: [getCharPref, setCharPref],
+  object: [getJSONPref, setJSONPref]
 };
 
 function getIntPref(branch, pref) branch.getIntPref(pref)
@@ -152,3 +191,5 @@ function setCharPref(branch, pref, newValue)
 
 function getJSONPref(branch, pref) JSON.parse(getCharPref(branch, pref))
 function setJSONPref(branch, pref, newValue) setCharPref(branch, pref, JSON.stringify(newValue))
+
+init();
