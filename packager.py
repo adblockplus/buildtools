@@ -237,7 +237,7 @@ def addMissingFiles(baseDir, params, files):
     if not '/' in name:
       if re.search(r'(?:^|\s)unrequire\(', content):
         templateData['hasUnrequires'] = True
-      elif re.search(r'(?:^|\s)onShutdown\.(?:add|remove)\(', content):
+      elif re.search(r'(?:^|\s)onShutdown\.', content):
         templateData['hasShutdownHandlers'] = True
 
   for name, content in files.iteritems():
