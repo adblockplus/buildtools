@@ -112,7 +112,12 @@ function require(module)
     else
     {
     {%- endif %}
-      scopes[module] = {require: require, {% if hasUnrequires %}unrequire: unrequire, {% endif %}{% if hasShutdownHandlers %}onShutdown: onShutdown, {% endif %}exports: {}};
+      scopes[module] = {
+        require: require,
+        {% if hasShutdownHandlers %}
+        onShutdown: onShutdown,
+        {% endif %}
+        exports: {}};
       Services.scriptloader.loadSubScript(addonData.resourceURI.spec + module + ".js", scopes[module]);
     {%- if 'info' in requires %}
     }
@@ -121,13 +126,6 @@ function require(module)
   return scopes[module].exports;
 }
 require.scopes = {__proto__: null};
-
-{%- if hasUnrequires %}
-function unrequire(module)
-{
-  delete require.scopes[module];
-}
-{%- endif %}
 
 {%- if hasChromeRequires %}
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");

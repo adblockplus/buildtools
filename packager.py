@@ -221,7 +221,6 @@ def addMissingFiles(baseDir, params, files):
   templateData = {
     'hasChrome': False,
     'hasChromeRequires': False,
-    'hasUnrequires': False,
     'hasShutdownHandlers': False,
     'chromeWindows': [],
     'requires': {},
@@ -235,9 +234,7 @@ def addMissingFiles(baseDir, params, files):
       if name.startswith('chrome/content/'):
         templateData['hasChromeRequires'] = True
     if not '/' in name:
-      if re.search(r'(?:^|\s)unrequire\(', content):
-        templateData['hasUnrequires'] = True
-      elif re.search(r'(?:^|\s)onShutdown\.', content):
+      if re.search(r'(?:^|\s)onShutdown\.', content):
         templateData['hasShutdownHandlers'] = True
 
   for name, content in files.iteritems():
