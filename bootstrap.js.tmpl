@@ -106,6 +106,7 @@ function require(module)
         addonID: addonData.id,
         addonVersion: addonData.version,
         addonRoot: addonData.resourceURI.spec,
+        addonName: "{{metadata.get('general', 'basename')}}",
       };
     }
     else
