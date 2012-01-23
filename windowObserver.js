@@ -11,34 +11,47 @@ const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-let WindowObserver = exports.WindowObserver =
+exports.WindowObserver = WindowObserver;
+
+/**
+ * This class will call listener's method applyToWindow() for all new chrome
+ * windows being opened. It will also call listener's method removeFromWindow()
+ * for all windows still open when the extension is shut down.
+ * @constructor
+ */
+function WindowObserver(/**Object*/ listener)
 {
-  listener: null,
+  this._listener  = listener;
 
-  init: function(listener)
+  let e = Services.ww.getWindowEnumerator();
+  while (e.hasMoreElements())
+    this._listener.applyToWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
+
+  Services.ww.registerNotification(this);
+
+  this._shutdownHandler = function()
   {
-    if (this.listener)
-      return;
-    this.listener = listener;
-
     let e = Services.ww.getWindowEnumerator();
     while (e.hasMoreElements())
-      this.listener.applyToWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
+      this._listener.removeFromWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
 
-    Services.ww.registerNotification(this);
-  },
+    Services.ww.unregisterNotification(this);
+  }.bind(this);
+  onShutdown.add(this._shutdownHandler);
+}
+WindowObserver.prototype =
+{
+  _listener: null,
+  _shutdownHandler: null,
 
   shutdown: function()
   {
-    if (!this.listener)
+    if (!this._shutdownHandler)
       return;
 
-    let e = Services.ww.getWindowEnumerator();
-    while (e.hasMoreElements())
-      this.listener.removeFromWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
-
-    Services.ww.unregisterNotification(this);
-    this.listener = null;
+    onShutdown.remove(this._shutdownHandler);
+    this._shutdownHandler();
+    this._shutdownHandler = null;
   },
 
   observe: function(subject, topic, data)
@@ -48,8 +61,8 @@ let WindowObserver = exports.WindowObserver =
       let window = subject.QueryInterface(Ci.nsIDOMWindow);
       window.addEventListener("DOMContentLoaded", function()
       {
-        if (this.listener)
-          this.listener.applyToWindow(window);
+        if (this._shutdownHandler)
+          this._listener.applyToWindow(window);
       }.bind(this), false);
     }
   },

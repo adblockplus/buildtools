@@ -98,6 +98,7 @@ let Prefs = exports.Prefs =
     {
       this.branch.QueryInterface(Ci.nsIPrefBranch2)
                  .addObserver("", this, true);
+      onShutdown.add((function() this.branch.removeObserver("", this)).bind(this));
     }
     catch (e)
     {
@@ -121,23 +122,6 @@ let Prefs = exports.Prefs =
         }
       }
     }
-  },
-
-  shutdown: function()
-  {
-    if (!this.branch)
-      return;
-
-    try
-    {
-      this.branch.QueryInterface(Ci.nsIPrefBranch2)
-                 .removeObserver("", this);
-    }
-    catch (e)
-    {
-      Cu.reportError(e);
-    }
-    this.branch = null;
   },
 
   observe: function(subject, topic, data)
