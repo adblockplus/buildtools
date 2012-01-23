@@ -218,29 +218,41 @@ def readXPIFiles(baseDir, params, files):
       readFile(files, params, path, os.path.basename(path))
 
 def addMissingFiles(baseDir, params, files):
-  hasChrome = False
-  hasChromeRequires = False
-  hasUnrequires = False
-  chromeWindows = []
-  requires = {}
+  templateData = {
+    'hasChrome': False,
+    'hasChromeRequires': False,
+    'hasUnrequires': False,
+    'hasShutdownHandlers': False,
+    'chromeWindows': [],
+    'requires': {},
+    'metadata': params['metadata'],
+  }
+
+  def checkScript(name):
+    content = files[name]
+    for match in re.finditer(r'(?:^|\s)require\("([\w\-]+)"\)', content):
+      templateData['requires'][match.group(1)] = True
+      if name.startswith('chrome/content/'):
+        templateData['hasChromeRequires'] = True
+    if not '/' in name:
+      if re.search(r'(?:^|\s)unrequire\(', content):
+        templateData['hasUnrequires'] = True
+      elif re.search(r'(?:^|\s)onShutdown\.(?:add|remove)\(', content):
+        templateData['hasShutdownHandlers'] = True
+
   for name, content in files.iteritems():
     if name == 'chrome.manifest':
-      hasChrome = True
-    if name.startswith('chrome/content/') and name.endswith('.js') and re.search(r'\srequire\(', content):
-      hasChromeRequires = True
-    if not '/' in name and name.endswith('.js') and re.search(r'\sunrequire\(', content):
-      hasUnrequires = True
-    if name.endswith('.js'):
-      for match in re.finditer(r'\srequire\("(\w+)"\)', content):
-        requires[match.group(1)] = True
-    if name.endswith('.xul'):
+      templateData['hasChrome'] = True
+    elif name.endswith('.js'):
+      checkScript(name)
+    elif name.endswith('.xul'):
       match = re.search(r'<(?:window|dialog)\s[^>]*\bwindowtype="([^">]+)"', content)
       if match:
-        chromeWindows.append(match.group(1))
+        templateData['chromeWindows'].append(match.group(1))
 
   while True:
     missing = []
-    for module in requires:
+    for module in templateData['requires']:
       moduleFile = module + '.js'
       if not moduleFile in files:
         path = os.path.join(buildtools.__path__[0], moduleFile)
@@ -250,20 +262,11 @@ def addMissingFiles(baseDir, params, files):
       break
     for path, moduleFile in missing:
       readFile(files, params, path, moduleFile)
-      for match in re.finditer(r'\srequire\("(\w+)"\)', files[moduleFile]):
-        requires[match.group(1)] = True
+      checkScript(moduleFile)
 
   env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
   env.filters['json'] = json.dumps
   template = env.get_template('bootstrap.js.tmpl')
-  templateData = {
-    'hasChrome': hasChrome,
-    'hasChromeRequires': hasChromeRequires,
-    'hasUnrequires': hasUnrequires,
-    'chromeWindows': chromeWindows,
-    'requires': requires,
-    'metadata': params['metadata'],
-  }
   files['bootstrap.js'] = processFile('bootstrap.js', template.render(templateData).encode('utf-8'), params)
 
 def signFiles(files, keyFile):
