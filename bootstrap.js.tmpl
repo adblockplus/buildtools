@@ -113,6 +113,10 @@ function require(module)
     {
     {%- endif %}
       scopes[module] = {
+        Cc: Cc,
+        Ci: Ci,
+        Cr: Cr,
+        Cu: Cu,
         require: require,
         {% if hasShutdownHandlers %}
         onShutdown: onShutdown,
