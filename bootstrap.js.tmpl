@@ -58,6 +58,7 @@ function shutdown(params, reason)
   {%- endif %}
 
   {%- if hasShutdownHandlers %}
+  onShutdown.done = true;
   for (let i = shutdownHandlers.length - 1; i >= 0; i --)
   {
     try
@@ -76,6 +77,7 @@ function shutdown(params, reason)
 let shutdownHandlers = [];
 let onShutdown =
 {
+  done: false,
   add: function(handler)
   {
     if (shutdownHandlers.indexOf(handler) < 0)
