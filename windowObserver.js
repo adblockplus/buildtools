@@ -17,11 +17,16 @@ exports.WindowObserver = WindowObserver;
  * This class will call listener's method applyToWindow() for all new chrome
  * windows being opened. It will also call listener's method removeFromWindow()
  * for all windows still open when the extension is shut down.
+ * @param {Object} listener
+ * @param {String} [when]   when to execute applyToWindow(). "start" means immediately
+ *                          when the window opens, "ready" when its contents are available
+ *                          and "end" (default) means to wait until the "load" event.
  * @constructor
  */
-function WindowObserver(/**Object*/ listener)
+function WindowObserver(listener, when)
 {
   this._listener  = listener;
+  this._when = when;
 
   let e = Services.ww.getWindowEnumerator();
   while (e.hasMoreElements())
@@ -42,6 +47,7 @@ function WindowObserver(/**Object*/ listener)
 WindowObserver.prototype =
 {
   _listener: null,
+  _when: null,
   _shutdownHandler: null,
 
   shutdown: function()
@@ -58,8 +64,14 @@ WindowObserver.prototype =
   {
     if (topic == "domwindowopened")
     {
+      if (this._when == "start")
+      {
+        this._listener.applyToWindow(window);
+        return;
+      }
+
       let window = subject.QueryInterface(Ci.nsIDOMWindow);
-      window.addEventListener("DOMContentLoaded", function()
+      window.addEventListener(this._when == "ready" ? "DOMContentLoaded" : "load", function()
       {
         if (this._shutdownHandler)
           this._listener.applyToWindow(window);
