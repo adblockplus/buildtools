@@ -10,12 +10,9 @@ const Cu = Components.utils;
 
 Cu.import("resource://gre/modules/Services.jsm");
 
-/**
- * Translation table for key modifier names.
- */
 let validModifiers =
 {
-  ACCEL: "control",
+  ACCEL: null,
   CTRL: "control",
   CONTROL: "control",
   SHIFT: "shift",
@@ -23,8 +20,6 @@ let validModifiers =
   META: "meta",
   __proto__: null
 };
-
-let existingShortcuts = null;
 
 /**
  * Sets the correct value of validModifiers.ACCEL.
@@ -43,140 +38,184 @@ function initAccelKey()
   }
   catch(e)
   {
+    validModifiers.ACCEL = "control";
     Cu.reportError(e);
   }
 }
 
+exports.KeySelector = KeySelector;
+
 /**
- * Finds out which keyboard shortcuts are already taken in an application window,
- * converts them to canonical form in the existingShortcuts variable.
+ * This class provides capabilities to find and use available keyboard shortcut
+ * keys.
+ * @param {ChromeWindow} window   the window where to look up existing shortcut
+ *                                keys
+ * @constructor
  */
-function initExistingShortcuts(/**ChromeWindow*/ window)
+function KeySelector(window)
 {
-  existingShortcuts = {__proto__: null};
-
-  let keys = window.document.getElementsByTagName("key");
-  for (let i = 0; i < keys.length; i++)
-  {
-    let key = keys[i];
-    let keyData =
-    {
-      shift: false,
-      meta: false,
-      alt: false,
-      control: false,
-      char: null,
-      code: null
-    };
-
-    let keyChar = key.getAttribute("key");
-    if (keyChar && keyChar.length == 1)
-      keyData.char = keyChar.toUpperCase();
-
-    let keyCode = key.getAttribute("keycode");
-    if (keyCode && "DOM_" + keyCode.toUpperCase() in Ci.nsIDOMKeyEvent)
-      keyData.code = Ci.nsIDOMKeyEvent["DOM_" + keyCode.toUpperCase()];
-
-    if (!keyData.char && !keyData.code)
-      continue;
-
-    let keyModifiers = key.getAttribute("modifiers");
-    if (keyModifiers)
-      for each (let modifier in keyModifiers.toUpperCase().match(/\w+/g))
-        if (modifier in validModifiers)
-          keyData[validModifiers[modifier]] = true;
-
-    let canonical = [keyData.shift, keyData.meta, keyData.alt, keyData.control, keyData.char || keyData.code].join(" ");
-    existingShortcuts[canonical] = true;
-  }
+  this._initExistingShortcuts(window);
 }
+KeySelector.prototype =
+{
+  /**
+   * Map listing existing shortcut keys as its keys.
+   * @type Object
+   */
+  _existingShortcuts: null,
+
+  /**
+   * Sets up _existingShortcuts property for a window.
+   */
+  _initExistingShortcuts: function(/**ChromeWindow*/ window)
+  {
+    if (!validModifiers.ACCEL)
+      initAccelKey();
+
+    this._existingShortcuts = {__proto__: null};
+
+    let keys = window.document.getElementsByTagName("key");
+    for (let i = 0; i < keys.length; i++)
+    {
+      let key = keys[i];
+      let keyData =
+      {
+        shift: false,
+        meta: false,
+        alt: false,
+        control: false,
+        char: null,
+        code: null
+      };
+
+      let keyChar = key.getAttribute("key");
+      if (keyChar && keyChar.length == 1)
+        keyData.char = keyChar.toUpperCase();
+
+      let keyCode = key.getAttribute("keycode");
+      if (keyCode && "DOM_" + keyCode.toUpperCase() in Ci.nsIDOMKeyEvent)
+        keyData.code = Ci.nsIDOMKeyEvent["DOM_" + keyCode.toUpperCase()];
+
+      if (!keyData.char && !keyData.code)
+        continue;
+
+      let keyModifiers = key.getAttribute("modifiers");
+      if (keyModifiers)
+        for each (let modifier in keyModifiers.toUpperCase().match(/\w+/g))
+          if (modifier in validModifiers)
+            keyData[validModifiers[modifier]] = true;
+
+      let canonical = [keyData.shift, keyData.meta, keyData.alt, keyData.control, keyData.char || keyData.code].join(" ");
+      this._existingShortcuts[canonical] = true;
+    }
+  },
+
+  /**
+   * Selects a keyboard shortcut variant that isn't already taken,
+   * parses it into an object.
+   */
+  selectKey: function(/**String*/ variants) /**Object*/
+  {
+    for each (let variant in variants.split(/\s*,\s*/))
+    {
+      if (!variant)
+        continue;
+
+      let keyData =
+      {
+        shift: false,
+        meta: false,
+        alt: false,
+        control: false,
+        char: null,
+        code: null,
+        codeName: null
+      };
+      for each (let part in variant.toUpperCase().split(/\s+/))
+      {
+        if (part in validModifiers)
+          keyData[validModifiers[part]] = true;
+        else if (part.length == 1)
+          keyData.char = part;
+        else if ("DOM_VK_" + part in Ci.nsIDOMKeyEvent)
+        {
+          keyData.code = Ci.nsIDOMKeyEvent["DOM_VK_" + part];
+          keyData.codeName = "VK_" + part;
+        }
+      }
+
+      if (!keyData.char && !keyData.code)
+        continue;
+
+      let canonical = [keyData.shift, keyData.meta, keyData.alt, keyData.control, keyData.char || keyData.code].join(" ");
+      if (canonical in this._existingShortcuts)
+        continue;
+
+      return keyData;
+    }
+
+    return null;
+  }
+};
 
 /**
  * Creates the text representation for a key.
+ * @static
  */
-function getTextForKey(/**Object*/ keyData) /**String*/
+KeySelector.getTextForKey = function (/**Object*/ key) /**String*/
 {
-  try
-  {
-    let stringBundle = Services.strings.createBundle("chrome://global-platform/locale/platformKeys.properties");
-    let parts = [];
-    if (keyData.control)
-      parts.push(stringBundle.GetStringFromName("VK_CONTROL"));
-    if (keyData.alt)
-      parts.push(stringBundle.GetStringFromName("VK_ALT"));
-    if (keyData.meta)
-      parts.push(stringBundle.GetStringFromName("VK_META"));
-    if (keyData.shift)
-      parts.push(stringBundle.GetStringFromName("VK_SHIFT"));
-    if (keyData.char)
-      parts.push(keyData.char.toUpperCase());
-    else
-    {
-      let stringBundle2 = Services.strings.createBundle("chrome://global/locale/keys.properties");
-      parts.push(stringBundle2.GetStringFromName(keyData.codeName));
-    }
-    return parts.join(stringBundle.GetStringFromName("MODIFIER_SEPARATOR"));
-  }
-  catch (e)
-  {
-    Cu.reportError(e);
+  if (!key)
     return null;
-  }
-}
 
-exports.selectKey = selectKey;
+  if (!("text" in key))
+  {
+    key.text = null;
+    try
+    {
+      let stringBundle = Services.strings.createBundle("chrome://global-platform/locale/platformKeys.properties");
+      let parts = [];
+      if (key.control)
+        parts.push(stringBundle.GetStringFromName("VK_CONTROL"));
+      if (key.alt)
+        parts.push(stringBundle.GetStringFromName("VK_ALT"));
+      if (key.meta)
+        parts.push(stringBundle.GetStringFromName("VK_META"));
+      if (key.shift)
+        parts.push(stringBundle.GetStringFromName("VK_SHIFT"));
+      if (key.char)
+        parts.push(key.char.toUpperCase());
+      else
+      {
+        let stringBundle2 = Services.strings.createBundle("chrome://global/locale/keys.properties");
+        parts.push(stringBundle2.GetStringFromName(key.codeName));
+      }
+      key.text = parts.join(stringBundle.GetStringFromName("MODIFIER_SEPARATOR"));
+    }
+    catch (e)
+    {
+      Cu.reportError(e);
+      return null;
+    }
+  }
+  return key.text;
+};
 
 /**
- * Selects a keyboard shortcut variant that isn't already taken in the window,
- * parses it into an object.
+ * Tests whether a keypress event matches the given key.
+ * @static
  */
-function selectKey(/**ChromeWindow*/ window, /**String*/ variants) /**Object*/
+KeySelector.matchesKey = function(/**Event*/ event, /**Object*/ key) /**Boolean*/
 {
-  if (!existingShortcuts)
-  {
-    initAccelKey();
-    initExistingShortcuts(window);
-  }
+  if (event.defaultPrevented || !key)
+    return false;
+  if (key.shift != event.shiftKey || key.alt != event.altKey)
+    return false;
+  if (key.meta != event.metaKey || key.control != event.ctrlKey)
+    return false;
 
-  for each (let variant in variants.split(/\s*,\s*/))
-  {
-    if (!variant)
-      continue;
-
-    let keyData =
-    {
-      shift: false,
-      meta: false,
-      alt: false,
-      control: false,
-      char: null,
-      code: null,
-      codeName: null,
-      text: null
-    };
-    for each (let part in variant.toUpperCase().split(/\s+/))
-    {
-      if (part in validModifiers)
-        keyData[validModifiers[part]] = true;
-      else if (part.length == 1)
-        keyData.char = part;
-      else if ("DOM_VK_" + part in Ci.nsIDOMKeyEvent)
-      {
-        keyData.code = Ci.nsIDOMKeyEvent["DOM_VK_" + part];
-        keyData.codeName = "VK_" + part;
-      }
-    }
-
-    if (!keyData.char && !keyData.code)
-      continue;
-
-    let canonical = [keyData.shift, keyData.meta, keyData.alt, keyData.control, keyData.char || keyData.code].join(" ");
-    if (canonical in existingShortcuts)
-      continue;
-
-    keyData.text = getTextForKey(keyData);
-    return keyData;
-  }
-
-  return null;
-}
+  if (key.char && event.charCode && String.fromCharCode(event.charCode).toUpperCase() == key.char)
+    return true;
+  if (key.code && event.keyCode && event.keyCode == key.code)
+    return true;
+  return false;
+};
