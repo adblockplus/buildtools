@@ -26,7 +26,13 @@ function WindowObserver(listener, when)
 
   let e = Services.ww.getWindowEnumerator();
   while (e.hasMoreElements())
-    this._listener.applyToWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
+  {
+    let window = e.getNext().QueryInterface(Ci.nsIDOMWindow);
+    if (when == "start" || window.document.readyState == "complete")
+      this._listener.applyToWindow(window);
+    else
+      this.observe(window, "domwindowopened", null);
+  }
 
   Services.ww.registerNotification(this);
 
