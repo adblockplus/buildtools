@@ -73,11 +73,14 @@ WindowObserver.prototype =
       }
 
       let window = subject.QueryInterface(Ci.nsIDOMWindow);
-      window.addEventListener(this._when == "ready" ? "DOMContentLoaded" : "load", function()
+      let event = (this._when == "ready" ? "DOMContentLoaded" : "load");
+      let listener = function()
       {
+        window.removeEventListener(event, listener, false);
         if (this._shutdownHandler)
           this._listener.applyToWindow(window);
-      }.bind(this), false);
+      }.bind(this);
+      window.addEventListener(event, listener, false);
     }
   },
 
