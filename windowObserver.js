@@ -17,19 +17,32 @@ exports.WindowObserver = WindowObserver;
  * @param {String} [when]   when to execute applyToWindow(). "start" means immediately
  *                          when the window opens, "ready" when its contents are available
  *                          and "end" (default) means to wait until the "load" event.
+ * @param {Boolean} [ignoreUnloads]   Do not work around bug 721319 by calling
+ *                                    removeFromWindow() when the window unloads.
  * @constructor
  */
-function WindowObserver(listener, when)
+function WindowObserver(listener, when, ignoreUnloads)
 {
   this._listener  = listener;
   this._when = when;
+
+  if (ignoreUnloads)
+    this._unloadHandler = null;
+  else
+  {
+    // Ugly bug 721319 work-around
+    this._unloadHandler = function(event)
+    {
+      this.removeFromWindow(event.target.defaultView);
+    }.bind(this);
+  }
 
   let e = Services.ww.getWindowEnumerator();
   while (e.hasMoreElements())
   {
     let window = e.getNext().QueryInterface(Ci.nsIDOMWindow);
     if (when == "start" || window.document.readyState == "complete")
-      this._listener.applyToWindow(window);
+      this.applyToWindow(window);
     else
       this.observe(window, "domwindowopened", null);
   }
@@ -40,7 +53,7 @@ function WindowObserver(listener, when)
   {
     let e = Services.ww.getWindowEnumerator();
     while (e.hasMoreElements())
-      this._listener.removeFromWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
+      this.removeFromWindow(e.getNext().QueryInterface(Ci.nsIDOMWindow));
 
     Services.ww.unregisterNotification(this);
   }.bind(this);
@@ -51,6 +64,7 @@ WindowObserver.prototype =
   _listener: null,
   _when: null,
   _shutdownHandler: null,
+  _unloadHandler: null,
 
   shutdown: function()
   {
@@ -62,13 +76,27 @@ WindowObserver.prototype =
     this._shutdownHandler = null;
   },
 
+  applyToWindow: function(window)
+  {
+    if (this._unloadHandler)
+      window.addEventListener("unload", this._unloadHandler, false);
+    this._listener.applyToWindow(window);
+  },
+
+  removeFromWindow: function(window)
+  {
+    if (this._unloadHandler)
+      window.removeEventListener("unload", this._unloadHandler, false);
+    this._listener.removeFromWindow(window);
+  },
+
   observe: function(subject, topic, data)
   {
     if (topic == "domwindowopened")
     {
       if (this._when == "start")
       {
-        this._listener.applyToWindow(window);
+        this.applyToWindow(window);
         return;
       }
 
@@ -78,7 +106,7 @@ WindowObserver.prototype =
       {
         window.removeEventListener(event, listener, false);
         if (this._shutdownHandler)
-          this._listener.applyToWindow(window);
+          this.applyToWindow(window);
       }.bind(this);
       window.addEventListener(event, listener, false);
     }
