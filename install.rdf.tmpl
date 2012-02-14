@@ -4,6 +4,22 @@
    - version 2.0 (the "License"). You can obtain a copy of the License at
    - http://mozilla.org/MPL/2.0/. -->
 
+<!DOCTYPE RDF [
+  <!ENTITY meta "
+    <em:creator>{{metadata.get('general', 'author')}}</em:creator>
+
+    {%- if metadata.has_section('contributors') %}
+    {%- for option in metadata.options('contributors')|sort %}
+    <em:contributor>{{metadata.get('contributors', option)}}</em:contributor>
+    {%- endfor %}
+    {%- endif %}
+
+    {%- for translator in localeMetadata|translators %}
+    <em:translator>{{translator}}</em:translator>
+    {%- endfor %}
+  ">
+]>
+
 <RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
 
@@ -12,7 +28,7 @@
     <em:version>{{version}}</em:version>
     <em:name>{{localeMetadata[defaultLocale].name}}</em:name>
     <em:description>{{localeMetadata[defaultLocale].description}}</em:description>
-    <em:creator>{{metadata.get('general', 'author')}}</em:creator>
+    &meta;
     <em:homepageURL>{{metadata.get('homepage', 'default')}}</em:homepageURL>
     <em:type>2</em:type>
     {%- if metadata.has_option('general', 'restartless') %}
@@ -41,22 +57,13 @@
     <em:optionsType>{{metadata.get('general', 'optionsType')}}</em:optionsType>
     {%- endif %}
 
-    {%- if metadata.has_section('contributors') %}
-    {%- for option in metadata.options('contributors')|sort %}
-    <em:contributor>{{metadata.get('contributors', option)}}</em:contributor>
-    {%- endfor %}
-    {%- endif %}
-
-    {%- for translator in localeMetadata|translators %}
-    <em:translator>{{translator}}</em:translator>
-    {%- endfor %}
-
     {%- if not limitMetadata %}
     {%- for localeCode in localeMetadata.keys()|sort %}
     {%- set locale = localeMetadata[localeCode] %}
     <em:localized>
       <Description>
         <em:locale>{{localeCode}}</em:locale>
+        &meta;
         <em:name>
           {%- if 'name' in locale -%}
             {{locale.name}}
@@ -71,7 +78,6 @@
             {{localeMetadata[defaultLocale].description}}
           {%- endif -%}
         </em:description>
-        <em:creator>{{metadata.get('general', 'author')}}</em:creator>
         <em:homepageURL>
           {%- if metadata.has_option('homepage', localeCode) -%}
             {{- metadata.get('homepage', localeCode) -}}
