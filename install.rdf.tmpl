@@ -29,7 +29,9 @@
     <em:name>{{localeMetadata[defaultLocale].name}}</em:name>
     <em:description>{{localeMetadata[defaultLocale].description}}</em:description>
     &meta;
+    {%- if metadata.has_option('homepage', 'default') %}
     <em:homepageURL>{{metadata.get('homepage', 'default')}}</em:homepageURL>
+    {%- endif %}
     <em:type>2</em:type>
     {%- if metadata.has_option('general', 'restartless') %}
     <em:bootstrap>true</em:bootstrap>
@@ -78,6 +80,7 @@
             {{localeMetadata[defaultLocale].description}}
           {%- endif -%}
         </em:description>
+        {%- if metadata.has_option('homepage', 'default') %}
         <em:homepageURL>
           {%- if metadata.has_option('homepage', localeCode) -%}
             {{- metadata.get('homepage', localeCode) -}}
@@ -87,6 +90,7 @@
             {{- metadata.get('homepage', 'default') -}}
           {%- endif -%}
         </em:homepageURL>
+        {%- endif -%}
       </Description>
     </em:localized>
     {%- endfor %}
