@@ -4,21 +4,19 @@
    - version 2.0 (the "License"). You can obtain a copy of the License at
    - http://mozilla.org/MPL/2.0/. -->
 
-<!DOCTYPE RDF [
-  <!ENTITY meta "
-    <em:creator>{{metadata.get('general', 'author')}}</em:creator>
+{%- macro meta() -%}
+<em:creator>{{metadata.get('general', 'author')}}</em:creator>
 
-    {%- if metadata.has_section('contributors') %}
-    {%- for option in metadata.options('contributors')|sort %}
-    <em:contributor>{{metadata.get('contributors', option)}}</em:contributor>
-    {%- endfor %}
-    {%- endif %}
+{%- if metadata.has_section('contributors') -%}
+{%- for option in metadata.options('contributors')|sort -%}
+<em:contributor>{{metadata.get('contributors', option)}}</em:contributor>
+{%- endfor -%}
+{%- endif -%}
 
-    {%- for translator in localeMetadata|translators %}
-    <em:translator>{{translator}}</em:translator>
-    {%- endfor %}
-  ">
-]>
+{%- for translator in localeMetadata|translators -%}
+<em:translator>{{translator}}</em:translator>
+{%- endfor -%}
+{%- endmacro %}
 
 <RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
@@ -28,7 +26,7 @@
     <em:version>{{version}}</em:version>
     <em:name>{{localeMetadata[defaultLocale].name}}</em:name>
     <em:description>{{localeMetadata[defaultLocale].description}}</em:description>
-    &meta;
+    {{ meta() }}
     {%- if metadata.has_option('homepage', 'default') %}
     <em:homepageURL>{{metadata.get('homepage', 'default')}}</em:homepageURL>
     {%- endif %}
@@ -65,7 +63,7 @@
     <em:localized>
       <Description>
         <em:locale>{{localeCode}}</em:locale>
-        &meta;
+        {{ meta() }}
         <em:name>
           {%- if 'name' in locale -%}
             {{locale.name}}
