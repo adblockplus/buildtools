@@ -100,6 +100,9 @@ function require(module)
     {%- if 'info' in requires %}
     if (module == "info")
     {
+      let applications = {{applications|json}};
+      let appID = Services.appinfo.ID;
+
       scopes[module] = {};
       scopes[module].exports =
       {
@@ -107,6 +110,7 @@ function require(module)
         addonVersion: addonData.version,
         addonRoot: addonData.resourceURI.spec,
         addonName: "{{metadata.get('general', 'basename')}}",
+        application: (appID in applications ? applications[appID] : "other"),
       };
     }
     else

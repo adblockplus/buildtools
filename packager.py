@@ -225,6 +225,7 @@ def addMissingFiles(baseDir, params, files):
     'chromeWindows': [],
     'requires': {},
     'metadata': params['metadata'],
+    'applications': dict((v, k) for k, v in KNOWN_APPS.iteritems()),
   }
 
   def checkScript(name):
