@@ -79,8 +79,11 @@ def getLocales(baseDir, includeIncomplete=False):
   return locales
 
 def getBuildNum(baseDir):
-  (result, dummy) = subprocess.Popen(['hg', 'id', '-n'], stdout=subprocess.PIPE).communicate()
-  return re.sub(r'\W', '', result)
+  try:
+    (result, dummy) = subprocess.Popen(['hg', 'id', '-n'], stdout=subprocess.PIPE).communicate()
+    return re.sub(r'\W', '', result)
+  except Exception:
+    return '0'
 
 def readMetadata(baseDir):
   metadata = SafeConfigParser()
