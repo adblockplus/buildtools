@@ -349,7 +349,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if not params['limitMetadata']:
     fixupLocales(baseDir, files, params)
   readXPIFiles(baseDir, params, files)
-  if metadata.has_option('general', 'restartless') and not 'bootstrap.js' in files:
+  if not 'bootstrap.js' in files:
     addMissingFiles(baseDir, params, files)
   if keyFile:
     signFiles(files, keyFile)

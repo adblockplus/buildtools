@@ -31,9 +31,7 @@
     <em:homepageURL>{{metadata.get('homepage', 'default')}}</em:homepageURL>
     {%- endif %}
     <em:type>2</em:type>
-    {%- if metadata.has_option('general', 'restartless') %}
     <em:bootstrap>true</em:bootstrap>
-    {%- endif %}
 
     {%- if not releaseBuild or metadata.has_option('general', 'updateURL') %}
     <em:updateURL>
