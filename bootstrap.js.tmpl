@@ -138,7 +138,7 @@ function require(module)
         onShutdown: onShutdown,
         {% endif %}
         exports: {}};
-      Services.scriptloader.loadSubScript(addonData.resourceURI.spec + module + ".js", scopes[module]);
+      Services.scriptloader.loadSubScript(addonData.resourceURI.spec + "lib/" + module + ".js", scopes[module]);
     {%- if 'info' in requires %}
     }
     {%- endif %}

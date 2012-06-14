@@ -51,7 +51,7 @@ def getXPIFiles(baseDir):
   for file in ('components', 'modules', 'lib', 'resources', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png'):
     yield os.path.join(baseDir, file)
   for file in os.listdir(baseDir):
-    if file.endswith('.js') or file.endswith('.jsm') or file.endswith('.xml'):
+    if file.endswith('.xml'):
       yield os.path.join(baseDir, file)
 
 def getIgnoredFiles(params):
@@ -241,7 +241,7 @@ def addMissingFiles(baseDir, params, files):
     if name == 'defaults/preferences/prefs.js':
       if re.search(r'\.currentVersion"', content):
         templateData['hasVersionPref'] = True
-    if not '/' in name:
+    if not '/' in name or name.startswith('lib/'):
       if re.search(r'(?:^|\s)onShutdown\.', content):
         templateData['hasShutdownHandlers'] = True
 
@@ -258,7 +258,7 @@ def addMissingFiles(baseDir, params, files):
   while True:
     missing = []
     for module in templateData['requires']:
-      moduleFile = module + '.js'
+      moduleFile = 'lib/' + module + '.js'
       if not moduleFile in files:
         path = os.path.join(buildtools.__path__[0], moduleFile)
         if os.path.exists(path):
