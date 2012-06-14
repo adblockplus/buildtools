@@ -13,9 +13,6 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 let addonData = null;
 
-function install(params, reason) {}
-function uninstall(params, reason) {}
-
 function startup(params, reason)
 {
   addonData = params;
@@ -69,6 +66,21 @@ function shutdown(params, reason)
     {
       Cu.reportError(e);
     }
+  }
+  {%- endif %}
+}
+
+function install(params, reason) {}
+
+function uninstall(params, reason)
+{
+  {%- if hasVersionPref %}
+  const ADDON_UNINSTALL = 6;  // https://developer.mozilla.org/en/Extensions/Bootstrapped_extensions#Reason_constants
+  if (reason == ADDON_UNINSTALL)
+  {
+    // Users often uninstall/reinstall extension to "fix" issues. Clear current
+    // version number on uninstall to rerun first-run actions in this scenario.
+    Services.prefs.clearUserPref("extensions.{{metadata.get('general', 'basename')}}.currentVersion");
   }
   {%- endif %}
 }
