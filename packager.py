@@ -187,10 +187,7 @@ def fixupLocales(baseDir, files, params):
 
   for locale in params['locales']:
     for file in reference.iterkeys():
-      if params['noJar']:
-        path = 'chrome/locale/%s/%s' % (locale, file)
-      else:
-        path = 'locale/%s/%s' % (locale, file)
+      path = 'chrome/locale/%s/%s' % (locale, file)
       if path in files:
         data = localeTools.parseString(files[path].decode('utf-8'), path)
         for key, value in reference[file].iteritems():
@@ -198,22 +195,6 @@ def fixupLocales(baseDir, files, params):
             files[path] += localeTools.generateStringEntry(key, value, path).encode('utf-8')
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
-
-def createChromeJar(baseDir, params, files=None):
-  if not files:
-    files = {}
-  for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
-    if os.path.isdir(path):
-      readFile(files, params, path, name)
-  if not params['limitMetadata']:
-    fixupLocales(baseDir, files, params)
-
-  data = StringIO()
-  jar = ZipFile(data, 'w', ZIP_STORED)
-  for name, value in files.iteritems():
-    jar.writestr(name, value)
-  jar.close()
-  return data.getvalue()
 
 def readXPIFiles(baseDir, params, files):
   for path in getXPIFiles(baseDir):
@@ -359,18 +340,14 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'version': version.encode('utf-8'),
     'metadata': metadata,
     'limitMetadata': limitMetadata,
-    'noJar': metadata.has_option('general', 'nojar'),
   }
   files = {}
   files['install.rdf'] = createManifest(baseDir, params)
-  if params['noJar']:
-    for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
-      if os.path.isdir(path):
-        readFile(files, params, path, 'chrome/%s' % name)
-    if not params['limitMetadata']:
-      fixupLocales(baseDir, files, params)
-  else:
-    files['chrome/%s.jar' % metadata.get('general', 'baseName')] = createChromeJar(baseDir, params)
+  for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
+    if os.path.isdir(path):
+      readFile(files, params, path, 'chrome/%s' % name)
+  if not params['limitMetadata']:
+    fixupLocales(baseDir, files, params)
   readXPIFiles(baseDir, params, files)
   if metadata.has_option('general', 'restartless') and not 'bootstrap.js' in files:
     addMissingFiles(baseDir, params, files)
