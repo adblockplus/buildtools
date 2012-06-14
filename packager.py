@@ -238,7 +238,7 @@ def addMissingFiles(baseDir, params, files):
       templateData['requires'][match.group(1)] = True
       if name.startswith('chrome/content/'):
         templateData['hasChromeRequires'] = True
-    if name == 'defaults/preferences/prefs.js':
+    if name == 'defaults/prefs.js':
       if re.search(r'\.currentVersion"', content):
         templateData['hasVersionPref'] = True
     if not '/' in name or name.startswith('lib/'):
