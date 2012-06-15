@@ -8,6 +8,7 @@ import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shu
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
+import xml.dom.minidom as minidom
 import buildtools.localeTools as localeTools
 
 KNOWN_APPS = {
@@ -134,17 +135,38 @@ def readLocaleMetadata(baseDir, locales):
       result[locale] = {}
   return result
 
+def getContributors(baseDir, metadata):
+  main = []
+  additional = set()
+  if metadata.has_section('contributors'):
+    options = metadata.options('contributors')
+    options.sort()
+    for option in options:
+      value = metadata.get('contributors', option)
+      if re.search(r'\D', option):
+        match = re.search(r'^\s*(\S+)\s+//([^/\s]+)/@(\S+)\s*$', value)
+        if not match:
+          print >>sys.stderr, 'Warning: unrecognized contributor location "%s"\n' % value
+          continue
+        dom = minidom.parse(os.path.join(baseDir, match.group(1)))
+        tags = dom.getElementsByTagName(match.group(2))
+        for tag in tags:
+          if tag.hasAttribute(match.group(3)):
+            for name in re.split(r'\s*,\s*', tag.getAttribute(match.group(3))):
+              additional.add(name)
+      else:
+        main.append(value)
+  return main + sorted(additional, key=unicode.lower)
+
 def getTranslators(localeMetadata):
-  translators = {}
+  translators = set()
   for locale in localeMetadata.itervalues():
     if 'translator' in locale:
       for translator in locale['translator'].split(','):
         translator = translator.strip()
         if translator:
-          translators[translator] = True
-  result = translators.keys()
-  result.sort()
-  return result
+          translators.add(translator)
+  return sorted(translators, key=unicode.lower)
 
 def createManifest(baseDir, params):
   global KNOWN_APPS, defaultLocale
@@ -333,6 +355,8 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if outFile == None:
     outFile = getDefaultFileName(baseDir, metadata, version)
 
+  contributors = getContributors(baseDir, metadata)
+
   params = {
     'locales': locales,
     'releaseBuild': releaseBuild,
@@ -340,6 +364,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'version': version.encode('utf-8'),
     'metadata': metadata,
     'limitMetadata': limitMetadata,
+    'contributors': contributors,
   }
   files = {}
   files['install.rdf'] = createManifest(baseDir, params)

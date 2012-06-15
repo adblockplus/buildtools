@@ -7,11 +7,9 @@
 {%- macro meta() -%}
 <em:creator>{{metadata.get('general', 'author')}}</em:creator>
 
-{%- if metadata.has_section('contributors') -%}
-{%- for option in metadata.options('contributors')|sort -%}
-<em:contributor>{{metadata.get('contributors', option)}}</em:contributor>
+{%- for contributor in contributors -%}
+<em:contributor>{{contributor}}</em:contributor>
 {%- endfor -%}
-{%- endif -%}
 
 {%- for translator in localeMetadata|translators -%}
 <em:translator>{{translator}}</em:translator>
