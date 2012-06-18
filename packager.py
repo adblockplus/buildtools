@@ -52,7 +52,7 @@ def getXPIFiles(baseDir):
   for file in ('components', 'modules', 'lib', 'resources', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png'):
     yield os.path.join(baseDir, file)
   for file in os.listdir(baseDir):
-    if file.endswith('.xml'):
+    if file.endswith('.js') or file.endswith('.xml'):
       yield os.path.join(baseDir, file)
 
 def getIgnoredFiles(params):
