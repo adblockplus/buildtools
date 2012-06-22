@@ -67,7 +67,13 @@ function shutdown(params, reason)
       Cu.reportError(e);
     }
   }
+  shutdownHandlers = null;
   {%- endif %}
+
+  // Make sure to release our ties to the modules even if the sandbox cannot be
+  // released for some reason.
+  require.scopes = null;
+  addonData = null;
 }
 
 function install(params, reason) {}
