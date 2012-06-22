@@ -72,6 +72,13 @@ function shutdown(params, reason)
 
   // Make sure to release our ties to the modules even if the sandbox cannot be
   // released for some reason.
+  for (let key in require.scopes)
+  {
+    let scope = require.scopes[key];
+    let list = Object.keys(scope);
+    for (let i = 0; i < list.length; i++)
+      scope[list[i]] = null;
+  }
   require.scopes = null;
   addonData = null;
 }
