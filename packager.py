@@ -232,6 +232,7 @@ def addMissingFiles(baseDir, params, files):
     'chromeWindows': [],
     'requires': {},
     'metadata': params['metadata'],
+    'multicompartment': params['multicompartment'],
     'applications': dict((v, k) for k, v in KNOWN_APPS.iteritems()),
   }
 
@@ -334,7 +335,7 @@ def writeXPI(files, outFile):
     zip.writestr(name, files[name])
   zip.close()
 
-def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, limitMetadata=False):
+def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, limitMetadata=False, multicompartment=False):
   if buildNum == None:
     buildNum = getBuildNum(baseDir)
   if locales == None:
@@ -365,6 +366,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'metadata': metadata,
     'limitMetadata': limitMetadata,
     'contributors': contributors,
+    'multicompartment': multicompartment,
   }
   files = {}
   files['install.rdf'] = createManifest(baseDir, params)
@@ -380,7 +382,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     signFiles(files, keyFile)
   writeXPI(files, outFile)
 
-def autoInstall(baseDir, host, port):
+def autoInstall(baseDir, host, port, multicompartment=False):
   fileBuffer = StringIO()
-  createBuild(baseDir, outFile=fileBuffer)
+  createBuild(baseDir, outFile=fileBuffer, multicompartment=multicompartment)
   urllib.urlopen('http://%s:%s/' % (host, port), data=fileBuffer.getvalue())

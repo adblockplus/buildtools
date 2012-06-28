@@ -141,6 +141,7 @@ function require(module)
     else
     {
     {%- endif %}
+      let url = addonData.resourceURI.spec + "lib/" + module + ".js";
       scopes[module] = {
         Cc: Cc,
         Ci: Ci,
@@ -151,7 +152,15 @@ function require(module)
         onShutdown: onShutdown,
         {% endif %}
         exports: {}};
-      Services.scriptloader.loadSubScript(addonData.resourceURI.spec + "lib/" + module + ".js", scopes[module]);
+      {%- if multicompartment %}
+      let principal = Cc["@mozilla.org/systemprincipal;1"].getService(Ci.nsIPrincipal);
+      scopes[module] = new Cu.Sandbox(principal, {
+        sandboxName: url,
+        sandboxPrototype: scopes[module],
+        wantXrays: false
+      });
+      {%- endif %}
+      Services.scriptloader.loadSubScript(url, scopes[module]);
     {%- if 'info' in requires %}
     }
     {%- endif %}
