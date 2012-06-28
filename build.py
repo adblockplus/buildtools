@@ -142,6 +142,7 @@ Options:
 def runBuild(baseDir, scriptName, opts, args, type):
   locales = None
   buildNum = None
+  multicompartment = False
   releaseBuild = False
   keyFile = None
   limitMetadata = False
@@ -152,6 +153,8 @@ def runBuild(baseDir, scriptName, opts, args, type):
       buildNum = int(value)
     elif option in ('-k', '--key'):
       keyFile = value
+    elif option in ('-m', '--multi-compartment'):
+      multicompartment = True
     elif option in ('-r', '--release'):
       releaseBuild = True
     elif option == '--babelzilla':
@@ -163,7 +166,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
     import buildtools.packager as packager
     packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
-                         limitMetadata=limitMetadata)
+                         limitMetadata=limitMetadata, multicompartment=multicompartment)
   elif type == 'kmeleon':
     import buildtools.packagerKMeleon as packagerKMeleon
     packagerKMeleon.createBuild(baseDir, outFile=outFile, locales=locales,
@@ -175,13 +178,18 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
     usage(scriptName, type, 'autoinstall')
     return
 
+  multicompartment = False
+  for option, value in opts:
+    if option in ('-m', '--multi-compartment'):
+      multicompartment = True
+
   if ':' in args[0]:
     host, port = args[0].rsplit(':', 1)
   else:
     host, port = ('localhost', args[0])
 
   import buildtools.packager as packager
-  packager.autoInstall(baseDir, host, port)
+  packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
 
 
 def showDescriptions(baseDir, scriptName, opts, args, type):
@@ -283,6 +291,7 @@ with addCommand(runBuild, 'build') as command:
   command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3')
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
   command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file')
+  command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Create a build for Babelzilla', long='babelzilla')
   command.supportedTypes = ('gecko', 'kmeleon')
@@ -291,6 +300,7 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
   command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
   command.params = '[<host>:]<port>'
+  command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
   command.supportedTypes = ('gecko')
 
 with addCommand(showDescriptions, 'showdesc') as command:
