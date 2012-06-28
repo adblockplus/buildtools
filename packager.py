@@ -60,7 +60,7 @@ def getIgnoredFiles(params):
   if not params['limitMetadata']:
     result.append('meta.properties')
   if params['releaseBuild']:
-    result.append('TimeLine.jsm')
+    result.append('timeline.js')
   return result
 
 def isValidLocale(localesDir, dir, includeIncomplete=False):
@@ -109,10 +109,10 @@ def processFile(path, data, params):
     replacement = '\n'.join(map(lambda locale: r'\1%s\2%s\3' % (locale, locale), params['locales']))
     data = re.sub(localesRegExp, replacement, data)
 
-  if params['releaseBuild'] and path.endswith('.jsm'):
+  if params['releaseBuild'] and path.endswith('.js'):
     # Remove timeline calls from release builds
     timelineRegExp1 = re.compile(r'^.*\b[tT]imeLine\.(\w+)\(.*', re.M)
-    timelineRegExp2 = re.compile(r'^.*Cu\.import\([^()]*\bTimeLine\.jsm\"\).*', re.M)
+    timelineRegExp2 = re.compile(r'^.*\brequire\(\"timeline\"\).*', re.M)
     data = re.sub(timelineRegExp1, '', data)
     data = re.sub(timelineRegExp2, '', data)
 
