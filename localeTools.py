@@ -4,10 +4,23 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import re, sys, codecs, cgi
+import re, sys, codecs, cgi, json
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
+
+class OrderedDict(dict):
+  def __init__(self):
+    self.__order = []
+  def __setitem__(self, key, value):
+    self.__order.append(key)
+    dict.__setitem__(self, key, value)
+  def iteritems(self):
+    done = set()
+    for key in self.__order:
+      if not key in done and key in self:
+        yield (key, self[key])
+        done.add(key)
 
 def parseDTDString(data, path):
   result = []
@@ -93,3 +106,23 @@ def removeFromFile(path, key):
   fileHandle = codecs.open(path, 'wb', encoding='utf-8')
   fileHandle.write(data)
   fileHandle.close()
+
+def toJSON(path):
+  fileHandle = codecs.open(path, 'rb', encoding='utf-8')
+  data = fileHandle.read()
+  fileHandle.close()
+
+  if path.endswith('.dtd'):
+    it = parseDTDString(data, path)
+  elif path.endswith('.properties'):
+    it = parsePropertiesString(data, path)
+  else:
+    return None
+
+  result = OrderedDict()
+  for name, comment, value in it:
+    obj = {'message': value}
+    if comment != None:
+      obj['description'] = comment
+    result[name] = obj
+  return json.dumps(result, indent=2)
