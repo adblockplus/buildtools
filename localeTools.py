@@ -4,7 +4,7 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import re, sys, codecs, json
+import re, os, sys, codecs, json, urllib2
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
@@ -138,3 +138,43 @@ def toJSON(path):
       obj['description'] = comment
     result[name] = obj
   return json.dumps(result, indent=2)
+
+def updateTranslationMaster(dir, locale, projectName, user, password):
+  def encode_multipart_formdata(filename, data):
+    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+    body =  '--%s\r\n' % boundary
+    body += 'Content-Disposition: form-data; name="%s"; filename="%s"\r\n' % ('file', filename)
+    body += 'Content-Type: application/octet-stream\r\n'
+    body += '\r\n' + data + '\r\n'
+    body += '--%s--\r\n' % boundary
+    content_type = 'multipart/form-data; boundary=%s' % boundary
+    return content_type, body
+
+  locale = re.sub(r'-.*', '', locale)
+  passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+  passman.add_password(None, 'https://api.getlocalization.com/', user, password)
+  opener = urllib2.build_opener(urllib2.HTTPBasicAuthHandler(passman))
+  result = json.load(opener.open('https://api.getlocalization.com/%s/api/list-master/json/' % projectName))
+  if not result.get('success', 0):
+    raise Exception('Server indicated the retrieving the list of masters failed')
+
+  existing = set(result['master_files'])
+  for file in os.listdir(dir):
+    path = os.path.join(dir, file)
+    if os.path.isfile(path):
+      data = toJSON(path)
+      if data:
+        if file in existing:
+          url = 'https://api.getlocalization.com/%s/api/update-master/' % projectName
+          existing.remove(file)
+        else:
+          url = 'https://api.getlocalization.com/%s/api/create-master/json/%s/' % (projectName, locale)
+
+        content_type, body = encode_multipart_formdata(file, data.encode('utf-8'))
+        request = urllib2.Request(url, body)
+        request.add_header('Content-Type', content_type)
+        request.add_header('Content-Length', len(body))
+        opener.open(request).read()
+
+  for file in existing:
+    print 'Warning: master file %s needs to be removed' % file

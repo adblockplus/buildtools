@@ -192,6 +192,22 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
   packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
 
 
+def updateTranslationMaster(baseDir, scriptName, opts, args, type):
+  if len(args) < 2:
+    print 'User name and password are required to update translation master files.'
+    usage(scriptName, type, 'translate')
+    return
+
+  user = args[0]
+  password = args[1]
+
+  import buildtools.packager as packager
+  defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
+  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+
+  import buildtools.localeTools as localeTools
+  localeTools.updateTranslationMaster(defaultLocaleDir, packager.defaultLocale, basename, user, password)
+
 def showDescriptions(baseDir, scriptName, opts, args, type):
   locales = None
   for option, value in opts:
@@ -301,6 +317,12 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
   command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
   command.params = '[<host>:]<port>'
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
+  command.supportedTypes = ('gecko')
+
+with addCommand(updateTranslationMaster, 'translate') as command:
+  command.shortDescription = 'Updates translation master files'
+  command.description = 'Updates the translation master files on getlocalization.com.'
+  command.params = '[options] user password'
   command.supportedTypes = ('gecko')
 
 with addCommand(showDescriptions, 'showdesc') as command:
