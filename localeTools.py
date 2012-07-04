@@ -4,7 +4,7 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import re, sys, codecs, cgi, json
+import re, sys, codecs, json
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
@@ -21,6 +21,12 @@ class OrderedDict(dict):
       if not key in done and key in self:
         yield (key, self[key])
         done.add(key)
+
+def escapeEntity(value):
+  return value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+
+def unescapeEntity(value):
+  return value.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
 def parseDTDString(data, path):
   result = []
@@ -39,7 +45,7 @@ def parseDTDString(data, path):
     currentComment[0] = data.strip()
 
   def EntityDeclHandler(entityName, is_parameter_entity, value, base, systemId, publicId, notationName):
-    result.append((entityName, currentComment[0], value))
+    result.append((unescapeEntity(entityName), currentComment[0], unescapeEntity(value.strip())))
     currentComment[0] = None
 
   parser.ExternalEntityRefHandler = ExternalEntityRefHandler
@@ -84,7 +90,7 @@ def readFile(path):
 
 def generateStringEntry(key, value, path):
   if path.endswith('.dtd'):
-    return '<!ENTITY %s "%s">\n' % (cgi.escape(key, True), cgi.escape(value, True))
+    return '<!ENTITY %s "%s">\n' % (escapeEntity(key), escapeEntity(value))
   else:
     return '%s=%s\n' % (key, value)
 
