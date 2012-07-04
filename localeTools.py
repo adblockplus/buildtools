@@ -56,6 +56,12 @@ def parseDTDString(data, path):
   for entry in result:
     yield entry
 
+def escapeProperty(value):
+  return value.replace('\n', '\\n')
+
+def unescapeProperty(value):
+  return value.replace('\\n', '\n')
+
 def parsePropertiesString(data, path):
   currentComment = None
   for line in data.splitlines():
@@ -64,7 +70,7 @@ def parsePropertiesString(data, path):
       currentComment = match.group(1)
     elif '=' in line:
       key, value = line.split('=', 1)
-      yield (key, currentComment, value)
+      yield (unescapeProperty(key), currentComment, unescapeProperty(value))
       currentComment = None
     elif re.search(r'\S', line):
       print >>sys.stderr, 'Unrecognized data in file %s: %s' % (path, line)
@@ -92,7 +98,7 @@ def generateStringEntry(key, value, path):
   if path.endswith('.dtd'):
     return '<!ENTITY %s "%s">\n' % (escapeEntity(key), escapeEntity(value))
   else:
-    return '%s=%s\n' % (key, value)
+    return '%s=%s\n' % (escapeProperty(key), escapeProperty(value))
 
 def appendToFile(path, key, value):
   fileHandle = codecs.open(path, 'ab', encoding='utf-8')
