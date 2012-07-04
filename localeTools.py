@@ -36,7 +36,7 @@ def parseDTDString(data, path):
     return 1
 
   def CommentHandler(data):
-    currentComment[0] = data
+    currentComment[0] = data.strip()
 
   def EntityDeclHandler(entityName, is_parameter_entity, value, base, systemId, publicId, notationName):
     result.append((entityName, currentComment[0], value))
