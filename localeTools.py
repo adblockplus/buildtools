@@ -10,7 +10,9 @@ from ConfigParser import SafeConfigParser
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
 def parseDTDString(data, path):
-  result = {}
+  result = []
+  currentComment = [None]
+
   parser = ParserCreate()
   parser.UseForeignDTD(True)
   parser.SetParamEntityParsing(XML_PARAM_ENTITY_PARSING_ALWAYS)
@@ -20,35 +22,46 @@ def parseDTDString(data, path):
     subparser.Parse(data.encode('utf-8'), True)
     return 1
 
+  def CommentHandler(data):
+    currentComment[0] = data
+
   def EntityDeclHandler(entityName, is_parameter_entity, value, base, systemId, publicId, notationName):
-    result[entityName] = value
+    result.append((entityName, currentComment[0], value))
+    currentComment[0] = None
 
   parser.ExternalEntityRefHandler = ExternalEntityRefHandler
+  parser.CommentHandler = CommentHandler
   parser.EntityDeclHandler = EntityDeclHandler
   parser.Parse('<!DOCTYPE root SYSTEM "foo"><root/>', True)
-  result['_origData'] = data
-  return result
+
+  for entry in result:
+    yield entry
 
 def parsePropertiesString(data, path):
-  result = {}
+  currentComment = None
   for line in data.splitlines():
-    if re.search(r'^\s*[#!]', line):
-      continue
+    match = re.search(r'^\s*[#!]\s*(.*)', line)
+    if match:
+      currentComment = match.group(1)
     elif '=' in line:
       key, value = line.split('=', 1)
-      result[key] = value
+      yield (key, currentComment, value)
+      currentComment = None
     elif re.search(r'\S', line):
       print >>sys.stderr, 'Unrecognized data in file %s: %s' % (path, line)
-  result['_origData'] = data
-  return result
 
 def parseString(data, path):
+  result = {'_origData': data}
   if path.endswith('.dtd'):
-    return parseDTDString(data, path)
+    it = parseDTDString(data, path)
   elif path.endswith('.properties'):
-    return parsePropertiesString(data, path)
+    it = parsePropertiesString(data, path)
   else:
     return None
+
+  for name, comment, value in it:
+    result[name] = value
+  return result
 
 def readFile(path):
   fileHandle = codecs.open(path, 'rb', encoding='utf-8')
