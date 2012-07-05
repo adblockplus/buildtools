@@ -4,7 +4,7 @@
 # version 2.0 (the "License"). You can obtain a copy of the License at
 # http://mozilla.org/MPL/2.0/.
 
-import re, os, sys, codecs, json, urllib2
+import re, os, sys, codecs, json, urllib, urllib2
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
@@ -140,6 +140,25 @@ def toJSON(path):
       obj['description'] = '%s: %s' % (name, comment)
     result[name] = obj
   return json.dumps(result, indent=2)
+
+def setupTranslations(locales, projectName, key):
+  locales = set(locales)
+  firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
+  for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
+    locales.add(match.group(1))
+  langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
+  for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
+    if match.group(0).find('Install Language Pack') >= 0:
+      match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
+      if match2:
+        locales.add(match2.group(1))
+
+  locales = list(locales)
+  locales.sort()
+  params = urllib.urlencode([('languages[]', locale) for locale in locales])
+  result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/edit-project?key=%s&%s' % (projectName, key, params)).read()
+  if result.find('<success') < 0:
+    raise Exception('Server indicated that the operation was not successful\n' + result)
 
 def updateTranslationMaster(dir, locale, projectName, key):
   result = json.load(urllib2.urlopen('http://api.crowdin.net/api/project/%s/info?key=%s&json=1' % (projectName, key)))

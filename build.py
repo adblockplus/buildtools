@@ -192,6 +192,22 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
   packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
 
 
+def setupTranslations(baseDir, scriptName, opts, args, type):
+  if len(args) < 1:
+    print 'Project key is required to update translation master files.'
+    usage(scriptName, type, 'setuptrans')
+    return
+
+  key = args[0]
+
+  import buildtools.packager as packager
+  locales = packager.getLocales(baseDir, True)
+  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+
+  import buildtools.localeTools as localeTools
+  localeTools.setupTranslations(locales, basename, key)
+
+
 def updateTranslationMaster(baseDir, scriptName, opts, args, type):
   if len(args) < 1:
     print 'Project key is required to update translation master files.'
@@ -318,9 +334,15 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
   command.supportedTypes = ('gecko')
 
+with addCommand(setupTranslations, 'setuptrans') as command:
+  command.shortDescription = 'Sets up translation languages'
+  command.description = 'Sets up translation languages for the project on crowdin.net.'
+  command.params = '[options] project-key'
+  command.supportedTypes = ('gecko')
+
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
-  command.description = 'Updates the translation master files on crowdin.net.'
+  command.description = 'Updates the translation master files in the project on crowdin.net.'
   command.params = '[options] project-key'
   command.supportedTypes = ('gecko')
 
