@@ -153,7 +153,14 @@ def setupTranslations(locales, projectName, key):
       if match2:
         locales.add(match2.group(1))
 
-  locales = list(locales)
+  allowed = set()
+  allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
+  for match in re.finditer(r'<tr>\s*<td>([\w\-]+)</td>', allowedLocales, re.S):
+    allowed.add(match.group(1))
+  if not allowed.issuperset(locales):
+    print 'Warning, following locales aren\'t allowed by server: ' + ', '.join(locales - allowed)
+
+  locales = list(locales & allowed)
   locales.sort()
   params = urllib.urlencode([('languages[]', locale) for locale in locales])
   result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/edit-project?key=%s&%s' % (projectName, key, params)).read()
