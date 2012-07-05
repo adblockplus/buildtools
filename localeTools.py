@@ -134,47 +134,54 @@ def toJSON(path):
   result = OrderedDict()
   for name, comment, value in it:
     obj = {'message': value}
-    if comment != None:
-      obj['description'] = comment
+    if comment == None:
+      obj['description'] = name
+    else:
+      obj['description'] = '%s: %s' % (name, comment)
     result[name] = obj
   return json.dumps(result, indent=2)
 
-def updateTranslationMaster(dir, locale, projectName, user, password):
-  def encode_multipart_formdata(filename, data):
-    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
-    body =  '--%s\r\n' % boundary
-    body += 'Content-Disposition: form-data; name="%s"; filename="%s"\r\n' % ('file', filename)
-    body += 'Content-Type: application/octet-stream\r\n'
-    body += '\r\n' + data + '\r\n'
-    body += '--%s--\r\n' % boundary
-    content_type = 'multipart/form-data; boundary=%s' % boundary
-    return content_type, body
+def updateTranslationMaster(dir, locale, projectName, key):
+  result = json.load(urllib2.urlopen('http://api.crowdin.net/api/project/%s/info?key=%s&json=1' % (projectName, key)))
 
-  locale = re.sub(r'-.*', '', locale)
-  passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
-  passman.add_password(None, 'https://api.getlocalization.com/', user, password)
-  opener = urllib2.build_opener(urllib2.HTTPBasicAuthHandler(passman))
-  result = json.load(opener.open('https://api.getlocalization.com/%s/api/list-master/json/' % projectName))
-  if not result.get('success', 0):
-    raise Exception('Server indicated the retrieving the list of masters failed')
-
-  existing = set(result['master_files'])
+  existing = set(map(lambda f: f['name'], result['files']))
+  add = []
+  update = []
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
       data = toJSON(path)
       if data:
-        if file in existing:
-          url = 'https://api.getlocalization.com/%s/api/update-master/' % projectName
-          existing.remove(file)
+        newName = file + '.json'
+        if newName in existing:
+          update.append((newName, data))
+          existing.remove(newName)
         else:
-          url = 'https://api.getlocalization.com/%s/api/create-master/json/%s/' % (projectName, locale)
+          add.append((newName, data))
 
-        content_type, body = encode_multipart_formdata(file, data.encode('utf-8'))
-        request = urllib2.Request(url, body)
-        request.add_header('Content-Type', content_type)
-        request.add_header('Content-Length', len(body))
-        opener.open(request).read()
+  def postFiles(files, url):
+    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+    body = ''
+    for file, data in files:
+      body +=  '--%s\r\n' % boundary
+      body += 'Content-Disposition: form-data; name="files[%s]"; filename="%s"\r\n' % (file, file)
+      body += 'Content-Type: application/octet-stream\r\n'
+      body += '\r\n' + data.encode('utf-8') + '\r\n'
+      body += '--%s--\r\n' % boundary
 
+    request = urllib2.Request(url, body)
+    request.add_header('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
+    request.add_header('Content-Length', len(body))
+    result = urllib2.urlopen(request).read()
+    if result.find('<success') < 0:
+      raise Exception('Server indicated that the operation was not successful\n' + result)
+
+  if len(add):
+    postFiles(add, 'http://api.crowdin.net/api/project/%s/add-file?key=%s&type=chrome' % (projectName, key))
+  if len(update):
+    postFiles(update, 'http://api.crowdin.net/api/project/%s/update-file?key=%s' % (projectName, key))
   for file in existing:
-    print 'Warning: master file %s needs to be removed' % file
+    result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/delete-file?key=%s&file=%s' % (projectName, key, file)).read()
+    if result.find('<success') < 0:
+      raise Exception('Server indicated that the operation was not successful\n' + result)
+
