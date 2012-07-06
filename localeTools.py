@@ -7,6 +7,7 @@
 import re, os, sys, codecs, json, urllib, urllib2
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
+from zipfile import ZipFile
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
 class OrderedDict(dict):
@@ -141,6 +142,21 @@ def toJSON(path):
     result[name] = obj
   return json.dumps(result, indent=2)
 
+def fromJSON(path, data):
+  data = json.loads(data)
+  if not data:
+    if os.path.exists(path):
+      os.remove(path)
+    return
+
+  dir = os.path.dirname(path)
+  if not os.path.exists(dir):
+    os.makedirs(dir)
+  file = codecs.open(path, 'wb', encoding='utf-8')
+  for key, value in data.iteritems():
+    file.write(generateStringEntry(key, value['message'], path))
+  file.close()
+
 def setupTranslations(locales, projectName, key):
   locales = set(locales)
   firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
@@ -211,3 +227,35 @@ def updateTranslationMaster(dir, locale, projectName, key):
     if result.find('<success') < 0:
       raise Exception('Server indicated that the operation was not successful\n' + result)
 
+def getTranslations(localesDir, defaultLocale, projectName, key):
+  result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/export?key=%s' % (projectName, key)).read()
+  if result.find('<success') < 0:
+    raise Exception('Server indicated that the operation was not successful\n' + result)
+
+  result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/download/all.zip?key=%s' % (projectName, key)).read()
+  zip = ZipFile(StringIO(result))
+  dirs = {}
+  for info in zip.infolist():
+    if not info.filename.endswith('.dtd.json') and not info.filename.endswith('.properties.json'):
+      continue
+
+    dir, file = os.path.split(info.filename)
+    origFile = re.sub(r'\.json$', '', file)
+    if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
+      continue
+    if not dir in dirs:
+      dirs[dir] = set()
+    dirs[dir].add(origFile)
+
+    data = zip.open(info.filename).read()
+    fromJSON(os.path.join(localesDir, dir, origFile), data)
+
+  # Remove any extra files
+  for dir, files in dirs.iteritems():
+    baseDir = os.path.join(localesDir, dir)
+    if not os.path.exists(baseDir):
+      continue
+    for file in os.listdir(baseDir):
+      path = os.path.join(baseDir, file)
+      if os.path.isfile(path) and (file.endswith('.properties') or file.endswith('.dtd')) and not file in files:
+        os.remove(path)

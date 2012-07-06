@@ -223,6 +223,22 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
   import buildtools.localeTools as localeTools
   localeTools.updateTranslationMaster(defaultLocaleDir, packager.defaultLocale, basename, key)
 
+
+def getTranslations(baseDir, scriptName, opts, args, type):
+  if len(args) < 1:
+    print 'Project key is required to update translation master files.'
+    usage(scriptName, type, 'translate')
+    return
+
+  key = args[0]
+  import buildtools.packager as packager
+  localesDir = packager.getLocalesDir(baseDir)
+  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+
+  import buildtools.localeTools as localeTools
+  localeTools.getTranslations(localesDir, packager.defaultLocale, basename, key)
+
+
 def showDescriptions(baseDir, scriptName, opts, args, type):
   locales = None
   for option, value in opts:
@@ -343,6 +359,12 @@ with addCommand(setupTranslations, 'setuptrans') as command:
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
   command.description = 'Updates the translation master files in the project on crowdin.net.'
+  command.params = '[options] project-key'
+  command.supportedTypes = ('gecko')
+
+with addCommand(getTranslations, 'gettranslations') as command:
+  command.shortDescription = 'Downloads translation updates'
+  command.description = 'Downloads updated translations from crowdin.net.'
   command.params = '[options] project-key'
   command.supportedTypes = ('gecko')
 
