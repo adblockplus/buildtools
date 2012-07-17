@@ -219,7 +219,8 @@ def updateTranslationMaster(dir, locale, projectName, key):
       raise Exception('Server indicated that the operation was not successful\n' + result)
 
   if len(add):
-    postFiles(add, 'http://api.crowdin.net/api/project/%s/add-file?key=%s&type=chrome' % (projectName, key))
+    titles = urllib.urlencode([('titles[%s]' % name, re.sub(r'\.json', '', name)) for name, data in add])
+    postFiles(add, 'http://api.crowdin.net/api/project/%s/add-file?key=%s&type=chrome&%s' % (projectName, key, titles))
   if len(update):
     postFiles(update, 'http://api.crowdin.net/api/project/%s/update-file?key=%s' % (projectName, key))
   for file in existing:
