@@ -158,23 +158,20 @@ def getContributors(baseDir, metadata):
         main.append(value)
   return main + sorted(additional, key=unicode.lower)
 
-def getTranslators(localeMetadata):
-  translators = set()
+def initTranslators(localeMetadata):
   for locale in localeMetadata.itervalues():
     if 'translator' in locale:
-      for translator in locale['translator'].split(','):
-        translator = translator.strip()
-        if translator:
-          translators.add(translator)
-  return sorted(translators, key=unicode.lower)
+      locale['translators'] = sorted(map(lambda t: t.strip(), locale['translator'].split(',')), key=unicode.lower)
+    else:
+      locale['translators'] = []
 
 def createManifest(baseDir, params):
   global KNOWN_APPS, defaultLocale
   env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]), autoescape=True, extensions=['jinja2.ext.autoescape'])
-  env.filters['translators'] = getTranslators
   template = env.get_template('install.rdf.tmpl')
   templateData = dict(params)
   templateData['localeMetadata'] = readLocaleMetadata(baseDir, params['locales'])
+  initTranslators(templateData['localeMetadata'])
   templateData['KNOWN_APPS'] = KNOWN_APPS
   templateData['defaultLocale'] = defaultLocale
   return template.render(templateData).encode('utf-8')

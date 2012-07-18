@@ -10,10 +10,6 @@
 {%- for contributor in contributors -%}
 <em:contributor>{{contributor}}</em:contributor>
 {%- endfor -%}
-
-{%- for translator in localeMetadata|translators -%}
-<em:translator>{{translator}}</em:translator>
-{%- endfor -%}
 {%- endmacro %}
 
 <RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -84,7 +80,10 @@
             {{- metadata.get('homepage', 'default') -}}
           {%- endif -%}
         </em:homepageURL>
-        {%- endif -%}
+        {%- endif %}
+        {%- for translator in locale.translators %}
+        <em:translator>{{translator}}</em:translator>
+        {%- endfor %}
       </Description>
     </em:localized>
     {%- endfor %}
