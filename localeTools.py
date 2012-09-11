@@ -10,6 +10,11 @@ from ConfigParser import SafeConfigParser
 from zipfile import ZipFile
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
+langMapping = {
+  'dsb': 'dsb-DE',
+  'hsb': 'hsb-DE',
+}
+
 class OrderedDict(dict):
   def __init__(self):
     self.__order = []
@@ -161,13 +166,13 @@ def setupTranslations(locales, projectName, key):
   locales = set(locales)
   firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
   for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
-    locales.add(match.group(1))
+    locales.add(langMapping.get(match.group(1), match.group(1)))
   langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
   for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
     if match.group(0).find('Install Language Pack') >= 0:
       match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
       if match2:
-        locales.add(match2.group(1))
+        locales.add(langMapping.get(match2.group(1), match2.group(1)))
 
   allowed = set()
   allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
@@ -244,6 +249,11 @@ def getTranslations(localesDir, defaultLocale, projectName, key):
     origFile = re.sub(r'\.json$', '', file)
     if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
       continue
+
+    for key, value in langMapping.iteritems():
+      if value == dir:
+        dir = key
+
     if not dir in dirs:
       dirs[dir] = set()
     dirs[dir].add(origFile)
