@@ -9,7 +9,7 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 const Cu = Components.utils;
 
-let {Services, atob, btoa} = Cu.import("resource://gre/modules/Services.jsm", null);
+let {Services, atob, btoa, File} = Cu.import("resource://gre/modules/Services.jsm", null);
 
 let addonData = null;
 
@@ -149,6 +149,7 @@ function require(module)
         Cu: Cu,
         atob: atob,
         btoa: btoa,
+        File: File,
         require: require,
         {% if hasShutdownHandlers %}
         onShutdown: onShutdown,
