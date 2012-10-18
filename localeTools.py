@@ -98,6 +98,10 @@ def escapeEntity(value):
 def unescapeEntity(value):
   return value.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
+def mapLocale(type, locale):
+  mapping = langMappingChrome if type == 'chrome' else langMappingGecko
+  return mapping.get(locale, locale)
+
 def parseDTDString(data, path):
   result = []
   currentComment = [None]
@@ -209,7 +213,7 @@ def toJSON(path):
     else:
       obj['description'] = '%s: %s' % (name, comment)
     result[name] = obj
-  return json.dumps(result, indent=2)
+  return json.dumps(result, ensure_ascii=False, indent=2)
 
 def fromJSON(path, data):
   data = json.loads(data)
@@ -226,6 +230,36 @@ def fromJSON(path, data):
     file.write(generateStringEntry(key, value['message'], path))
   file.close()
 
+def preprocessChromeLocale(path, metadata, isMaster):
+  fileHandle = codecs.open(path, 'rb', encoding='utf-8')
+  data = json.load(fileHandle)
+  fileHandle.close()
+
+  # Remove synced keys, these don't need to be translated
+  if metadata.has_section('locale_sync'):
+    for file, stringIDs in metadata.items('locale_sync'):
+      for stringID in re.split(r'\s+', stringIDs):
+        if file == 'remove':
+          key = stringID
+        else:
+          key = re.sub(r'\..*', '', file) + '_' + re.sub(r'\W', '_', stringID)
+        if key in data:
+          del data[key]
+
+  for key, value in data.iteritems():
+    if isMaster:
+      # Make sure the key name is listed in the description
+      if "description" in value:
+        value["description"] = "%s: %s" % (key, value["description"])
+      else:
+        value["description"] = key
+    else:
+      # Delete description from translations
+      if "description" in value:
+        del value["description"]
+
+  return json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2)
+
 def setupTranslations(type, locales, projectName, key):
   # Copy locales list, we don't want to change the parameter
   locales = set(locales)
@@ -237,17 +271,16 @@ def setupTranslations(type, locales, projectName, key):
   else:
     firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
     for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
-      locales.add(langMappingGecko.get(match.group(1), match.group(1)))
+      locales.add(mapLocale(type, match.group(1)))
     langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
     for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
       if match.group(0).find('Install Language Pack') >= 0:
         match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
         if match2:
-          locales.add(langMappingGecko.get(match2.group(1), match2.group(1)))
+          locales.add(mapLocale(type, match2.group(1)))
 
   # Convert locale codes to the ones that Crowdin will understand
-  mapping = langMappingChrome if type == 'chrome' else langMappingGecko
-  locales = set(map(lambda locale: mapping[locale] if locale in mapping else locale, locales))
+  locales = set(map(lambda locale: mapLocale(type, locale), locales))
 
   allowed = set()
   allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
@@ -263,7 +296,25 @@ def setupTranslations(type, locales, projectName, key):
   if result.find('<success') < 0:
     raise Exception('Server indicated that the operation was not successful\n' + result)
 
-def updateTranslationMaster(dir, locale, projectName, key):
+def postFiles(files, url):
+  boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+  body = ''
+  for file, data in files:
+    body +=  '--%s\r\n' % boundary
+    body += 'Content-Disposition: form-data; name="files[%s]"; filename="%s"\r\n' % (file, file)
+    body += 'Content-Type: application/octet-stream\r\n'
+    body += 'Content-Transfer-Encoding: binary\r\n'
+    body += '\r\n' + data + '\r\n'
+    body += '--%s--\r\n' % boundary
+
+  request = urllib2.Request(url, StringIO(body.encode('utf-8')))
+  request.add_header('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
+  request.add_header('Content-Length', len(body))
+  result = urllib2.urlopen(request).read()
+  if result.find('<success') < 0:
+    raise Exception('Server indicated that the operation was not successful\n' + result)
+
+def updateTranslationMaster(type, metadata, dir, projectName, key):
   result = json.load(urllib2.urlopen('http://api.crowdin.net/api/project/%s/info?key=%s&json=1' % (projectName, key)))
 
   existing = set(map(lambda f: f['name'], result['files']))
@@ -272,31 +323,19 @@ def updateTranslationMaster(dir, locale, projectName, key):
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
-      data = toJSON(path)
-      if data:
+      if type == 'chrome':
+        data = preprocessChromeLocale(path, metadata, True)
+        newName = file
+      else:
+        data = toJSON(path)
         newName = file + '.json'
+
+      if data:
         if newName in existing:
           update.append((newName, data))
           existing.remove(newName)
         else:
           add.append((newName, data))
-
-  def postFiles(files, url):
-    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
-    body = ''
-    for file, data in files:
-      body +=  '--%s\r\n' % boundary
-      body += 'Content-Disposition: form-data; name="files[%s]"; filename="%s"\r\n' % (file, file)
-      body += 'Content-Type: application/octet-stream\r\n'
-      body += '\r\n' + data.encode('utf-8') + '\r\n'
-      body += '--%s--\r\n' % boundary
-
-    request = urllib2.Request(url, body)
-    request.add_header('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
-    request.add_header('Content-Length', len(body))
-    result = urllib2.urlopen(request).read()
-    if result.find('<success') < 0:
-      raise Exception('Server indicated that the operation was not successful\n' + result)
 
   if len(add):
     titles = urllib.urlencode([('titles[%s]' % name, re.sub(r'\.json', '', name)) for name, data in add])
@@ -307,6 +346,23 @@ def updateTranslationMaster(dir, locale, projectName, key):
     result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/delete-file?key=%s&file=%s' % (projectName, key, file)).read()
     if result.find('<success') < 0:
       raise Exception('Server indicated that the operation was not successful\n' + result)
+
+def uploadTranslations(type, metadata, dir, locale, projectName, key):
+  files = []
+  for file in os.listdir(dir):
+    path = os.path.join(dir, file)
+    if os.path.isfile(path):
+      if type == 'chrome':
+        data = preprocessChromeLocale(path, metadata, False)
+        newName = file
+      else:
+        data = toJSON(path)
+        newName = file + '.json'
+
+      if data:
+        files.append((newName, data))
+  if len(files):
+    postFiles(files, 'http://api.crowdin.net/api/project/%s/upload-translation?key=%s&language=%s' % (projectName, key, mapLocale(type, locale)))
 
 def getTranslations(localesDir, defaultLocale, projectName, key):
   result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/export?key=%s' % (projectName, key)).read()

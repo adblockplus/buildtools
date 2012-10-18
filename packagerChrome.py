@@ -9,6 +9,8 @@ from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
+defaultLocale = 'en_US'
+
 def getDefaultFileName(baseDir, metadata, version, ext):
   return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'baseName'), version, ext))
 
