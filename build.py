@@ -41,12 +41,24 @@ class Command(object):
   def isSupported(self, type):
     return self._supportedTypes == None or type in self._supportedTypes
 
-  def addOption(self, description, short=None, long=None, value=None):
-    self._options.append((description, short, long, value))
+  def addOption(self, description, short=None, long=None, value=None, types=None):
+    self._options.append((description, short, long, value, types))
 
-  def parseArgs(self, args):
-    shortOptions = map(lambda o: o[1]+':' if o[3] != None else o[1], filter(lambda o: o[1] != None, self._options))
-    longOptions = map(lambda o: o[2]+'=' if o[3] != None else o[2], filter(lambda o: o[2] != None, self._options))
+  def parseArgs(self, type, args):
+    shortOptions = map(
+      lambda o: o[1]+':' if o[3] != None else o[1],
+      filter(
+        lambda o: o[1] != None and (o[4] == None or type in o[4]),
+        self._options
+      )
+    )
+    longOptions = map(
+      lambda o: o[2]+'=' if o[3] != None else o[2],
+      filter(
+        lambda o: o[2] != None and (o[4] == None or type in o[4]),
+        self._options
+      )
+    )
     return getopt(args, ''.join(shortOptions), longOptions)
 
 
@@ -107,7 +119,9 @@ For details on a command run:
     command = commands[commandName]
     description = '\n'.join(map(lambda s: '\n'.join(splitByLength(s, 80)), command.description.split('\n')))
     options = []
-    for descr, short, long, value in command.options:
+    for descr, short, long, value, types in command.options:
+      if types != None and type not in types:
+        continue
       if short == None:
         shortText = ''
       elif value == None:
@@ -335,12 +349,12 @@ with addCommand(runBuild, 'build') as command:
   command.shortDescription = 'Create a build'
   command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
   command.params = '[options] [output_file]'
-  command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3')
+  command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko', 'kmeleon'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file')
-  command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
-  command.addOption('Create a release build', short='r', long='release')
-  command.addOption('Create a build for Babelzilla', long='babelzilla')
+  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko'))
+  command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
+  command.addOption('Create a release build', short='r', long='release', types=('gecko', 'kmeleon'))
+  command.addOption('Create a build for Babelzilla', long='babelzilla', types=('gecko'))
   command.supportedTypes = ('gecko', 'kmeleon')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
@@ -388,7 +402,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
     'probably don\'t want to run this!\n\n'\
     'Runs release automation: creates downloads for the new version, tags '\
     'source code repository as well as downloads and buildtools repository.'
-  command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file')
+  command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file', types=('gecko'))
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
   command.supportedTypes = ('gecko', 'kmeleon')
@@ -410,7 +424,7 @@ No command given, assuming "build". For a list of commands run:
   if command in commands:
     if commands[command].isSupported(type):
       try:
-        opts, args = commands[command].parseArgs(args[1:])
+        opts, args = commands[command].parseArgs(type, args[1:])
       except GetoptError, e:
         print str(e)
         usage(scriptName, type, command)
