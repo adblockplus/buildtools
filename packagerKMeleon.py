@@ -5,7 +5,7 @@
 # http://mozilla.org/MPL/2.0/.
 
 import os, subprocess, re, tempfile, shutil, json
-import buildtools.packager as packager
+import buildtools.packagerGecko as packagerBase
 
 libs = (
   'libcmt.lib', 'kernel32.lib', 'user32.lib', 'gdi32.lib', 'comctl32.lib',
@@ -92,15 +92,15 @@ def buildDLL(baseDir, fileName, version):
     shutil.rmtree(tempDir, ignore_errors=True)
 
 def createManifest(baseExtDir, params):
-  localeMetadata = packager.readLocaleMetadata(baseExtDir, params['locales'])
+  localeMetadata = packagerBase.readLocaleMetadata(baseExtDir, params['locales'])
 
   manifest = {}
   metadata = params['metadata']
   manifest['id'] = metadata.get('general', 'id')
   manifest['version'] = metadata.get('general', 'version')
   manifest['version'] = params['version']
-  manifest['name'] = localeMetadata[packager.defaultLocale]['name']
-  manifest['description'] = localeMetadata[packager.defaultLocale]['description']
+  manifest['name'] = localeMetadata[packagerBase.defaultLocale]['name']
+  manifest['description'] = localeMetadata[packagerBase.defaultLocale]['description']
   manifest['creator'] = metadata.get('general', 'author')
   manifest['homepage'] = metadata.get('homepage', 'default')
   if metadata.has_section('contributors'):
@@ -108,7 +108,7 @@ def createManifest(baseExtDir, params):
     manifest['contributors'].sort()
   else:
     manifest['contributors'] = []
-  manifest['translators'] = packager.getTranslators(localeMetadata)
+  manifest['translators'] = packagerBase.getTranslators(localeMetadata)
   return 'var EXPORTED_SYMBOLS = ["manifest"];\nvar manifest = ' + json.dumps(manifest)
 
 def processChromeManifest(data, baseName):
@@ -120,15 +120,15 @@ def processChromeManifest(data, baseName):
 
 def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False):
   if buildNum == None:
-    buildNum = packager.getBuildNum(baseDir)
+    buildNum = packagerBase.getBuildNum(baseDir)
 
   baseExtDir = getBaseExtensionDir(baseDir)
   if locales == None:
-    locales = packager.getLocales(baseExtDir)
+    locales = packagerBase.getLocales(baseExtDir)
   elif locales == 'all':
-    locales = packager.getLocales(baseExtDir, True)
+    locales = packagerBase.getLocales(baseExtDir, True)
 
-  metadata = packager.readMetadata(baseExtDir)
+  metadata = packagerBase.readMetadata(baseExtDir)
   version = metadata.get('general', 'version')
   if not releaseBuild:
     version += '.' + buildNum
@@ -145,27 +145,27 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
 
   chromeFiles = {}
   for xulFile in getXULFiles(baseDir):
-    packager.readFile(chromeFiles, params, xulFile, 'content/ui/%s' % os.path.basename(xulFile))
+    packagerBase.readFile(chromeFiles, params, xulFile, 'content/ui/%s' % os.path.basename(xulFile))
 
   files = {}
   files['modules/%s/Manifest.jsm' % baseName] = createManifest(baseExtDir, params)
   files['kplugins/%s.dll' % baseName] = buildDLL(baseDir, '%s.dll' % baseName, version)
-  files['chrome/%s.jar' % baseName] = packager.createChromeJar(baseExtDir, params, files=chromeFiles)
+  files['chrome/%s.jar' % baseName] = packagerBase.createChromeJar(baseExtDir, params, files=chromeFiles)
 
-  packager.readFile(files, params, os.path.join(baseExtDir, 'chrome.manifest'), 'chrome/%s.manifest' % baseName)
+  packagerBase.readFile(files, params, os.path.join(baseExtDir, 'chrome.manifest'), 'chrome/%s.manifest' % baseName)
   files['chrome/%s.manifest' % baseName] = processChromeManifest(files['chrome/%s.manifest' % baseName], baseName)
 
   for macroFile in getMacroFiles(baseDir):
-    packager.readFile(files, params, macroFile, 'macros/%s' % os.path.basename(macroFile))
+    packagerBase.readFile(files, params, macroFile, 'macros/%s' % os.path.basename(macroFile))
   for interfaceFile in getInterfaceFiles(baseDir):
-    packager.readFile(files, params, interfaceFile, 'components/%s' % os.path.basename(interfaceFile))
+    packagerBase.readFile(files, params, interfaceFile, 'components/%s' % os.path.basename(interfaceFile))
   for moduleFile in getModuleFiles(baseDir):
-    packager.readFile(files, params, moduleFile, 'modules/%s/%s' % (baseName, os.path.basename(moduleFile)))
+    packagerBase.readFile(files, params, moduleFile, 'modules/%s/%s' % (baseName, os.path.basename(moduleFile)))
   for prefsFile in getPrefsFiles(baseDir):
-    packager.readFile(files, params, prefsFile, 'defaults/pref/%s' % os.path.basename(prefsFile))
+    packagerBase.readFile(files, params, prefsFile, 'defaults/pref/%s' % os.path.basename(prefsFile))
 
-  packager.readFile(files, params, os.path.join(baseExtDir, 'defaults'), 'defaults')
-  packager.readFile(files, params, os.path.join(baseExtDir, 'modules'), 'modules/%s' %baseName)
+  packagerBase.readFile(files, params, os.path.join(baseExtDir, 'defaults'), 'defaults')
+  packagerBase.readFile(files, params, os.path.join(baseExtDir, 'modules'), 'modules/%s' %baseName)
 
   # Correct files names (defaults/preferences/ => defaults/pref/)
   newFiles = {}
@@ -176,8 +176,8 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   files = newFiles
 
   # Allow local metadata to overrite settings from base extension
-  metadata.read(packager.getMetadataPath(baseDir))
+  metadata.read(packagerBase.getMetadataPath(baseDir))
   if outFile == None:
-    outFile = packager.getDefaultFileName(baseDir, metadata, version, 'zip')
+    outFile = packagerBase.getDefaultFileName(baseDir, metadata, version, 'zip')
 
-  packager.writeXPI(files, outFile)
+  packagerBase.writeXPI(files, outFile)

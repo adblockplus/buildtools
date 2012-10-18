@@ -163,14 +163,14 @@ def runBuild(baseDir, scriptName, opts, args, type):
   outFile = args[0] if len(args) > 0 else None
 
   if type == 'gecko':
-    import buildtools.packager as packager
+    import buildtools.packagerGecko as packager
     packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          limitMetadata=limitMetadata, multicompartment=multicompartment)
   elif type == 'kmeleon':
-    import buildtools.packagerKMeleon as packagerKMeleon
-    packagerKMeleon.createBuild(baseDir, outFile=outFile, locales=locales,
-                                buildNum=buildNum, releaseBuild=releaseBuild)
+    import buildtools.packagerKMeleon as packager
+    packager.createBuild(baseDir, outFile=outFile, locales=locales,
+                         buildNum=buildNum, releaseBuild=releaseBuild)
 
 def runAutoInstall(baseDir, scriptName, opts, args, type):
   if len(args) == 0:
@@ -188,7 +188,7 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
   else:
     host, port = ('localhost', args[0])
 
-  import buildtools.packager as packager
+  import buildtools.packagerGecko as packager
   packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
 
 
@@ -200,7 +200,7 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  import buildtools.packager as packager
+  import buildtools.packagerGecko as packager
   locales = packager.getLocales(baseDir, True)
   basename = packager.readMetadata(baseDir).get('general', 'baseName')
 
@@ -216,7 +216,7 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  import buildtools.packager as packager
+  import buildtools.packagerGecko as packager
   defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
   basename = packager.readMetadata(baseDir).get('general', 'baseName')
 
@@ -231,7 +231,7 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     return
 
   key = args[0]
-  import buildtools.packager as packager
+  import buildtools.packagerGecko as packager
   localesDir = packager.getLocalesDir(baseDir)
   basename = packager.readMetadata(baseDir).get('general', 'baseName')
 
@@ -245,7 +245,7 @@ def showDescriptions(baseDir, scriptName, opts, args, type):
     if option in ('-l', '--locales'):
       locales = value.split(',')
 
-  import buildtools.packager as packager
+  import buildtools.packagerGecko as packager
   if locales == None:
     locales = packager.getLocales(baseDir)
   elif locales == 'all':
@@ -322,11 +322,11 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     if keyFile == None:
       print 'Warning: no key file specified, creating an unsigned release build\n'
 
-    import buildtools.releaseAutomation as releaseAutomation
+    import buildtools.releaseAutomationGecko as releaseAutomation
     releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
   else:
-    import buildtools.releaseAutomationKMeleon as releaseAutomationKMeleon
-    releaseAutomationKMeleon.run(baseDir, downloadsRepo, buildtoolsRepo)
+    import buildtools.releaseAutomationKMeleon as releaseAutomation
+    releaseAutomation.run(baseDir, downloadsRepo, buildtoolsRepo)
 
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
   command.shortDescription = 'Show this message'

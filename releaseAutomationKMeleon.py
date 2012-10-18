@@ -6,18 +6,18 @@
 
 import os, re, subprocess, tarfile
 from StringIO import StringIO
-import buildtools.packager as packager
+import buildtools.packagerGecko as packagerBase
 import buildtools.packagerKMeleon as packagerKMeleon
 
 def run(baseDir, downloadsRepo, buildtoolsRepo):
   baseExtDir = packagerKMeleon.getBaseExtensionDir(baseDir)
 
   # Read extension name, version and branch name
-  locales = packager.readLocaleMetadata(baseExtDir, [packager.defaultLocale])
-  extensionName = locales[packager.defaultLocale]['name'] + ' for K-Meleon'
+  locales = packagerBase.readLocaleMetadata(baseExtDir, [packagerBase.defaultLocale])
+  extensionName = locales[packagerBase.defaultLocale]['name'] + ' for K-Meleon'
 
-  metadata = packager.readMetadata(baseExtDir)
-  metadata.read(packager.getMetadataPath(baseDir))
+  metadata = packagerBase.readMetadata(baseExtDir)
+  metadata.read(packagerBase.getMetadataPath(baseDir))
   branchName = metadata.get('general', 'branchname')
   version = metadata.get('general', 'version')
 
@@ -25,7 +25,7 @@ def run(baseDir, downloadsRepo, buildtoolsRepo):
   subprocess.Popen(['hg', 'tag', '-R', baseDir, '-f', version]).communicate()
 
   # Create a release build
-  buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'zip'))
+  buildPath = os.path.join(downloadsRepo, packagerBase.getDefaultFileName(baseDir, metadata, version, 'zip'))
   packagerKMeleon.createBuild(baseDir, outFile=buildPath, releaseBuild=True)
 
   # Create source archive
