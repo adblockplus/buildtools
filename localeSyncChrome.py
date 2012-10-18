@@ -97,7 +97,7 @@ def syncLocales(sourceLocales, targetLocales, removed, imported):
     except:
       pass
     file = codecs.open(targetFile, 'wb', encoding='utf-8')
-    json.dump(data, file, ensure_ascii=False, sort_keys=True, indent=2)
+    json.dump(data, file, ensure_ascii=False, sort_keys=True, indent=2, separators=(',', ': '))
     print >>file
     file.close()
 
