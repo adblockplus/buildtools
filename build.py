@@ -244,12 +244,48 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  import buildtools.packagerGecko as packager
-  defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
-  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  if type == 'chrome':
+    import buildtools.packagerChrome as packager
+    defaultLocaleDir = os.path.join(baseDir, '_locales', packager.defaultLocale)
+    metadata = packager.readMetadata(baseDir)
+    basename = metadata.get('general', 'baseName')
+  else:
+    import buildtools.packagerGecko as packager
+    defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
+    metadata = packager.readMetadata(baseDir)
+    basename = metadata.get('general', 'baseName')
 
   import buildtools.localeTools as localeTools
-  localeTools.updateTranslationMaster(defaultLocaleDir, packager.defaultLocale, basename, key)
+  localeTools.updateTranslationMaster(type, metadata, defaultLocaleDir, basename, key)
+
+
+def uploadTranslations(baseDir, scriptName, opts, args, type):
+  if len(args) < 1:
+    print 'Project key is required to upload existing translations.'
+    usage(scriptName, type, 'uploadtrans')
+    return
+
+  key = args[0]
+
+  if type == 'chrome':
+    import buildtools.packagerChrome as packager
+    localesDir = os.path.join(baseDir, '_locales')
+    locales = os.listdir(localesDir)
+    locales = map(lambda locale: (locale.replace('_', '-'), os.path.join(localesDir, locale)), locales)
+    metadata = packager.readMetadata(baseDir)
+    basename = metadata.get('general', 'baseName')
+  else:
+    import buildtools.packagerGecko as packager
+    localesDir = packager.getLocalesDir(baseDir)
+    locales = packager.getLocales(baseDir, True)
+    locales = map(lambda locale: (locale, os.path.join(localesDir, locale)), locales)
+    metadata = packager.readMetadata(baseDir)
+    basename = metadata.get('general', 'baseName')
+
+  import buildtools.localeTools as localeTools
+  for locale, localeDir in locales:
+    if locale != packager.defaultLocale:
+      localeTools.uploadTranslations(type, metadata, localeDir, locale, basename, key)
 
 
 def getTranslations(baseDir, scriptName, opts, args, type):
@@ -403,7 +439,13 @@ with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
   command.description = 'Updates the translation master files in the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'chrome')
+
+with addCommand(uploadTranslations, 'uploadtrans') as command:
+  command.shortDescription = 'Uploads existing translations'
+  command.description = 'Uploads already existing translations to the project on crowdin.net.'
+  command.params = '[options] project-key'
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(getTranslations, 'gettranslations') as command:
   command.shortDescription = 'Downloads translation updates'
