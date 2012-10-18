@@ -350,6 +350,16 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     import buildtools.releaseAutomationKMeleon as releaseAutomation
     releaseAutomation.run(baseDir, downloadsRepo, buildtoolsRepo)
 
+def syncLocales(baseDir, scriptName, opts, args, type):
+  if len(args) == 0:
+    print 'Please specify the directory of the source Firefox extension as a parameter'
+    usage(scriptName, type, 'synclocales')
+    return
+  sourceDir = args[0]
+
+  import buildtools.localeSyncChrome as localeSync
+  localeSync.run(baseDir, sourceDir)
+
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
   command.shortDescription = 'Show this message'
 
@@ -415,6 +425,12 @@ with addCommand(runReleaseAutomation, 'release') as command:
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
   command.supportedTypes = ('gecko', 'kmeleon')
+
+with addCommand(syncLocales, 'synclocales') as command:
+  command.shortDescription = 'Sync locales with a Firefox extension'
+  command.description = 'Updates locale files with strings from a Firefox extension corresponding to the entries in [locale_sync] metadata section.'
+  command.params = '<firefox_extension_directory>'
+  command.supportedTypes = ('chrome')
 
 def processArgs(baseDir, args, type='gecko'):
   global commands
