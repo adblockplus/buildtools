@@ -88,7 +88,7 @@ def syncLocales(sourceLocales, targetLocales, removed, imported):
       try:
         sourceData = localeTools.readFile(sourceFile)
         if 'name' in sourceData:
-          data['name'] = {'message': sourceData['name'] + ' (Beta)'}
+          data['name'] = {'message': sourceData['name']}
       except:
         pass
 
