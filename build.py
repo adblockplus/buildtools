@@ -360,6 +360,10 @@ def syncLocales(baseDir, scriptName, opts, args, type):
   import buildtools.localeSyncChrome as localeSync
   localeSync.run(baseDir, sourceDir)
 
+def updatePSL(baseDir, scriptName, opts, args, type):
+  import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
+  publicSuffixListUpdater.updatePSL(baseDir)
+
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
   command.shortDescription = 'Show this message'
 
@@ -429,7 +433,12 @@ with addCommand(runReleaseAutomation, 'release') as command:
 with addCommand(syncLocales, 'synclocales') as command:
   command.shortDescription = 'Sync locales with a Firefox extension'
   command.description = 'Updates locale files with strings from a Firefox extension corresponding to the entries in [locale_sync] metadata section.'
-  command.params = '<firefox_extension_directory>'
+  command.params = '<firefox_addon_directory>'
+  command.supportedTypes = ('chrome')
+
+with addCommand(updatePSL, 'updatepsl') as command:
+  command.shortDescription = 'Updates Public Suffix List'
+  command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
   command.supportedTypes = ('chrome')
 
 def processArgs(baseDir, args, type='gecko'):
