@@ -6,7 +6,7 @@
 
 import os, re, subprocess, tarfile
 from StringIO import StringIO
-import buildtools.packager as packager
+import buildtools.packagerGecko as packager
 
 def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
   # Replace version number in metadata file "manually", ConfigParser will mess
