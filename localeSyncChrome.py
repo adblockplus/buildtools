@@ -16,7 +16,7 @@ firefoxToChrome = {
   'da': 'da',
   'de': 'de',
   'el': 'el',
-  'en-US': 'en',
+  'en-US': 'en_US',
   'en-GB': 'en_GB',
   'es-ES': 'es',
   'es-AR': 'es_419',
