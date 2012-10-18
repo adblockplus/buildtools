@@ -160,6 +160,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
   releaseBuild = False
   keyFile = None
   limitMetadata = False
+  experimentalAPI = False
   for option, value in opts:
     if option in ('-l', '--locales'):
       locales = value.split(',')
@@ -171,6 +172,8 @@ def runBuild(baseDir, scriptName, opts, args, type):
       multicompartment = True
     elif option in ('-r', '--release'):
       releaseBuild = True
+    elif option == '--experimental':
+      experimentalAPI = True
     elif option == '--babelzilla':
       locales = 'all'
       limitMetadata = True
@@ -181,6 +184,11 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          limitMetadata=limitMetadata, multicompartment=multicompartment)
+  elif type == 'chrome':
+    import buildtools.packagerChrome as packager
+    packager.createBuild(baseDir, outFile=outFile, buildNum=buildNum,
+                         releaseBuild=releaseBuild, keyFile=keyFile,
+                         experimentalAPI=experimentalAPI)
   elif type == 'kmeleon':
     import buildtools.packagerKMeleon as packager
     packager.createBuild(baseDir, outFile=outFile, locales=locales,
@@ -351,11 +359,12 @@ with addCommand(runBuild, 'build') as command:
   command.params = '[options] [output_file]'
   command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko', 'kmeleon'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko'))
+  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
-  command.addOption('Create a release build', short='r', long='release', types=('gecko', 'kmeleon'))
+  command.addOption('Create a release build', short='r', long='release')
+  command.addOption('Enable use of experimental APIs', long='experimental')
   command.addOption('Create a build for Babelzilla', long='babelzilla', types=('gecko'))
-  command.supportedTypes = ('gecko', 'kmeleon')
+  command.supportedTypes = ('gecko', 'kmeleon', 'chrome')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
