@@ -10,10 +10,74 @@ from ConfigParser import SafeConfigParser
 from zipfile import ZipFile
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
-langMapping = {
+langMappingGecko = {
   'dsb': 'dsb-DE',
   'hsb': 'hsb-DE',
 }
+
+langMappingChrome = {
+  'es-419': 'es-AR',
+  'es': 'es-ES',
+  'sv': 'sv-SE',
+  'ml': 'ml-IN',
+  'nb': 'no',
+}
+
+chromeLocales = [
+  "am",
+  "ar",
+  "bg",
+  "bn",
+  "ca",
+  "cs",
+  "da",
+  "de",
+  "el",
+  "en-GB",
+  "en-US",
+  "es-419",
+  "es",
+  "et",
+  "fa",
+  "fi",
+  "fil",
+  "fr",
+  "gu",
+  "he",
+  "hi",
+  "hr",
+  "hu",
+  "id",
+  "it",
+  "ja",
+  "kn",
+  "ko",
+  "lt",
+  "lv",
+  "ml",
+  "mr",
+  "ms",
+  "nb",
+  "nl",
+  "pl",
+  "pt-BR",
+  "pt-PT",
+  "ro",
+  "ru",
+  "sk",
+  "sl",
+  "sr",
+  "sv",
+  "sw",
+  "ta",
+  "te",
+  "th",
+  "tr",
+  "uk",
+  "vi",
+  "zh-CN",
+  "zh-TW",
+]
 
 class OrderedDict(dict):
   def __init__(self):
@@ -162,17 +226,28 @@ def fromJSON(path, data):
     file.write(generateStringEntry(key, value['message'], path))
   file.close()
 
-def setupTranslations(locales, projectName, key):
+def setupTranslations(type, locales, projectName, key):
+  # Copy locales list, we don't want to change the parameter
   locales = set(locales)
-  firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
-  for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
-    locales.add(langMapping.get(match.group(1), match.group(1)))
-  langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
-  for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
-    if match.group(0).find('Install Language Pack') >= 0:
-      match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
-      if match2:
-        locales.add(langMapping.get(match2.group(1), match2.group(1)))
+
+  # Fill up with locales that we don't have but the browser supports
+  if type == 'chrome':
+    for locale in chromeLocales:
+      locales.add(locale)
+  else:
+    firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
+    for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
+      locales.add(langMappingGecko.get(match.group(1), match.group(1)))
+    langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
+    for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
+      if match.group(0).find('Install Language Pack') >= 0:
+        match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
+        if match2:
+          locales.add(langMappingGecko.get(match2.group(1), match2.group(1)))
+
+  # Convert locale codes to the ones that Crowdin will understand
+  mapping = langMappingChrome if type == 'chrome' else langMappingGecko
+  locales = set(map(lambda locale: mapping[locale] if locale in mapping else locale, locales))
 
   allowed = set()
   allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
@@ -250,7 +325,7 @@ def getTranslations(localesDir, defaultLocale, projectName, key):
     if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
       continue
 
-    for key, value in langMapping.iteritems():
+    for key, value in langMappingGecko.iteritems():
       if value == dir:
         dir = key
 

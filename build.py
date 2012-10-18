@@ -222,12 +222,18 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  import buildtools.packagerGecko as packager
-  locales = packager.getLocales(baseDir, True)
-  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  if type == 'chrome':
+    import buildtools.packagerChrome as packager
+    locales = os.listdir(os.path.join(baseDir, '_locales'))
+    locales = map(lambda locale: locale.replace('_', '-'), locales)
+    basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  else:
+    import buildtools.packagerGecko as packager
+    locales = packager.getLocales(baseDir, True)
+    basename = packager.readMetadata(baseDir).get('general', 'baseName')
 
   import buildtools.localeTools as localeTools
-  localeTools.setupTranslations(locales, basename, key)
+  localeTools.setupTranslations(type, locales, basename, key)
 
 
 def updateTranslationMaster(baseDir, scriptName, opts, args, type):
@@ -391,7 +397,7 @@ with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'
   command.description = 'Sets up translation languages for the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
