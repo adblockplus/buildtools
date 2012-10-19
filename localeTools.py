@@ -300,14 +300,15 @@ def postFiles(files, url):
   boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
   body = ''
   for file, data in files:
-    body +=  '--%s\r\n' % boundary
+    body += '--%s\r\n' % boundary
     body += 'Content-Disposition: form-data; name="files[%s]"; filename="%s"\r\n' % (file, file)
     body += 'Content-Type: application/octet-stream\r\n'
     body += 'Content-Transfer-Encoding: binary\r\n'
     body += '\r\n' + data + '\r\n'
     body += '--%s--\r\n' % boundary
 
-  request = urllib2.Request(url, StringIO(body.encode('utf-8')))
+  body = body.encode('utf-8')
+  request = urllib2.Request(url, StringIO(body))
   request.add_header('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
   request.add_header('Content-Length', len(body))
   result = urllib2.urlopen(request).read()
