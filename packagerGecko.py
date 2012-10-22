@@ -88,6 +88,7 @@ def getBuildNum(baseDir):
 
 def readMetadata(baseDir):
   metadata = SafeConfigParser()
+  metadata.optionxform = str
   file = codecs.open(getMetadataPath(baseDir), 'rb', encoding='utf-8')
   metadata.readfp(file)
   file.close()
@@ -129,6 +130,7 @@ def readLocaleMetadata(baseDir, locales):
 
   for locale in locales:
     data = SafeConfigParser()
+    data.optionxform = str
     try:
       result[locale] = localeTools.readFile(os.path.join(getLocalesDir(baseDir), locale, 'meta.properties'))
     except:
