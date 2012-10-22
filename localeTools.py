@@ -260,6 +260,18 @@ def preprocessChromeLocale(path, metadata, isMaster):
 
   return json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2)
 
+def postprocessChromeLocale(path, data):
+  parsed = json.loads(data)
+
+  # Delete description from translations
+  for key, value in parsed.iteritems():
+    if "description" in value:
+      del value["description"]
+
+  file = codecs.open(path, 'wb', encoding='utf-8')
+  json.dump(parsed, file, ensure_ascii=False, sort_keys=True, indent=2, separators=(',', ': '))
+  file.close()
+
 def setupTranslations(type, locales, projectName, key):
   # Copy locales list, we don't want to change the parameter
   locales = set(locales)
@@ -365,7 +377,7 @@ def uploadTranslations(type, metadata, dir, locale, projectName, key):
   if len(files):
     postFiles(files, 'http://api.crowdin.net/api/project/%s/upload-translation?key=%s&language=%s' % (projectName, key, mapLocale(type, locale)))
 
-def getTranslations(localesDir, defaultLocale, projectName, key):
+def getTranslations(type, localesDir, defaultLocale, projectName, key):
   result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/export?key=%s' % (projectName, key)).read()
   if result.find('<success') < 0:
     raise Exception('Server indicated that the operation was not successful\n' + result)
@@ -374,24 +386,41 @@ def getTranslations(localesDir, defaultLocale, projectName, key):
   zip = ZipFile(StringIO(result))
   dirs = {}
   for info in zip.infolist():
-    if not info.filename.endswith('.dtd.json') and not info.filename.endswith('.properties.json'):
+    if not info.filename.endswith('.json'):
       continue
 
     dir, file = os.path.split(info.filename)
-    origFile = re.sub(r'\.json$', '', file)
     if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
       continue
+    if type == 'chrome':
+      origFile = file
+    else:
+      origFile = re.sub(r'\.json$', '', file)
+      if not origFile.endswith('.dtd') and not origFile.endswith('.properties'):
+        continue
 
-    for key, value in langMappingGecko.iteritems():
+    mapping = langMappingChrome if type == 'chrome' else langMappingGecko
+    for key, value in mapping.iteritems():
       if value == dir:
         dir = key
+    if type == 'chrome':
+      dir = dir.replace('-', '_')
+
+    data = zip.open(info.filename).read()
+    if data == '[]':
+      continue
 
     if not dir in dirs:
       dirs[dir] = set()
     dirs[dir].add(origFile)
 
-    data = zip.open(info.filename).read()
-    fromJSON(os.path.join(localesDir, dir, origFile), data)
+    path = os.path.join(localesDir, dir, origFile)
+    if not os.path.exists(os.path.dirname(path)):
+      os.makedirs(os.path.dirname(path))
+    if type == 'chrome':
+      postprocessChromeLocale(path, data)
+    else:
+      fromJSON(path, data)
 
   # Remove any extra files
   for dir, files in dirs.iteritems():
@@ -400,5 +429,5 @@ def getTranslations(localesDir, defaultLocale, projectName, key):
       continue
     for file in os.listdir(baseDir):
       path = os.path.join(baseDir, file)
-      if os.path.isfile(path) and (file.endswith('.properties') or file.endswith('.dtd')) and not file in files:
+      if os.path.isfile(path) and (file.endswith('.json') or file.endswith('.properties') or file.endswith('.dtd')) and not file in files:
         os.remove(path)

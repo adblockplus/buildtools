@@ -295,12 +295,16 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     return
 
   key = args[0]
-  import buildtools.packagerGecko as packager
-  localesDir = packager.getLocalesDir(baseDir)
-  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  if type == 'chrome':
+    import buildtools.packagerChrome as packager
+    localesDir = os.path.join(baseDir, '_locales')
+  else:
+    import buildtools.packagerGecko as packager
+    localesDir = packager.getLocalesDir(baseDir)
 
   import buildtools.localeTools as localeTools
-  localeTools.getTranslations(localesDir, packager.defaultLocale, basename, key)
+  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  localeTools.getTranslations(type, localesDir, packager.defaultLocale.replace('_', '-'), basename, key)
 
 
 def showDescriptions(baseDir, scriptName, opts, args, type):
@@ -451,7 +455,7 @@ with addCommand(getTranslations, 'gettranslations') as command:
   command.shortDescription = 'Downloads translation updates'
   command.description = 'Downloads updated translations from crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(showDescriptions, 'showdesc') as command:
   command.shortDescription = 'Print description strings for all locales'
