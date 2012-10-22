@@ -26,6 +26,7 @@ def getBuildNum(baseDir):
 
 def readMetadata(baseDir):
   metadata = SafeConfigParser()
+  metadata.optionxform = str
   file = codecs.open(getMetadataPath(baseDir), 'rb', encoding='utf-8')
   metadata.readfp(file)
   file.close()
