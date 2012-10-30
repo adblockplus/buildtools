@@ -317,7 +317,7 @@ def postFiles(files, url):
     body += 'Content-Type: application/octet-stream\r\n'
     body += 'Content-Transfer-Encoding: binary\r\n'
     body += '\r\n' + data + '\r\n'
-    body += '--%s--\r\n' % boundary
+  body += '--%s--\r\n' % boundary
 
   body = body.encode('utf-8')
   request = urllib2.Request(url, StringIO(body))
@@ -336,9 +336,14 @@ def updateTranslationMaster(type, metadata, dir, projectName, key):
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
-      if type == 'chrome':
+      if type == 'chrome' and file.endswith('.json'):
         data = preprocessChromeLocale(path, metadata, True)
         newName = file
+      elif type == 'chrome':
+        fileHandle = codecs.open(path, 'rb', encoding='utf-8')
+        data = json.dumps({file: {'message': fileHandle.read()}})
+        fileHandle.close()
+        newName = file + '.json'
       else:
         data = toJSON(path)
         newName = file + '.json'
@@ -365,9 +370,14 @@ def uploadTranslations(type, metadata, dir, locale, projectName, key):
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
-      if type == 'chrome':
+      if type == 'chrome' and file.endswith('.json'):
         data = preprocessChromeLocale(path, metadata, False)
         newName = file
+      elif type == 'chrome':
+        fileHandle = codecs.open(path, 'rb', encoding='utf-8')
+        data = json.dumps({file: {'message': fileHandle.read()}})
+        fileHandle.close()
+        newName = file + '.json'
       else:
         data = toJSON(path)
         newName = file + '.json'
@@ -392,12 +402,12 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
     dir, file = os.path.split(info.filename)
     if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
       continue
-    if type == 'chrome':
+    if type == 'chrome' and file.count('.') == 1:
       origFile = file
     else:
       origFile = re.sub(r'\.json$', '', file)
-      if not origFile.endswith('.dtd') and not origFile.endswith('.properties'):
-        continue
+    if type == 'gecko' and not origFile.endswith('.dtd') and not origFile.endswith('.properties'):
+      continue
 
     mapping = langMappingChrome if type == 'chrome' else langMappingGecko
     for key, value in mapping.iteritems():
@@ -417,8 +427,14 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
     path = os.path.join(localesDir, dir, origFile)
     if not os.path.exists(os.path.dirname(path)):
       os.makedirs(os.path.dirname(path))
-    if type == 'chrome':
+    if type == 'chrome' and origFile.endswith('.json'):
       postprocessChromeLocale(path, data)
+    elif type == 'chrome':
+      data = json.loads(data)
+      if origFile in data:
+        fileHandle = codecs.open(path, 'wb', encoding='utf-8')
+        fileHandle.write(data[origFile])
+        fileHandle.close()
     else:
       fromJSON(path, data)
 
