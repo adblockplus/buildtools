@@ -88,6 +88,7 @@ def addToZip(zip, filters, dir, baseName):
     filelc = file.lower()
     if (file.startswith('.') or
         file == 'buildtools' or file == 'qunit' or file == 'metadata' or
+        file == 'store.description' or
         filelc.endswith('.py') or filelc.endswith('.pyc') or
         filelc.endswith('.crx') or filelc.endswith('.zip') or
         filelc.endswith('.sh') or filelc.endswith('.bat') or
