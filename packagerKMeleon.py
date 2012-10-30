@@ -141,7 +141,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'metadata': metadata,
     'limitMetadata': False,
   }
-  baseName = metadata.get('general', 'baseName')
+  baseName = metadata.get('general', 'basename')
 
   chromeFiles = {}
   for xulFile in getXULFiles(baseDir):

@@ -28,7 +28,7 @@ KNOWN_APPS = {
 defaultLocale = 'en-US'
 
 def getDefaultFileName(baseDir, metadata, version, ext='xpi'):
-  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'baseName'), version, ext))
+  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
 
 def getMetadataPath(baseDir):
   return os.path.join(baseDir, 'metadata')
