@@ -12,7 +12,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 defaultLocale = 'en_US'
 
 def getDefaultFileName(baseDir, metadata, version, ext):
-  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'baseName'), version, ext))
+  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
 
 def getMetadataPath(baseDir):
   return os.path.join(baseDir, 'metadata')
@@ -151,7 +151,7 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
       buildNum = getBuildNum(baseDir)
     filters.append(lambda zip, dir, fileName, fileData: addBuildNumber(buildNum, zip, dir, fileName, fileData))
 
-    baseName = metadata.get('general', 'baseName')
+    baseName = metadata.get('general', 'basename')
     updateName = baseName + '-experimental' if experimentalAPI else baseName
     filters.append(lambda zip, dir, fileName, fileData: setUpdateURL(updateName, zip, dir, fileName, fileData))
     if experimentalAPI:

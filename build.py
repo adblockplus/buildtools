@@ -226,11 +226,11 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
     import buildtools.packagerChrome as packager
     locales = os.listdir(os.path.join(baseDir, '_locales'))
     locales = map(lambda locale: locale.replace('_', '-'), locales)
-    basename = packager.readMetadata(baseDir).get('general', 'baseName')
+    basename = packager.readMetadata(baseDir).get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     locales = packager.getLocales(baseDir, True)
-    basename = packager.readMetadata(baseDir).get('general', 'baseName')
+    basename = packager.readMetadata(baseDir).get('general', 'basename')
 
   import buildtools.localeTools as localeTools
   localeTools.setupTranslations(type, locales, basename, key)
@@ -248,12 +248,12 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
     import buildtools.packagerChrome as packager
     defaultLocaleDir = os.path.join(baseDir, '_locales', packager.defaultLocale)
     metadata = packager.readMetadata(baseDir)
-    basename = metadata.get('general', 'baseName')
+    basename = metadata.get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
     metadata = packager.readMetadata(baseDir)
-    basename = metadata.get('general', 'baseName')
+    basename = metadata.get('general', 'basename')
 
   import buildtools.localeTools as localeTools
   localeTools.updateTranslationMaster(type, metadata, defaultLocaleDir, basename, key)
@@ -273,14 +273,14 @@ def uploadTranslations(baseDir, scriptName, opts, args, type):
     locales = os.listdir(localesDir)
     locales = map(lambda locale: (locale.replace('_', '-'), os.path.join(localesDir, locale)), locales)
     metadata = packager.readMetadata(baseDir)
-    basename = metadata.get('general', 'baseName')
+    basename = metadata.get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     localesDir = packager.getLocalesDir(baseDir)
     locales = packager.getLocales(baseDir, True)
     locales = map(lambda locale: (locale, os.path.join(localesDir, locale)), locales)
     metadata = packager.readMetadata(baseDir)
-    basename = metadata.get('general', 'baseName')
+    basename = metadata.get('general', 'basename')
 
   import buildtools.localeTools as localeTools
   for locale, localeDir in locales:
@@ -303,7 +303,7 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     localesDir = packager.getLocalesDir(baseDir)
 
   import buildtools.localeTools as localeTools
-  basename = packager.readMetadata(baseDir).get('general', 'baseName')
+  basename = packager.readMetadata(baseDir).get('general', 'basename')
   localeTools.getTranslations(type, localesDir, packager.defaultLocale.replace('_', '-'), basename, key)
 
 
