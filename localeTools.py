@@ -433,7 +433,7 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
       data = json.loads(data)
       if origFile in data:
         fileHandle = codecs.open(path, 'wb', encoding='utf-8')
-        fileHandle.write(data[origFile])
+        fileHandle.write(data[origFile]['message'])
         fileHandle.close()
     else:
       fromJSON(path, data)
