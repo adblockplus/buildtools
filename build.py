@@ -378,7 +378,6 @@ def generateDocs(baseDir, scriptName, opts, args, type):
 
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
-  buildtoolsRepo = buildtools.__path__[0]
   keyFile = None
   downloadsRepo = os.path.join(baseDir, '..', 'downloads')
   for option, value in opts:
@@ -402,7 +401,7 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
       print 'Warning: no key file specified, creating an unsigned release build\n'
 
     import buildtools.releaseAutomationGecko as releaseAutomation
-    releaseAutomation.run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo)
+    releaseAutomation.run(baseDir, version, keyFile, downloadsRepo)
   else:
     import buildtools.releaseAutomationKMeleon as releaseAutomation
     releaseAutomation.run(baseDir, downloadsRepo, buildtoolsRepo)
