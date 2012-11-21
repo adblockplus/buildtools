@@ -36,7 +36,6 @@ def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
   extensionName = locales[packager.defaultLocale]['name']
 
   metadata = packager.readMetadata(baseDir)
-  branchName = metadata.get('general', 'branchname')
 
   # Now commit the change and tag it
   subprocess.Popen(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)]).communicate()
@@ -68,16 +67,10 @@ def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
   archive.close()
   archiveHandle.close()
 
-  # Now add the downloads, commit and tag the downloads repo
-  tagName = '%s_%s_RELEASE' % (branchName, version.replace('.', '_'))
+  # Now add the downloads and commit
   subprocess.Popen(['hg', 'add', '-R', downloadsRepo, buildPath, archivePath]).communicate()
   subprocess.Popen(['hg', 'commit', '-R', downloadsRepo, '-m', 'Releasing %s %s' % (extensionName, version)]).communicate()
-  subprocess.Popen(['hg', 'tag', '-R', downloadsRepo, '-f', tagName]).communicate()
-
-  # Tag buildtools repository as well
-  subprocess.Popen(['hg', 'tag', '-R', buildtoolsRepo, '-f', tagName]).communicate()
 
   # Push all changes
   subprocess.Popen(['hg', 'push', '-R', baseDir]).communicate()
   subprocess.Popen(['hg', 'push', '-R', downloadsRepo]).communicate()
-  subprocess.Popen(['hg', 'push', '-R', buildtoolsRepo]).communicate()
