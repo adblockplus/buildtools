@@ -185,9 +185,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
       releaseBuild = True
     elif option == '--experimental':
       experimentalAPI = True
-    elif option == '--babelzilla':
-      locales = 'all'
-      limitMetadata = True
   outFile = args[0] if len(args) > 0 else None
 
   if type == 'gecko':
@@ -426,7 +423,6 @@ with addCommand(runBuild, 'build') as command:
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Enable use of experimental APIs', long='experimental')
-  command.addOption('Create a build for Babelzilla', long='babelzilla', types=('gecko'))
   command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
