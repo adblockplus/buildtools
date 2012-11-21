@@ -200,10 +200,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packager.createBuild(baseDir, outFile=outFile, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          experimentalAPI=experimentalAPI)
-  elif type == 'kmeleon':
-    import buildtools.packagerKMeleon as packager
-    packager.createBuild(baseDir, outFile=outFile, locales=locales,
-                         buildNum=buildNum, releaseBuild=releaseBuild)
 
 def runAutoInstall(baseDir, scriptName, opts, args, type):
   if len(args) == 0:
@@ -402,9 +398,6 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
 
     import buildtools.releaseAutomationGecko as releaseAutomation
     releaseAutomation.run(baseDir, version, keyFile, downloadsRepo)
-  else:
-    import buildtools.releaseAutomationKMeleon as releaseAutomation
-    releaseAutomation.run(baseDir, downloadsRepo, buildtoolsRepo)
 
 def syncLocales(baseDir, scriptName, opts, args, type):
   if len(args) == 0:
@@ -427,14 +420,14 @@ with addCommand(runBuild, 'build') as command:
   command.shortDescription = 'Create a build'
   command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
   command.params = '[options] [output_file]'
-  command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko', 'kmeleon'))
+  command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
   command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Enable use of experimental APIs', long='experimental')
   command.addOption('Create a build for Babelzilla', long='babelzilla', types=('gecko'))
-  command.supportedTypes = ('gecko', 'kmeleon', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
@@ -490,7 +483,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
   command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file', types=('gecko'))
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
-  command.supportedTypes = ('gecko', 'kmeleon')
+  command.supportedTypes = ('gecko')
 
 with addCommand(syncLocales, 'synclocales') as command:
   command.shortDescription = 'Sync locales with a Firefox extension'
