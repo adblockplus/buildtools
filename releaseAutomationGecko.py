@@ -19,7 +19,7 @@ import os, re, subprocess, tarfile
 from StringIO import StringIO
 import buildtools.packagerGecko as packager
 
-def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
+def run(baseDir, version, keyFile, downloadsRepo):
   # Replace version number in metadata file "manually", ConfigParser will mess
   # up the order of lines.
   handle = open(packager.getMetadataPath(baseDir), 'rb')
@@ -50,18 +50,13 @@ def run(baseDir, version, keyFile, downloadsRepo, buildtoolsRepo):
 
   archiveHandle = open(archivePath, 'wb')
   archive = tarfile.open(fileobj=archiveHandle, name=os.path.basename(archivePath), mode='w:gz')
-  (data, dummy) = subprocess.Popen(['hg', 'archive', '-R', baseDir, '-t', 'tar', '-X', os.path.join(baseDir, '.hgtags'), '-'], stdout=subprocess.PIPE).communicate()
+  (data, dummy) = subprocess.Popen(['hg', 'archive', '-R', baseDir, '-t', 'tar', '-S', '-'], stdout=subprocess.PIPE).communicate()
   repoArchive = tarfile.open(fileobj=StringIO(data), mode='r:')
   for fileInfo in repoArchive:
+    if os.path.basename(fileInfo.name) in ('.hgtags', '.hgignore'):
+      continue
     fileData = repoArchive.extractfile(fileInfo)
     fileInfo.name = re.sub(r'^[^/]+/', '', fileInfo.name)
-    archive.addfile(fileInfo, fileData)
-  repoArchive.close()
-  (data, dummy) = subprocess.Popen(['hg', 'archive', '-R', buildtoolsRepo, '-t', 'tar', '-X', os.path.join(buildtoolsRepo, '.hgtags'), '-'], stdout=subprocess.PIPE).communicate()
-  repoArchive = tarfile.open(fileobj=StringIO(data), mode='r:')
-  for fileInfo in repoArchive:
-    fileData = repoArchive.extractfile(fileInfo)
-    fileInfo.name = re.sub(r'^[^/]+/', 'buildtools/', fileInfo.name)
     archive.addfile(fileInfo, fileData)
   repoArchive.close()
   archive.close()
