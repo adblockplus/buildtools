@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Adblock Plus.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, subprocess, re, json, codecs, struct
+import sys, os, subprocess, re, json, codecs, struct, jinja2, buildtools
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
 defaultLocale = 'en_US'
 
-def getDefaultFileName(baseDir, metadata, version, ext):
-  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
+def getDefaultFileName(baseDir, metadata, ext):
+  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), metadata.get('general', 'version'), ext))
 
 def getMetadataPath(baseDir):
   return os.path.join(baseDir, 'metadata')
@@ -35,6 +35,9 @@ def getBuildNum(baseDir):
   except Exception:
     return '0'
 
+def getIgnoredFiles(params):
+  return ['store.description']
+
 def readMetadata(baseDir):
   metadata = SafeConfigParser()
   metadata.optionxform = str
@@ -43,89 +46,98 @@ def readMetadata(baseDir):
   file.close()
   return metadata
 
-def readVersion(baseDir):
-  file = open(os.path.join(baseDir, 'manifest.json'))
-  data = json.load(file)
-  file.close()
-  return data['version']
+def getPackageFiles(params):
+  baseDir = params['baseDir']
+  for file in ('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui'):
+    yield os.path.join(baseDir, file)
+  if params['devenv']:
+    yield os.path.join(baseDir, 'qunit')
+  for file in os.listdir(baseDir):
+    if file.endswith('.js') or file.endswith('.html') or file.endswith('.xml'):
+      yield os.path.join(baseDir, file)
 
-def setUpdateURL(updateName, zip, dir, fileName, fileData):
-  if fileName == 'manifest.json':
-    data = json.loads(fileData)
-    data['update_url'] = 'https://adblockplus.org/devbuilds/%s/updates.xml' % updateName
-    return json.dumps(data, sort_keys=True, indent=2)
-  return fileData
+def createManifest(params):
+  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
+  env.filters.update({'json': json.dumps})
+  template = env.get_template('manifest.json.tmpl')
+  templateData = dict(params)
 
-def setExperimentalSettings(zip, dir, fileName, fileData):
-  if fileName == 'manifest.json':
-    data = json.loads(fileData)
-    data['permissions'] += ['experimental']
-    data['name'] += ' experimental build'
-    return json.dumps(data, sort_keys=True, indent=2)
-  return fileData
+  baseDir = templateData['baseDir']
+  metadata = templateData['metadata']
 
-def addBuildNumber(revision, zip, dir, fileName, fileData):
-  if fileName == 'manifest.json':
-    if len(revision) > 0:
-      data = json.loads(fileData)
-      while data['version'].count('.') < 2:
-        data['version'] += '.0'
-      data['version'] += '.' + revision
-      return json.dumps(data, sort_keys=True, indent=2)
-  return fileData
+  if metadata.has_option('general', 'pageAction'):
+    icon, popup = re.split(r'\s+', metadata.get('general', 'pageAction'), 1)
+    templateData['pageAction'] = {'icon': icon, 'popup': popup}
 
-def mergeContentScripts(zip, dir, fileName, fileData):
-  if fileName == 'manifest.json':
-    data = json.loads(fileData)
-    if 'content_scripts' in data:
-      scriptIndex = 1
-      for contentScript in data['content_scripts']:
-        if 'js' in contentScript:
-          scriptData = ''
-          for scriptFile in contentScript['js']:
-            parts = [dir] + scriptFile.split('/')
-            scriptPath = os.path.join(*parts)
-            handle = open(scriptPath, 'rb')
-            scriptData += handle.read()
-            handle.close()
-          contentScript['js'] = ['contentScript' + str(scriptIndex) + '.js']
-          zip.writestr('contentScript' + str(scriptIndex) + '.js', scriptData)
-          scriptIndex += 1
-    return json.dumps(data, sort_keys=True, indent=2)
-  return fileData
+  if metadata.has_option('general', 'icons'):
+    icons = {}
+    iconsDir = baseDir
+    for dir in metadata.get('general', 'icons').split('/')[0:-1]:
+      iconsDir = os.path.join(iconsDir, dir)
 
-def addToZip(zip, filters, dir, baseName):
-  for file in os.listdir(dir):
-    filelc = file.lower()
-    if (file.startswith('.') or
-        file == 'buildtools' or file == 'qunit' or file == 'metadata' or
-        file == 'store.description' or file=='devenv' or
-        filelc.endswith('.py') or filelc.endswith('.pyc') or
-        filelc.endswith('.crx') or filelc.endswith('.zip') or
-        filelc.endswith('.sh') or filelc.endswith('.bat') or
-        filelc.endswith('.txt')):
-      # skip special files, scripts, existing archives
-      continue
-    if file.startswith('include.'):
-      # skip includes, they will be added by other means
-      continue
+    prefix, suffix = metadata.get('general', 'icons').split('/')[-1].split('?', 1)
+    for file in os.listdir(iconsDir):
+      path = os.path.join(iconsDir, file)
+      if os.path.isfile(path) and file.startswith(prefix) and file.endswith(suffix):
+        size = file[len(prefix):-len(suffix)]
+        if not re.search(r'\D', size):
+          icons[size] = os.path.relpath(path, baseDir).replace('\\', '/')
 
-    filePath = os.path.join(dir, file)
-    if os.path.isdir(filePath):
-      addToZip(zip, filters, filePath, baseName + file + '/')
-    else:
-      handle = open(filePath, 'rb')
-      fileData = handle.read()
-      handle.close()
+    templateData['icons'] = icons
 
-      for filter in filters:
-        fileData = filter(zip, dir, baseName + file, fileData)
-      zip.writestr(baseName + file, fileData)
+  if metadata.has_option('general', 'permissions'):
+    templateData['permissions'] = re.split(r'\s+', metadata.get('general', 'permissions'))
+    if params['experimentalAPI']:
+      templateData['permissions'].append('experimental')
 
-def packDirectory(dir, filters):
+  if metadata.has_option('general', 'backgroundScripts'):
+    templateData['backgroundScripts'] = re.split(r'\s+', metadata.get('general', 'backgroundScripts'))
+
+  if metadata.has_option('general', 'webAccessible'):
+    templateData['webAccessible'] = re.split(r'\s+', metadata.get('general', 'webAccessible'))
+
+  if metadata.has_section('contentScripts'):
+    contentScripts = []
+    for run_at, scripts in metadata.items('contentScripts'):
+      contentScripts.append({
+        'matches': ['http://*/*', 'https://*/*'],
+        'js': re.split(r'\s+', scripts),
+        'run_at': run_at,
+        'all_frames': True,
+      })
+    templateData['contentScripts'] = contentScripts
+
+  manifest = template.render(templateData)
+
+  # Normalize JSON structure
+  licenseComment = re.compile(r'/\*.*?\*/', re.S)
+  data = json.loads(re.sub(licenseComment, '', manifest, 1))
+  if '_dummy' in data:
+    del data['_dummy']
+  manifest = json.dumps(data, sort_keys=True, indent=2)
+
+  return manifest.encode('utf-8')
+
+def readFile(params, files, path):
+  ignoredFiles = getIgnoredFiles(params)
+  if os.path.isdir(path):
+    for file in os.listdir(path):
+      if file in ignoredFiles:
+        continue
+      readFile(params, files, os.path.join(path, file))
+  else:
+    file = open(path, 'rb')
+    data = file.read()
+    file.close()
+
+    name = os.path.relpath(path, params['baseDir']).replace('\\', '/')
+    files[name] = data
+
+def packFiles(files):
   buffer = StringIO()
   zip = ZipFile(buffer, 'w', ZIP_DEFLATED)
-  addToZip(zip, filters, dir, '')
+  for file, data in files.iteritems():
+    zip.writestr(file, data)
   zip.close()
   return buffer.getvalue()
 
@@ -155,24 +167,34 @@ def writePackage(outputFile, pubkey, signature, zipdata):
 
 def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
   metadata = readMetadata(baseDir)
-  version = readVersion(baseDir)
   if outFile == None:
-    outFile = getDefaultFileName(baseDir, metadata, version, 'crx' if keyFile else 'zip')
+    outFile = getDefaultFileName(baseDir, metadata, 'crx' if keyFile else 'zip')
 
-  filters = []
+  version = metadata.get('general', 'version')
   if not releaseBuild:
     if buildNum == None:
       buildNum = getBuildNum(baseDir)
-    filters.append(lambda zip, dir, fileName, fileData: addBuildNumber(buildNum, zip, dir, fileName, fileData))
+    if len(buildNum) > 0:
+      while version.count('.') < 2:
+        version += '.0'
+      version += '.' + buildNum
 
-    baseName = metadata.get('general', 'basename')
-    updateName = baseName + '-experimental' if experimentalAPI else baseName
-    filters.append(lambda zip, dir, fileName, fileData: setUpdateURL(updateName, zip, dir, fileName, fileData))
-    if experimentalAPI:
-      filters.append(setExperimentalSettings)
-  filters.append(mergeContentScripts)
+  params = {
+    'baseDir': baseDir,
+    'releaseBuild': releaseBuild,
+    'version': version,
+    'experimentalAPI': experimentalAPI,
+    'devenv': devenv,
+    'metadata': metadata,
+  }
 
-  zipdata = packDirectory(baseDir, filters)
+  files = {}
+  files['manifest.json'] = createManifest(params)
+  for path in getPackageFiles(params):
+    if os.path.exists(path):
+      readFile(params, files, path)
+
+  zipdata = packFiles(files)
   signature = None
   pubkey = None
   if keyFile != None:
@@ -182,7 +204,7 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
 
 def createDevEnv(baseDir):
   fileBuffer = StringIO()
-  createBuild(baseDir, outFile=fileBuffer, devenv=True)
+  createBuild(baseDir, outFile=fileBuffer, devenv=True, releaseBuild=True)
   zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
   zip.extractall(os.path.join(baseDir, 'devenv'))
   zip.close()
