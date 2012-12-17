@@ -133,6 +133,34 @@ def readFile(params, files, path):
     name = os.path.relpath(path, params['baseDir']).replace('\\', '/')
     files[name] = data
 
+def convertJS(params, files):
+  baseDir = params['baseDir']
+  hydraDir = os.path.join(baseDir, 'jshydra')
+  sys.path.append(hydraDir)
+  try:
+    import abp_rewrite
+    for file, sources in params['metadata'].items('convert_js'):
+      dirsep = file.find('/')
+      if dirsep >= 0:
+        # Not a top-level file, make sure it is inside an included director
+        dirname = file[0:dirsep]
+        if os.path.join(baseDir, dirname) not in getPackageFiles(params):
+          continue
+
+      sourceFiles = re.split(r'\s+', sources)
+      args = []
+      try:
+        argsStart = sourceFiles.index('--arg')
+        args = sourceFiles[argsStart + 1:]
+        sourceFiles = sourceFiles[0:argsStart]
+      except ValueError:
+        pass
+
+      sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
+      files[file] = abp_rewrite.doRewrite(sourceFiles, args)
+  finally:
+    sys.path.remove(hydraDir)
+
 def packFiles(files):
   buffer = StringIO()
   zip = ZipFile(buffer, 'w', ZIP_DEFLATED)
@@ -193,6 +221,9 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
   for path in getPackageFiles(params):
     if os.path.exists(path):
       readFile(params, files, path)
+
+  if metadata.has_section('convert_js') and os.path.isdir(os.path.join(baseDir, 'jshydra')):
+    convertJS(params, files)
 
   zipdata = packFiles(files)
   signature = None
