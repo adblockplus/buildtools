@@ -198,6 +198,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          experimentalAPI=experimentalAPI)
 
+
 def runAutoInstall(baseDir, scriptName, opts, args, type):
   if len(args) == 0:
     print 'Port of the Extension Auto-Installer needs to be specified'
@@ -216,6 +217,11 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
 
   import buildtools.packagerGecko as packager
   packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
+
+
+def createDevEnv(baseDir, scriptName, opts, args, type):
+  import buildtools.packagerChrome as packager
+  packager.createDevEnv(baseDir)
 
 
 def setupTranslations(baseDir, scriptName, opts, args, type):
@@ -431,6 +437,11 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
   command.params = '[<host>:]<port>'
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
   command.supportedTypes = ('gecko')
+
+with addCommand(createDevEnv, 'devenv') as command:
+  command.shortDescription = 'Set up a development environment'
+  command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
+  command.supportedTypes = ('chrome')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'

@@ -99,7 +99,7 @@ def addToZip(zip, filters, dir, baseName):
     filelc = file.lower()
     if (file.startswith('.') or
         file == 'buildtools' or file == 'qunit' or file == 'metadata' or
-        file == 'store.description' or
+        file == 'store.description' or file=='devenv' or
         filelc.endswith('.py') or filelc.endswith('.pyc') or
         filelc.endswith('.crx') or filelc.endswith('.zip') or
         filelc.endswith('.sh') or filelc.endswith('.bat') or
@@ -143,15 +143,17 @@ def getPublicKey(keyFile):
   return M2Crypto.EVP.load_key(keyFile).as_der()
 
 def writePackage(outputFile, pubkey, signature, zipdata):
-  file = open(outputFile, 'wb')
+  if isinstance(outputFile, basestring):
+    file = open(outputFile, 'wb')
+  else:
+    file = outputFile
   if pubkey != None and signature != None:
     file.write(struct.pack('<4sIII', 'Cr24', 2, len(pubkey), len(signature)))
     file.write(pubkey)
     file.write(signature)
   file.write(zipdata)
-  file.close()
 
-def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False):
+def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
   metadata = readMetadata(baseDir)
   version = readVersion(baseDir)
   if outFile == None:
@@ -177,3 +179,10 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
     signature = signBinary(zipdata, keyFile)
     pubkey = getPublicKey(keyFile)
   writePackage(outFile, pubkey, signature, zipdata)
+
+def createDevEnv(baseDir):
+  fileBuffer = StringIO()
+  createBuild(baseDir, outFile=fileBuffer, devenv=True)
+  zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
+  zip.extractall(os.path.join(baseDir, 'devenv'))
+  zip.close()
