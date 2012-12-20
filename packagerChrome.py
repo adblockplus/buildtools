@@ -138,7 +138,13 @@ def convertJS(params, files):
   hydraDir = os.path.join(baseDir, 'jshydra')
   sys.path.append(hydraDir)
   try:
-    import abp_rewrite
+    if 'abp_rewrite' in sys.modules:
+      import abp_rewrite
+      reload(abp_rewrite.utils)
+      reload(abp_rewrite)
+    else:
+      import abp_rewrite
+
     for file, sources in params['metadata'].items('convert_js'):
       dirsep = file.find('/')
       if dirsep >= 0:
