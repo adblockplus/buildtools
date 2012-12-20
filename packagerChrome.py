@@ -92,6 +92,8 @@ def createManifest(params):
 
   if metadata.has_option('general', 'backgroundScripts'):
     templateData['backgroundScripts'] = re.split(r'\s+', metadata.get('general', 'backgroundScripts'))
+    if params['devenv']:
+      templateData['backgroundScripts'].append('devenvPoller__.js')
 
   if metadata.has_option('general', 'webAccessible'):
     templateData['webAccessible'] = re.split(r'\s+', metadata.get('general', 'webAccessible'))
@@ -117,6 +119,12 @@ def createManifest(params):
   manifest = json.dumps(data, sort_keys=True, indent=2)
 
   return manifest.encode('utf-8')
+
+def createPoller(params):
+  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
+  env.filters.update({'json': json.dumps})
+  template = env.get_template('chromeDevenvPoller__.js.tmpl')
+  return template.render(params).encode('utf-8');
 
 def readFile(params, files, path):
   ignoredFiles = getIgnoredFiles(params)
@@ -231,6 +239,9 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
   if metadata.has_section('convert_js') and os.path.isdir(os.path.join(baseDir, 'jshydra')):
     convertJS(params, files)
 
+  if devenv:
+    files['devenvPoller__.js'] = createPoller(params)
+
   zipdata = packFiles(files)
   signature = None
   pubkey = None
@@ -245,3 +256,27 @@ def createDevEnv(baseDir):
   zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
   zip.extractall(os.path.join(baseDir, 'devenv'))
   zip.close()
+
+  print 'Development environment created, waiting for connections from active extensions...'
+  metadata = readMetadata(baseDir)
+  connections = [0]
+
+  import SocketServer, time, thread
+
+  class ConnectionHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+      connections[0] += 1
+      self.request.sendall('HTTP/1.0 OK\nConnection: close\n\n%s' % metadata.get('general', 'basename'))
+
+  server = SocketServer.TCPServer(('localhost', 43816), ConnectionHandler)
+
+  def shutdown_server(server):
+    time.sleep(10)
+    server.shutdown()
+  thread.start_new_thread(shutdown_server, (server,))
+  server.serve_forever()
+
+  if connections[0] == 0:
+    print 'Warning: No incoming connections, extension probably not active in the browser yet'
+  else:
+    print 'Handled %i connection(s)' % connections[0]
