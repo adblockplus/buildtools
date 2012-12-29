@@ -226,7 +226,7 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
     if os.path.exists(path):
       readFile(params, files, path)
 
-  if metadata.has_section('convert_js') and os.path.isdir(os.path.join(baseDir, 'jshydra')):
+  if metadata.has_section('convert_js'):
     convertJS(params, files)
 
   if devenv:
