@@ -53,29 +53,29 @@ sub testLocales
   $params{lengthRestrictions} = {} unless exists($params{lengthRestrictions});
 
   my @locales = sort {$a cmp $b} (exists($params{locales}) && @{$params{locales}} ? @{$params{locales}} : makeLocaleList($params{paths}));
-  
+
   my $referenceLocale = readLocaleFiles($params{paths}, "en-US");
-  
+
   foreach my $locale (@locales)
   {
     my $currentLocale = $locale eq "en-US" ? $referenceLocale : readLocaleFiles($params{paths}, $locale);
-  
+
     compareLocales($locale, $currentLocale, $referenceLocale) unless $currentLocale == $referenceLocale;
-  
+
     foreach my $entry (@{$params{mustDiffer}})
     {
       my %values = ();
       foreach my $key (@$entry)
       {
         my ($dir, $file, $name) = split(/:/, $key);
-        next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && $currentLocale->{"$dir:$file"}{$name};
+        next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && $currentLocale->{"$dir:$file"}{$name} =~ /\S/;
         my $value = lc($currentLocale->{"$dir:$file"}{$name});
-  
+
         print "$locale: Values for '$values{$value}' and '$key' are identical, must differ\n" if exists $values{$value};
         $values{$value} = $key;
       }
     }
-  
+
     foreach my $entry (@{$params{mustEqual}})
     {
       my $stdValue;
@@ -85,7 +85,7 @@ sub testLocales
         my ($dir, $file, $name) = split(/:/, $key);
         next unless exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name});
         my $value = lc($currentLocale->{"$dir:$file"}{$name});
-  
+
         $stdValue = $value unless defined $stdValue;
         $stdName = $key unless defined $stdName;
         print "$locale: Values for '$stdName' and '$key' differ, must be equal\n" if $value ne $stdValue;
@@ -98,7 +98,7 @@ sub testLocales
       my ($dir, $file, $name) = split(/:/, $key);
       print "$locale: Value of '$key' is too long, must not be longer than $maxLength characters\n" if exists($currentLocale->{"$dir:$file"}) && exists($currentLocale->{"$dir:$file"}{$name}) && length($currentLocale->{"$dir:$file"}{$name}) > $maxLength;
     }
-  
+
     foreach my $file (keys %$currentLocale)
     {
       my $fileData = $currentLocale->{$file};
@@ -108,7 +108,7 @@ sub testLocales
         {
           print "$locale: Length of accesskey '$file:$key' isn't 1 character\n";
         }
-  
+
         if ($key =~ /\.accesskey$/)
         {
           if (exists($keepAccessKeys{$locale}))
@@ -128,7 +128,7 @@ sub testLocales
             }
           }
         }
-  
+
         if ($currentLocale != $referenceLocale && $locale ne "en-GB" && exists($referenceLocale->{$file}{$key}) && length($fileData->{$key}) > 1 && $fileData->{$key} eq $referenceLocale->{$file}{$key})
         {
           my $ignore = 0;
@@ -185,7 +185,7 @@ sub readFile
 sub parseDTDFile
 {
   my $file = shift;
-  
+
   my %result = ();
 
   my $data = readFile($file);
