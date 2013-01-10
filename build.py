@@ -170,7 +170,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
   multicompartment = False
   releaseBuild = False
   keyFile = None
-  limitMetadata = False
   experimentalAPI = False
   for option, value in opts:
     if option in ('-l', '--locales'):
@@ -191,7 +190,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
     import buildtools.packagerGecko as packager
     packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
-                         limitMetadata=limitMetadata, multicompartment=multicompartment)
+                         multicompartment=multicompartment)
   elif type == 'chrome':
     import buildtools.packagerChrome as packager
     packager.createBuild(baseDir, outFile=outFile, buildNum=buildNum,

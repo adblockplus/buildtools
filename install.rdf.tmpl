@@ -62,7 +62,6 @@
     <em:optionsType>{{metadata.get('general', 'optionsType')}}</em:optionsType>
     {%- endif %}
 
-    {%- if not limitMetadata %}
     {%- for localeCode in localeMetadata.keys()|sort %}
     {%- set locale = localeMetadata[localeCode] %}
     <em:localized>
@@ -100,7 +99,6 @@
       </Description>
     </em:localized>
     {%- endfor %}
-    {%- endif %}
 
     {%- for appName in metadata.options('compat')|sort %}
     {%- if appName in KNOWN_APPS %}

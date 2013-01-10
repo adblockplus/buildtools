@@ -63,9 +63,7 @@ def getXPIFiles(baseDir):
       yield os.path.join(baseDir, file)
 
 def getIgnoredFiles(params):
-  result = ['.incomplete']
-  if not params['limitMetadata']:
-    result.append('meta.properties')
+  result = ['.incomplete', 'meta.properties']
   if params['releaseBuild']:
     result.append('timeline.js')
   return result
@@ -323,7 +321,7 @@ def writeXPI(files, outFile):
     zip.writestr(name, files[name])
   zip.close()
 
-def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, limitMetadata=False, multicompartment=False):
+def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
   if locales == None:
     locales = getLocales(baseDir)
   elif locales == 'all':
@@ -331,11 +329,6 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
 
   metadata = readMetadata(baseDir)
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
-
-  if limitMetadata:
-    for option in metadata.options('compat'):
-      if not option in ('firefox', 'thunderbird', 'seamonkey'):
-        metadata.remove_option('compat', option)
 
   if outFile == None:
     outFile = getDefaultFileName(baseDir, metadata, version, 'xpi')
@@ -347,7 +340,6 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'releaseBuild': releaseBuild,
     'version': version.encode('utf-8'),
     'metadata': metadata,
-    'limitMetadata': limitMetadata,
     'contributors': contributors,
     'multicompartment': multicompartment,
   }
@@ -356,8 +348,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
       readFile(files, params, path, 'chrome/%s' % name)
-  if not params['limitMetadata']:
-    fixupLocales(baseDir, files, params)
+  fixupLocales(baseDir, files, params)
   readXPIFiles(baseDir, params, files)
   if not 'bootstrap.js' in files:
     addMissingFiles(baseDir, params, files)
