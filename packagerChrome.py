@@ -15,36 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with Adblock Plus.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, subprocess, re, json, codecs, struct, jinja2, buildtools
-from ConfigParser import SafeConfigParser
+import sys, os, re, json, struct
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate
+
 defaultLocale = 'en_US'
-
-def getDefaultFileName(baseDir, metadata, ext):
-  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), metadata.get('general', 'version'), ext))
-
-def getMetadataPath(baseDir):
-  return os.path.join(baseDir, 'metadata')
-
-def getBuildNum(baseDir):
-  try:
-    (result, dummy) = subprocess.Popen(['hg', 'id', '-n'], stdout=subprocess.PIPE).communicate()
-    return re.sub(r'\D', '', result)
-  except Exception:
-    return '0'
 
 def getIgnoredFiles(params):
   return ['store.description']
-
-def readMetadata(baseDir):
-  metadata = SafeConfigParser()
-  metadata.optionxform = str
-  file = codecs.open(getMetadataPath(baseDir), 'rb', encoding='utf-8')
-  metadata.readfp(file)
-  file.close()
-  return metadata
 
 def getPackageFiles(params):
   baseDir = params['baseDir']
@@ -57,9 +37,7 @@ def getPackageFiles(params):
       yield os.path.join(baseDir, file)
 
 def createManifest(params):
-  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
-  env.filters.update({'json': json.dumps})
-  template = env.get_template('manifest.json.tmpl')
+  template = getTemplate('manifest.json.tmpl')
   templateData = dict(params)
 
   baseDir = templateData['baseDir']
@@ -121,9 +99,7 @@ def createManifest(params):
   return manifest.encode('utf-8')
 
 def createPoller(params):
-  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
-  env.filters.update({'json': json.dumps})
-  template = env.get_template('chromeDevenvPoller__.js.tmpl')
+  template = getTemplate('chromeDevenvPoller__.js.tmpl')
   return template.render(params).encode('utf-8');
 
 def readFile(params, files, path):
@@ -199,17 +175,10 @@ def writePackage(outputFile, pubkey, signature, zipdata):
 
 def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
   metadata = readMetadata(baseDir)
-  if outFile == None:
-    outFile = getDefaultFileName(baseDir, metadata, 'crx' if keyFile else 'zip')
+  version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
-  version = metadata.get('general', 'version')
-  if not releaseBuild:
-    if buildNum == None:
-      buildNum = getBuildNum(baseDir)
-    if len(buildNum) > 0:
-      while version.count('.') < 2:
-        version += '.0'
-      version += '.' + buildNum
+  if outFile == None:
+    outFile = getDefaultFileName(baseDir, metadata, version, 'crx' if keyFile else 'zip')
 
   params = {
     'baseDir': baseDir,

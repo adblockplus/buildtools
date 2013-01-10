@@ -15,12 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with Adblock Plus.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, re, subprocess, jinja2, buildtools, codecs, hashlib, base64, shutil, urllib, json
+import os, sys, re, hashlib, base64, urllib, json
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
 import xml.dom.minidom as minidom
 import buildtools.localeTools as localeTools
+
+from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate
 
 KNOWN_APPS = {
   'conkeror':   '{a79fe89b-6662-4ff4-8e88-09950ad4dfde}',
@@ -37,12 +39,6 @@ KNOWN_APPS = {
 }
 
 defaultLocale = 'en-US'
-
-def getDefaultFileName(baseDir, metadata, version, ext='xpi'):
-  return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
-
-def getMetadataPath(baseDir):
-  return os.path.join(baseDir, 'metadata')
 
 def getChromeDir(baseDir):
   return os.path.join(baseDir, 'chrome')
@@ -90,27 +86,11 @@ def getLocales(baseDir, includeIncomplete=False):
   locales.sort(key=lambda x: '!' if x == defaultLocale else x)
   return locales
 
-def getBuildNum(baseDir):
-  try:
-    (result, dummy) = subprocess.Popen(['hg', 'id', '-n'], stdout=subprocess.PIPE).communicate()
-    return re.sub(r'\W', '', result)
-  except Exception:
-    return '0'
-
-def readMetadata(baseDir):
-  metadata = SafeConfigParser()
-  metadata.optionxform = str
-  file = codecs.open(getMetadataPath(baseDir), 'rb', encoding='utf-8')
-  metadata.readfp(file)
-  file.close()
-  return metadata
-
 def processFile(path, data, params):
   if not re.search(r'\.(manifest|xul|jsm?|xml|xhtml|rdf|dtd|properties|css)$', path):
     return data
 
   data = re.sub(r'\r', '', data)
-  data = data.replace('{{BUILD}}', params['buildNum'])
   data = data.replace('{{VERSION}}', params['version'])
 
   whitespaceRegExp = re.compile(r'^(  )+', re.M)
@@ -180,8 +160,7 @@ def initTranslators(localeMetadata):
 
 def createManifest(baseDir, params):
   global KNOWN_APPS, defaultLocale
-  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]), autoescape=True, extensions=['jinja2.ext.autoescape'])
-  template = env.get_template('install.rdf.tmpl')
+  template = getTemplate('install.rdf.tmpl', autoEscape=True)
   templateData = dict(params)
   templateData['localeMetadata'] = readLocaleMetadata(baseDir, params['locales'])
   initTranslators(templateData['localeMetadata'])
@@ -274,6 +253,7 @@ def addMissingFiles(baseDir, params, files):
     for module in templateData['requires']:
       moduleFile = 'lib/' + module + '.js'
       if not moduleFile in files:
+        import buildtools
         path = os.path.join(buildtools.__path__[0], moduleFile)
         if os.path.exists(path):
           missing.append((path, moduleFile))
@@ -283,9 +263,7 @@ def addMissingFiles(baseDir, params, files):
       readFile(files, params, path, moduleFile)
       checkScript(moduleFile)
 
-  env = jinja2.Environment(loader=jinja2.FileSystemLoader(buildtools.__path__[0]))
-  env.filters['json'] = json.dumps
-  template = env.get_template('bootstrap.js.tmpl')
+  template = getTemplate('bootstrap.js.tmpl')
   files['bootstrap.js'] = processFile('bootstrap.js', template.render(templateData).encode('utf-8'), params)
 
 def signFiles(files, keyFile):
@@ -346,17 +324,13 @@ def writeXPI(files, outFile):
   zip.close()
 
 def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, limitMetadata=False, multicompartment=False):
-  if buildNum == None:
-    buildNum = getBuildNum(baseDir)
   if locales == None:
     locales = getLocales(baseDir)
   elif locales == 'all':
     locales = getLocales(baseDir, True)
 
   metadata = readMetadata(baseDir)
-  version = metadata.get('general', 'version')
-  if not releaseBuild:
-    version += '.' + buildNum
+  version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
   if limitMetadata:
     for option in metadata.options('compat'):
@@ -364,14 +338,13 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
         metadata.remove_option('compat', option)
 
   if outFile == None:
-    outFile = getDefaultFileName(baseDir, metadata, version)
+    outFile = getDefaultFileName(baseDir, metadata, version, 'xpi')
 
   contributors = getContributors(baseDir, metadata)
 
   params = {
     'locales': locales,
     'releaseBuild': releaseBuild,
-    'buildNum': buildNum,
     'version': version.encode('utf-8'),
     'metadata': metadata,
     'limitMetadata': limitMetadata,
