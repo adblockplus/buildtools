@@ -18,9 +18,11 @@
 # Note: These are the base functions common to all packagers, the actual
 # packagers are implemented in packagerGecko and packagerChrome.
 
-import os, re, codecs, subprocess, json, jinja2
-import buildtools
+import os, re, codecs, subprocess, json, zipfile, jinja2
+from StringIO import StringIO
 from ConfigParser import SafeConfigParser
+
+import buildtools
 
 def getDefaultFileName(baseDir, metadata, version, ext):
   return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
@@ -65,3 +67,45 @@ def getTemplate(template, autoEscape=False):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath))
   env.filters.update({'json': json.dumps})
   return env.get_template(template)
+
+class Files(dict):
+  def __init__(self, includedFiles, ignoredFiles, process=None):
+    self.includedFiles = includedFiles
+    self.ignoredFiles = ignoredFiles
+    self.process = process
+
+  def isIncluded(self, relpath):
+    parts = relpath.split('/')
+    if not parts[0] in self.includedFiles:
+      return False
+    for part in parts:
+      if part in self.ignoredFiles:
+        return False
+    return True
+
+  def read(self, path, relpath='', skip=None):
+    if os.path.isdir(path):
+      for file in os.listdir(path):
+        name = relpath + ('/' if relpath != '' else '') + file
+        if (skip == None or file not in skip) and self.isIncluded(name):
+          self.read(os.path.join(path, file), name)
+    else:
+      file = open(path, 'rb')
+      self[relpath] = file.read()
+      file.close()
+
+  def zip(self, outFile, sortKey=None):
+    zip = zipfile.ZipFile(outFile, 'w', zipfile.ZIP_DEFLATED)
+    names = self.keys()
+    names.sort(key=sortKey)
+    for name in names:
+      data = self[name]
+      if self.process:
+        data = self.process(name, data)
+      zip.writestr(name, data)
+    zip.close()
+
+  def zipToString(self, sortKey=None):
+    buffer = StringIO()
+    self.zip(buffer, sortKey=sortKey)
+    return buffer.getvalue()
