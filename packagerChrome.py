@@ -166,6 +166,8 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
 
   files = Files(getPackageFiles(params), getIgnoredFiles(params))
   files['manifest.json'] = createManifest(params)
+  if metadata.has_section('mapping'):
+    files.readMappedFiles(baseDir, metadata.items('mapping'))
   files.read(baseDir)
 
   if metadata.has_section('convert_js'):
