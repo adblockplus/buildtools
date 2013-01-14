@@ -18,7 +18,7 @@
 # Note: These are the base functions common to all packagers, the actual
 # packagers are implemented in packagerGecko and packagerChrome.
 
-import os, re, codecs, subprocess, json, zipfile, jinja2
+import sys, os, re, codecs, subprocess, json, zipfile, jinja2
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 
@@ -91,8 +91,22 @@ class Files(dict):
           self.read(os.path.join(path, file), name)
     else:
       file = open(path, 'rb')
+      if relpath in self:
+        print >>sys.stderr, 'Warning: File %s defined multiple times' % relpath
       self[relpath] = file.read()
       file.close()
+
+  def readMappedFiles(self, baseDir, mappings):
+    for target, source in mappings:
+      # Make sure the file is inside an included directory
+      if '/' in target and not self.isIncluded(target):
+        continue
+      parts = source.split('/')
+      path = os.path.join(baseDir, *parts)
+      if os.path.exists(path):
+        self.read(path, target)
+      else:
+        print >>sys.stderr, 'Warning: Mapped file %s doesn\'t exist' % source
 
   def zip(self, outFile, sortKey=None):
     zip = zipfile.ZipFile(outFile, 'w', zipfile.ZIP_DEFLATED)

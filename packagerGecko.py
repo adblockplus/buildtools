@@ -314,6 +314,8 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
   files['install.rdf'] = createManifest(params)
+  if metadata.has_section('mapping'):
+    files.readMappedFiles(baseDir, metadata.items('mapping'))
   files.read(baseDir, skip=('chrome'))
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
