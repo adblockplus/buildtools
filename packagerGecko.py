@@ -86,10 +86,6 @@ def getLocales(baseDir, includeIncomplete=False):
   return locales
 
 def processFile(path, data, params):
-  if re.search(r'\.(manifest|xul|jsm?|xml|xhtml|css)$', path):
-    whitespaceRegExp = re.compile(r'^(  )+', re.M)
-    data = re.sub(whitespaceRegExp, lambda match: '\t' * (len(match.group(0)) / 2), data)
-
   if path.endswith('.manifest') and data.find('{{LOCALE}}') >= 0:
     localesRegExp = re.compile(r'^(.*?){{LOCALE}}(.*?){{LOCALE}}(.*)$', re.M)
     replacement = '\n'.join(map(lambda locale: r'\1%s\2%s\3' % (locale, locale), params['locales']))
