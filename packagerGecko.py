@@ -148,21 +148,21 @@ def initTranslators(localeMetadata):
     else:
       locale['translators'] = []
 
-def createManifest(baseDir, params):
+def createManifest(params):
   global KNOWN_APPS, defaultLocale
   template = getTemplate('install.rdf.tmpl', autoEscape=True)
   templateData = dict(params)
-  templateData['localeMetadata'] = readLocaleMetadata(baseDir, params['locales'])
+  templateData['localeMetadata'] = readLocaleMetadata(params['baseDir'], params['locales'])
   initTranslators(templateData['localeMetadata'])
   templateData['KNOWN_APPS'] = KNOWN_APPS
   templateData['defaultLocale'] = defaultLocale
   return template.render(templateData).encode('utf-8')
 
-def fixupLocales(baseDir, files, params):
+def fixupLocales(params, files):
   global defaultLocale
 
   # Read in default locale data, it might not be included in files
-  defaultLocaleDir = os.path.join(getLocalesDir(baseDir), defaultLocale)
+  defaultLocaleDir = os.path.join(getLocalesDir(params['baseDir']), defaultLocale)
   reference = {}
   ignoredFiles = getIgnoredFiles(params)
   for file in os.listdir(defaultLocaleDir):
@@ -184,7 +184,7 @@ def fixupLocales(baseDir, files, params):
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
 
-def addMissingFiles(baseDir, params, files):
+def addMissingFiles(params, files):
   templateData = {
     'hasChrome': False,
     'hasChromeRequires': False,
@@ -313,14 +313,14 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
 
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
-  files['install.rdf'] = createManifest(baseDir, params)
+  files['install.rdf'] = createManifest(params)
   files.read(baseDir, skip=('chrome'))
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
       files.read(path, 'chrome/%s' % name)
-  fixupLocales(baseDir, files, params)
+  fixupLocales(params, files)
   if not 'bootstrap.js' in files:
-    addMissingFiles(baseDir, params, files)
+    addMissingFiles(params, files)
   if keyFile:
     signFiles(files, keyFile)
   files.zip(outFile, sortKey=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)
