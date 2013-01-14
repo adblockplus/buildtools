@@ -17,24 +17,25 @@
 
 import sys, os, re, json, struct
 from StringIO import StringIO
-from zipfile import ZipFile, ZIP_DEFLATED
 
-from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate
+from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate, Files
 
 defaultLocale = 'en_US'
 
 def getIgnoredFiles(params):
-  return ['store.description']
+  return set(('store.description',))
 
 def getPackageFiles(params):
-  baseDir = params['baseDir']
-  for file in ('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui'):
-    yield os.path.join(baseDir, file)
+  result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui',))
+
   if params['devenv']:
-    yield os.path.join(baseDir, 'qunit')
+    result.add('qunit')
+
+  baseDir = params['baseDir']
   for file in os.listdir(baseDir):
     if file.endswith('.js') or file.endswith('.html') or file.endswith('.xml'):
-      yield os.path.join(baseDir, file)
+      result.add(file)
+  return result
 
 def createManifest(params):
   template = getTemplate('manifest.json.tmpl')
@@ -102,32 +103,14 @@ def createPoller(params):
   template = getTemplate('chromeDevenvPoller__.js.tmpl')
   return template.render(params).encode('utf-8');
 
-def readFile(params, files, path):
-  ignoredFiles = getIgnoredFiles(params)
-  if os.path.isdir(path):
-    for file in os.listdir(path):
-      if file in ignoredFiles:
-        continue
-      readFile(params, files, os.path.join(path, file))
-  else:
-    file = open(path, 'rb')
-    data = file.read()
-    file.close()
-
-    name = os.path.relpath(path, params['baseDir']).replace('\\', '/')
-    files[name] = data
-
 def convertJS(params, files):
   from jshydra.abp_rewrite import doRewrite
   baseDir = params['baseDir']
 
   for file, sources in params['metadata'].items('convert_js'):
-    dirsep = file.find('/')
-    if dirsep >= 0:
-      # Not a top-level file, make sure it is inside an included directory
-      dirname = file[0:dirsep]
-      if os.path.join(baseDir, dirname) not in getPackageFiles(params):
-        continue
+    # Make sure the file is inside an included directory
+    if '/' in file and not files.isIncluded(file):
+      continue
 
     sourceFiles = re.split(r'\s+', sources)
     args = []
@@ -140,14 +123,6 @@ def convertJS(params, files):
 
     sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
     files[file] = doRewrite(sourceFiles, args)
-
-def packFiles(files):
-  buffer = StringIO()
-  zip = ZipFile(buffer, 'w', ZIP_DEFLATED)
-  for file, data in files.iteritems():
-    zip.writestr(file, data)
-  zip.close()
-  return buffer.getvalue()
 
 def signBinary(zipdata, keyFile):
   import M2Crypto
@@ -189,11 +164,9 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
     'metadata': metadata,
   }
 
-  files = {}
+  files = Files(getPackageFiles(params), getIgnoredFiles(params))
   files['manifest.json'] = createManifest(params)
-  for path in getPackageFiles(params):
-    if os.path.exists(path):
-      readFile(params, files, path)
+  files.read(baseDir)
 
   if metadata.has_section('convert_js'):
     convertJS(params, files)
@@ -201,7 +174,7 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
   if devenv:
     files['devenvPoller__.js'] = createPoller(params)
 
-  zipdata = packFiles(files)
+  zipdata = files.zipToString()
   signature = None
   pubkey = None
   if keyFile != None:
@@ -212,6 +185,8 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
 def createDevEnv(baseDir):
   fileBuffer = StringIO()
   createBuild(baseDir, outFile=fileBuffer, devenv=True, releaseBuild=True)
+
+  from zipfile import ZipFile
   zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
   zip.extractall(os.path.join(baseDir, 'devenv'))
   zip.close()

@@ -18,11 +18,10 @@
 import os, sys, re, hashlib, base64, urllib, json
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
-from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
 import xml.dom.minidom as minidom
 import buildtools.localeTools as localeTools
 
-from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate
+from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate, Files
 
 KNOWN_APPS = {
   'conkeror':   '{a79fe89b-6662-4ff4-8e88-09950ad4dfde}',
@@ -55,17 +54,19 @@ def getChromeSubdirs(baseDir, locales):
     result['locale/%s' % locale] = os.path.join(chromeDir, 'locale', locale)
   return result
 
-def getXPIFiles(baseDir):
-  for file in ('components', 'modules', 'lib', 'resources', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png'):
-    yield os.path.join(baseDir, file)
+def getPackageFiles(params):
+  result = set(('chrome', 'components', 'modules', 'lib', 'resources', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png',))
+
+  baseDir = params['baseDir']
   for file in os.listdir(baseDir):
     if file.endswith('.js') or file.endswith('.xml'):
-      yield os.path.join(baseDir, file)
+      result.add(file)
+  return result
 
 def getIgnoredFiles(params):
-  result = ['.incomplete', 'meta.properties']
+  result = set(('.incomplete', 'meta.properties',))
   if params['releaseBuild']:
-    result.append('timeline.js')
+    result.add('timeline.js')
   return result
 
 def isValidLocale(localesDir, dir, includeIncomplete=False):
@@ -85,14 +86,9 @@ def getLocales(baseDir, includeIncomplete=False):
   return locales
 
 def processFile(path, data, params):
-  if not re.search(r'\.(manifest|xul|jsm?|xml|xhtml|rdf|dtd|properties|css)$', path):
-    return data
-
-  data = re.sub(r'\r', '', data)
-  data = data.replace('{{VERSION}}', params['version'])
-
-  whitespaceRegExp = re.compile(r'^(  )+', re.M)
-  data = re.sub(whitespaceRegExp, lambda match: '\t' * (len(match.group(0)) / 2), data)
+  if re.search(r'\.(manifest|xul|jsm?|xml|xhtml|css)$', path):
+    whitespaceRegExp = re.compile(r'^(  )+', re.M)
+    data = re.sub(whitespaceRegExp, lambda match: '\t' * (len(match.group(0)) / 2), data)
 
   if path.endswith('.manifest') and data.find('{{LOCALE}}') >= 0:
     localesRegExp = re.compile(r'^(.*?){{LOCALE}}(.*?){{LOCALE}}(.*)$', re.M)
@@ -166,19 +162,6 @@ def createManifest(baseDir, params):
   templateData['defaultLocale'] = defaultLocale
   return template.render(templateData).encode('utf-8')
 
-def readFile(files, params, path, name):
-  ignoredFiles = getIgnoredFiles(params)
-  if os.path.isdir(path):
-    for file in os.listdir(path):
-      if file in ignoredFiles:
-        continue
-      readFile(files, params, os.path.join(path, file), '%s/%s' % (name, file))
-  else:
-    file = open(path, 'rb')
-    data = processFile(path, file.read(), params)
-    file.close()
-    files[name] = data
-
 def fixupLocales(baseDir, files, params):
   global defaultLocale
 
@@ -204,11 +187,6 @@ def fixupLocales(baseDir, files, params):
             files[path] += localeTools.generateStringEntry(key, value, path).encode('utf-8')
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
-
-def readXPIFiles(baseDir, params, files):
-  for path in getXPIFiles(baseDir):
-    if os.path.exists(path):
-      readFile(files, params, path, os.path.basename(path))
 
 def addMissingFiles(baseDir, params, files):
   templateData = {
@@ -258,11 +236,11 @@ def addMissingFiles(baseDir, params, files):
     if not len(missing):
       break
     for path, moduleFile in missing:
-      readFile(files, params, path, moduleFile)
+      files.read(path, moduleFile)
       checkScript(moduleFile)
 
   template = getTemplate('bootstrap.js.tmpl')
-  files['bootstrap.js'] = processFile('bootstrap.js', template.render(templateData).encode('utf-8'), params)
+  files['bootstrap.js'] = template.render(templateData).encode('utf-8')
 
 def signFiles(files, keyFile):
   import M2Crypto
@@ -313,14 +291,6 @@ def signFiles(files, keyFile):
   signature.write_der(buffer)
   files['META-INF/zigbert.rsa'] = buffer.read()
 
-def writeXPI(files, outFile):
-  zip = ZipFile(outFile, 'w', ZIP_DEFLATED)
-  names = files.keys()
-  names.sort(key=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)
-  for name in names:
-    zip.writestr(name, files[name])
-  zip.close()
-
 def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
   if locales == None:
     locales = getLocales(baseDir)
@@ -336,6 +306,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   contributors = getContributors(baseDir, metadata)
 
   params = {
+    'baseDir': baseDir,
     'locales': locales,
     'releaseBuild': releaseBuild,
     'version': version.encode('utf-8'),
@@ -343,18 +314,20 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     'contributors': contributors,
     'multicompartment': multicompartment,
   }
-  files = {}
+
+  files = Files(getPackageFiles(params), getIgnoredFiles(params),
+                process=lambda path, data: processFile(path, data, params))
   files['install.rdf'] = createManifest(baseDir, params)
+  files.read(baseDir, skip=('chrome'))
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
-      readFile(files, params, path, 'chrome/%s' % name)
+      files.read(path, 'chrome/%s' % name)
   fixupLocales(baseDir, files, params)
-  readXPIFiles(baseDir, params, files)
   if not 'bootstrap.js' in files:
     addMissingFiles(baseDir, params, files)
   if keyFile:
     signFiles(files, keyFile)
-  writeXPI(files, outFile)
+  files.zip(outFile, sortKey=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)
 
 def autoInstall(baseDir, host, port, multicompartment=False):
   fileBuffer = StringIO()
