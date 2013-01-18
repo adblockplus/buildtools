@@ -20,7 +20,7 @@
 
 import sys, os, re, codecs, subprocess, json, zipfile, jinja2
 from StringIO import StringIO
-from ConfigParser import SafeConfigParser
+from chainedconfigparser import ChainedConfigParser
 
 import buildtools
 
@@ -31,12 +31,7 @@ def getMetadataPath(baseDir):
   return os.path.join(baseDir, 'metadata')
 
 def readMetadata(baseDir):
-  metadata = SafeConfigParser()
-  metadata.optionxform = str
-  file = codecs.open(getMetadataPath(baseDir), 'rb', encoding='utf-8')
-  metadata.readfp(file)
-  file.close()
-  return metadata
+  return ChainedConfigParser(getMetadataPath(baseDir))
 
 def getBuildNum(baseDir):
   try:
