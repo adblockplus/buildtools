@@ -246,17 +246,6 @@ def preprocessChromeLocale(path, metadata, isMaster):
   data = json.load(fileHandle)
   fileHandle.close()
 
-  # Remove synced keys, these don't need to be translated
-  if metadata.has_section('locale_sync'):
-    for file, stringIDs in metadata.items('locale_sync'):
-      for stringID in re.split(r'\s+', stringIDs):
-        if file == 'remove':
-          key = stringID
-        else:
-          key = re.sub(r'\..*', '', file) + '_' + re.sub(r'\W', '_', stringID)
-        if key in data:
-          del data[key]
-
   for key, value in data.iteritems():
     if isMaster:
       # Make sure the key name is listed in the description
