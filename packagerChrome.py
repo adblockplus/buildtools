@@ -112,9 +112,11 @@ def createPoller(params):
 
 def convertJS(params, files):
   from jshydra.abp_rewrite import doRewrite
-  baseDir = params['baseDir']
 
-  for file, sources in params['metadata'].items('convert_js'):
+  for item in params['metadata'].items('convert_js'):
+    file, sources = item
+    baseDir = os.path.dirname(item.source)
+
     # Make sure the file is inside an included directory
     if '/' in file and not files.isIncluded(file):
       continue
@@ -182,9 +184,10 @@ def importGeckoLocales(params, files):
   for source, target in localeCodeMapping.iteritems():
     targetFile = '_locales/%s/messages.json' % target
 
-    for fileName, keys in params['metadata'].items('import_locales'):
+    for item in params['metadata'].items('import_locales'):
+      fileName, keys = item
       parts = map(lambda n: source if n == '*' else n, fileName.split('/'))
-      sourceFile = os.path.join(params['baseDir'], *parts)
+      sourceFile = os.path.join(os.path.dirname(item.source), *parts)
       incompleteMarker = os.path.join(os.path.dirname(sourceFile), '.incomplete')
       if not os.path.exists(sourceFile) or os.path.exists(incompleteMarker):
         continue
@@ -258,7 +261,7 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
   files = Files(getPackageFiles(params), getIgnoredFiles(params))
   files['manifest.json'] = createManifest(params)
   if metadata.has_section('mapping'):
-    files.readMappedFiles(baseDir, metadata.items('mapping'))
+    files.readMappedFiles(metadata.items('mapping'))
   files.read(baseDir)
 
   if metadata.has_section('convert_js'):

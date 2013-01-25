@@ -92,13 +92,15 @@ class Files(dict):
       self[relpath] = file.read()
       file.close()
 
-  def readMappedFiles(self, baseDir, mappings):
-    for target, source in mappings:
+  def readMappedFiles(self, mappings):
+    for item in mappings:
+      target, source = item
+
       # Make sure the file is inside an included directory
       if '/' in target and not self.isIncluded(target):
         continue
       parts = source.split('/')
-      path = os.path.join(baseDir, *parts)
+      path = os.path.join(os.path.dirname(item.source), *parts)
       if os.path.exists(path):
         self.read(path, target)
       else:
