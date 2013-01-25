@@ -44,6 +44,11 @@ def getPackageFiles(params):
       result.add(file)
   return result
 
+def processFile(path, data, params):
+  # We don't change anything yet, this function currently only exists here so
+  # that it can be overridden if necessary.
+  return data
+
 def createManifest(params):
   template = getTemplate('manifest.json.tmpl')
   templateData = dict(params)
@@ -269,7 +274,8 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
     'metadata': metadata,
   }
 
-  files = Files(getPackageFiles(params), getIgnoredFiles(params))
+  files = Files(getPackageFiles(params), getIgnoredFiles(params),
+                process=lambda path, data: processFile(path, data, params))
   files['manifest.json'] = createManifest(params)
   if metadata.has_section('mapping'):
     files.readMappedFiles(metadata.items('mapping'))
