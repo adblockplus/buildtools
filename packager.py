@@ -27,11 +27,11 @@ import buildtools
 def getDefaultFileName(baseDir, metadata, version, ext):
   return os.path.join(baseDir, '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext))
 
-def getMetadataPath(baseDir):
-  return os.path.join(baseDir, 'metadata')
+def getMetadataPath(baseDir, type):
+  return os.path.join(baseDir, 'metadata.%s' % type)
 
-def readMetadata(baseDir):
-  return ChainedConfigParser(getMetadataPath(baseDir))
+def readMetadata(baseDir, type):
+  return ChainedConfigParser(getMetadataPath(baseDir, type))
 
 def getBuildNum(baseDir):
   try:

@@ -18,6 +18,8 @@
 import os, sys, re, subprocess, buildtools
 from getopt import getopt, GetoptError
 
+knownTypes = ('gecko', 'chrome')
+
 class Command(object):
   name = property(lambda self: self._name)
   shortDescription = property(lambda self: self._shortDescription,
@@ -111,18 +113,19 @@ def usage(scriptName, type, commandName=None):
         continue
       commandText = ('%s %s' % (command.name, command.params)).ljust(39)
       descriptionParts = splitByLength(command.shortDescription, 29)
-      descriptions.append('  %s %s %s' % (scriptName, commandText, descriptionParts[0]))
+      descriptions.append('  %s [-t %s] %s %s' % (scriptName, type, commandText, descriptionParts[0]))
       for part in descriptionParts[1:]:
-        descriptions.append('  %s %s %s' % (' ' * len(scriptName), ' ' * len(commandText), part))
+        descriptions.append('  %s     %s  %s %s' % (' ' * len(scriptName), ' ' * len(type), ' ' * len(commandText), part))
     print '''Usage:
 
 %(descriptions)s
 
 For details on a command run:
 
-  %(scriptName)s <command> --help
+  %(scriptName)s [-t %(type)s] <command> --help
 ''' % {
     'scriptName': scriptName,
+    'type': type,
     'descriptions': '\n'.join(descriptions)
   }
   else:
@@ -149,7 +152,7 @@ For details on a command run:
       options.append('  %s %s %s' % (shortText.ljust(11), longText.ljust(19), descrParts[0]))
       for part in descrParts[1:]:
         options.append('  %s %s %s' % (' ' * 11, ' ' * 19, part))
-    print '''%(scriptName)s %(name)s %(params)s
+    print '''%(scriptName)s [-t %(type)s] %(name)s %(params)s
 
 %(description)s
 
@@ -157,6 +160,7 @@ Options:
 %(options)s
 ''' % {
       'scriptName': scriptName,
+      'type': type,
       'name': command.name,
       'params': command.params,
       'description': description,
@@ -502,11 +506,49 @@ with addCommand(updatePSL, 'updatepsl') as command:
   command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
   command.supportedTypes = ('chrome')
 
-def processArgs(baseDir, args, type='gecko'):
+def getType(baseDir, scriptName, args):
+  # Look for an explicit type parameter (has to be the first parameter)
+  if len(args) >= 2 and args[0] == '-t':
+    type = args[1]
+    del args[1]
+    del args[0]
+    if type not in knownTypes:
+      print '''
+Unknown type %s specified, supported types are: %s
+''' % (type, ', '.join(knownTypes))
+      return None
+    return type
+
+  # Try to guess repository type
+  types = []
+  for t in knownTypes:
+    if os.path.exists(os.path.join(baseDir, 'metadata.%s' % t)):
+      types.append(t)
+
+  if len(types) == 1:
+    return types[0]
+  elif len(types) > 1:
+    print '''
+Ambiguous repository type, please specify -t parameter explicitly, e.g.
+%s -t %s build
+''' % (scriptName, types[0])
+    return None
+  else:
+    print '''
+No metadata file found in this repository, a metadata file like
+metadata.%s is required.
+''' % knownTypes[0]
+    return None
+
+def processArgs(baseDir, args):
   global commands
 
   scriptName = os.path.basename(args[0])
   args = args[1:]
+  type = getType(baseDir, scriptName, args)
+  if type == None:
+    return
+
   if len(args) == 0:
     args = ['build']
     print '''
