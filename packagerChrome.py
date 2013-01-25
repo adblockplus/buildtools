@@ -51,7 +51,7 @@ def createManifest(params):
   baseDir = templateData['baseDir']
   metadata = templateData['metadata']
 
-  if metadata.has_option('general', 'pageAction'):
+  if metadata.has_option('general', 'pageAction') and metadata.get('general', 'pageAction') != '':
     icon, popup = re.split(r'\s+', metadata.get('general', 'pageAction'), 1)
     templateData['pageAction'] = {'icon': icon, 'popup': popup}
 
@@ -81,12 +81,14 @@ def createManifest(params):
     if params['devenv']:
       templateData['backgroundScripts'].append('devenvPoller__.js')
 
-  if metadata.has_option('general', 'webAccessible'):
+  if metadata.has_option('general', 'webAccessible') and metadata.get('general', 'webAccessible') != '':
     templateData['webAccessible'] = re.split(r'\s+', metadata.get('general', 'webAccessible'))
 
   if metadata.has_section('contentScripts'):
     contentScripts = []
     for run_at, scripts in metadata.items('contentScripts'):
+      if scripts == '':
+        continue
       contentScripts.append({
         'matches': ['http://*/*', 'https://*/*'],
         'js': re.split(r'\s+', scripts),
@@ -198,6 +200,15 @@ def importGeckoLocales(params, files):
 
       try:
         sourceData = localeTools.readFile(sourceFile)
+
+        # Resolve wildcard imports
+        if keys == '*' or keys == '=*':
+          importList = sourceData.keys()
+          importList = filter(lambda k: not k.startswith('_'), importList)
+          if keys == '=*':
+            importList = map(lambda k: '=' + k, importList)
+          keys = ' '.join(importList)
+
         for stringID in re.split(r'\s+', keys):
           noMangling = False
           if stringID.startswith('='):
