@@ -45,6 +45,7 @@ def getBuildVersion(baseDir, metadata, releaseBuild, buildNum=None):
   if not releaseBuild:
     if buildNum == None:
       buildNum = getBuildNum(baseDir)
+    buildNum = str(buildNum)
     if len(buildNum) > 0:
       if re.search(r'(^|\.)\d+$', version):
         # Numerical version number - need to fill up with zeros to have three
