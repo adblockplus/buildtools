@@ -217,7 +217,7 @@ def importGeckoLocales(params, files):
 
           if stringID in sourceData:
             if noMangling:
-              key = stringID
+              key = re.sub(r'\W', '_', stringID)
             else:
               key = re.sub(r'\..*', '', parts[-1]) + '_' + re.sub(r'\W', '_', stringID)
             if key in data:
