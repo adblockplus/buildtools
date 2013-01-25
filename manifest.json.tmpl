@@ -33,6 +33,8 @@
     -experimental
     {%- endif -%}
     /updates.xml",
+  {%- elif metadata.has_option('general', 'updateURL') %}
+  "update_url": {{metadata.get('general', 'updateURL')|json}},
   {%- endif %}
 
   {%- if pageAction %}
