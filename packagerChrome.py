@@ -18,9 +18,16 @@
 import sys, os, re, json, struct
 from StringIO import StringIO
 
-from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate, Files
+import packager
+from packager import getDefaultFileName, getBuildVersion, getTemplate, Files
 
 defaultLocale = 'en_US'
+
+def getMetadataPath(baseDir):
+  return packager.getMetadataPath(baseDir, 'chrome')
+
+def readMetadata(baseDir):
+  return packager.readMetadata(baseDir, 'chrome')
 
 def getIgnoredFiles(params):
   return set(('store.description',))

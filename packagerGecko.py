@@ -21,7 +21,8 @@ from StringIO import StringIO
 import xml.dom.minidom as minidom
 import buildtools.localeTools as localeTools
 
-from packager import getDefaultFileName, readMetadata, getBuildVersion, getTemplate, Files
+import packager
+from packager import getDefaultFileName, getBuildVersion, getTemplate, Files
 
 KNOWN_APPS = {
   'conkeror':   '{a79fe89b-6662-4ff4-8e88-09950ad4dfde}',
@@ -38,6 +39,12 @@ KNOWN_APPS = {
 }
 
 defaultLocale = 'en-US'
+
+def getMetadataPath(baseDir):
+  return packager.getMetadataPath(baseDir, 'gecko')
+
+def readMetadata(baseDir):
+  return packager.readMetadata(baseDir, 'gecko')
 
 def getChromeDir(baseDir):
   return os.path.join(baseDir, 'chrome')
