@@ -20,6 +20,12 @@
 
 import os, codecs, ConfigParser
 
+class Item(tuple):
+  def __new__(cls, name, value, source):
+    result = super(Item, cls).__new__(cls, (name, value))
+    result.source = source
+    return result
+
 class ChainedConfigParser:
   """
     This class provides essentially the same interfaces as SafeConfigParser but
@@ -37,7 +43,10 @@ class ChainedConfigParser:
     A main API difference to SafeConfigParser is the way a class instance is
     constructed: a file path has to be passed, this file is assumed to be
     encoded as UTF-8. Also, ChainedConfigParser data is read-only and the
-    options are case-sensitive.
+    options are case-sensitive. An additional option_source(section, option)
+    method is provided to get the path of the configuration file defining this
+    option (for relative paths). Items returned by the items() function also
+    have a source attribute serving the same purpose.
   """
 
   def __init__(self, path):
@@ -50,6 +59,7 @@ class ChainedConfigParser:
 
     config = ConfigParser.SafeConfigParser()
     config.optionxform = str
+    config.source_path = path
     handle = codecs.open(path, 'rb', encoding='utf-8')
     config.readfp(handle)
     handle.close()
@@ -108,5 +118,11 @@ class ChainedConfigParser:
         for name, value in config.items(section):
           if name not in seen:
             seen.add(name)
-            result.append((name, value))
+            result.append(Item(name, value, config.source_path))
     return result
+
+  def option_source(self, section, option):
+    for config in self.chain:
+      if config.has_section(section) and config.has_option(section, option):
+        return config.source_path
+    raise ConfigParser.NoOptionError(option, section)

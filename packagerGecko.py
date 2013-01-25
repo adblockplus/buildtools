@@ -125,7 +125,7 @@ def readLocaleMetadata(baseDir, locales):
       result[locale] = {}
   return result
 
-def getContributors(baseDir, metadata):
+def getContributors(metadata):
   main = []
   additional = set()
   if metadata.has_section('contributors'):
@@ -138,7 +138,9 @@ def getContributors(baseDir, metadata):
         if not match:
           print >>sys.stderr, 'Warning: unrecognized contributor location "%s"\n' % value
           continue
-        dom = minidom.parse(os.path.join(baseDir, match.group(1)))
+        baseDir = os.path.dirname(metadata.option_source('contributors', option))
+        parts = match.group(1).split('/')
+        dom = minidom.parse(os.path.join(baseDir, *parts))
         tags = dom.getElementsByTagName(match.group(2))
         for tag in tags:
           if tag.hasAttribute(match.group(3)):
@@ -306,7 +308,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
   if outFile == None:
     outFile = getDefaultFileName(baseDir, metadata, version, 'xpi')
 
-  contributors = getContributors(baseDir, metadata)
+  contributors = getContributors(metadata)
 
   params = {
     'baseDir': baseDir,
@@ -322,7 +324,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
                 process=lambda path, data: processFile(path, data, params))
   files['install.rdf'] = createManifest(params)
   if metadata.has_section('mapping'):
-    files.readMappedFiles(baseDir, metadata.items('mapping'))
+    files.readMappedFiles(metadata.items('mapping'))
   files.read(baseDir, skip=('chrome'))
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
