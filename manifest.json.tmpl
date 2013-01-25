@@ -45,6 +45,10 @@
   },
   {%- endif %}
 
+  {%- if metadata.has_option('general', 'browserAction') and metadata.get('general', 'browserAction') != '' %}
+  "browser_action": {},
+  {%- endif %}
+
   {%- if icons %}
   "icons": {{icons|json}},
   {%- endif %}
