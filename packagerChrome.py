@@ -131,6 +131,90 @@ def convertJS(params, files):
     sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
     files[file] = doRewrite(sourceFiles, args)
 
+def importGeckoLocales(params, files):
+  import localeTools
+
+  localeCodeMapping = {
+    'ar': 'ar',
+    'bg': 'bg',
+    'ca': 'ca',
+    'cs': 'cs',
+    'da': 'da',
+    'de': 'de',
+    'el': 'el',
+    'en-US': 'en_US',
+    'en-GB': 'en_GB',
+    'es-ES': 'es',
+    'es-AR': 'es_419',
+    'et': 'et',
+    'fi': 'fi',
+  #   '': 'fil', ???
+    'fr': 'fr',
+    'he': 'he',
+    'hi-IN': 'hi',
+    'hr': 'hr',
+    'hu': 'hu',
+    'id': 'id',
+    'it': 'it',
+    'ja': 'ja',
+    'ko': 'ko',
+    'lt': 'lt',
+    'lv': 'lv',
+    'nl': 'nl',
+  #    'nb-NO': 'no', ???
+    'pl': 'pl',
+    'pt-BR': 'pt_BR',
+    'pt-PT': 'pt_PT',
+    'ro': 'ro',
+    'ru': 'ru',
+    'sk': 'sk',
+    'sl': 'sl',
+    'sr': 'sr',
+    'sv-SE': 'sv',
+    'th': 'th',
+    'tr': 'tr',
+    'uk': 'uk',
+    'vi': 'vi',
+    'zh-CN': 'zh_CN',
+    'zh-TW': 'zh_TW',
+  }
+
+  for source, target in localeCodeMapping.iteritems():
+    targetFile = '_locales/%s/messages.json' % target
+
+    for fileName, keys in params['metadata'].items('import_locales'):
+      parts = map(lambda n: source if n == '*' else n, fileName.split('/'))
+      sourceFile = os.path.join(params['baseDir'], *parts)
+      incompleteMarker = os.path.join(os.path.dirname(sourceFile), '.incomplete')
+      if not os.path.exists(sourceFile) or os.path.exists(incompleteMarker):
+        continue
+
+      data = {}
+      if targetFile in files:
+        data = json.loads(files[targetFile].decode('utf-8'))
+
+      try:
+        sourceData = localeTools.readFile(sourceFile)
+        for stringID in re.split(r'\s+', keys):
+          noMangling = False
+          if stringID.startswith('='):
+            stringID = stringID[1:]
+            noMangling = True
+
+          if stringID in sourceData:
+            if noMangling:
+              key = stringID
+            else:
+              key = re.sub(r'\..*', '', parts[-1]) + '_' + re.sub(r'\W', '_', stringID)
+            if key in data:
+              print 'Warning: locale string %s defined multiple times' % key
+            data[key] = {'message': sourceData[stringID]}
+      except Exception, e:
+        print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
+
+      files[targetFile] = json.dumps(data, ensure_ascii=False, sort_keys=True,
+                            indent=2, separators=(',', ': ')).encode('utf-8') + '\n'
+
 def signBinary(zipdata, keyFile):
   import M2Crypto
   if not os.path.exists(keyFile):
@@ -179,6 +263,9 @@ def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFil
 
   if metadata.has_section('convert_js'):
     convertJS(params, files)
+
+  if metadata.has_section('import_locales'):
+    importGeckoLocales(params, files)
 
   if devenv:
     files['devenvPoller__.js'] = createPoller(params)

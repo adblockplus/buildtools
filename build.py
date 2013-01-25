@@ -405,16 +405,6 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     import buildtools.releaseAutomationGecko as releaseAutomation
     releaseAutomation.run(baseDir, version, keyFile, downloadsRepo)
 
-def syncLocales(baseDir, scriptName, opts, args, type):
-  if len(args) == 0:
-    print 'Please specify the directory of the source Firefox extension as a parameter'
-    usage(scriptName, type, 'synclocales')
-    return
-  sourceDir = args[0]
-
-  import buildtools.localeSyncChrome as localeSync
-  localeSync.run(baseDir, sourceDir)
-
 def updatePSL(baseDir, scriptName, opts, args, type):
   import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
   publicSuffixListUpdater.updatePSL(baseDir)
@@ -494,12 +484,6 @@ with addCommand(runReleaseAutomation, 'release') as command:
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
   command.supportedTypes = ('gecko')
-
-with addCommand(syncLocales, 'synclocales') as command:
-  command.shortDescription = 'Sync locales with a Firefox extension'
-  command.description = 'Updates locale files with strings from a Firefox extension corresponding to the entries in [locale_sync] metadata section.'
-  command.params = '<firefox_addon_directory>'
-  command.supportedTypes = ('chrome')
 
 with addCommand(updatePSL, 'updatepsl') as command:
   command.shortDescription = 'Updates Public Suffix List'
