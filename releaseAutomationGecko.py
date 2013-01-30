@@ -42,7 +42,7 @@ def run(baseDir, version, keyFile, downloadsRepo):
   subprocess.Popen(['hg', 'tag', '-R', baseDir, '-f', version]).communicate()
 
   # Create a release build
-  buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version))
+  buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'xpi'))
   packager.createBuild(baseDir, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
 
   # Create source archive
