@@ -208,7 +208,7 @@ def addMissingFiles(params, files):
 
   def checkScript(name):
     content = files[name]
-    for match in re.finditer(r'(?:^|\s)require\( *"([\w\-]+)" *\)', content):
+    for match in re.finditer(r'(?:^|\s)require\(\s*"([\w\-]+)"\s*\)', content):
       templateData['requires'][match.group(1)] = True
       if name.startswith('chrome/content/'):
         templateData['hasChromeRequires'] = True
