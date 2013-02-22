@@ -40,13 +40,21 @@
   {%- if pageAction %}
   "page_action": {
     "default_icon": {{pageAction.icon|json}},
-    "default_title": "__MSG_name__",
-    "default_popup": {{pageAction.popup|json}}
+    {%- if pageAction.popup %}
+    "default_popup": {{pageAction.popup|json}},
+    {%- endif %}
+    "default_title": "__MSG_name__"
   },
   {%- endif %}
 
-  {%- if metadata.has_option('general', 'browserAction') and metadata.get('general', 'browserAction') != '' %}
-  "browser_action": {},
+  {%- if browserAction %}
+  "browser_action": {
+    "default_icon": {{browserAction.icon|json}},
+    {%- if browserAction.popup %}
+    "default_popup": {{browserAction.popup|json}},
+    {%- endif %}
+    "default_title": "__MSG_name__"
+  },
   {%- endif %}
 
   {%- if icons %}
