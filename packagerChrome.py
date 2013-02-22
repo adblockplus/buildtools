@@ -57,8 +57,18 @@ def createManifest(params):
   metadata = templateData['metadata']
 
   if metadata.has_option('general', 'pageAction') and metadata.get('general', 'pageAction') != '':
-    icon, popup = re.split(r'\s+', metadata.get('general', 'pageAction'), 1)
+    if re.search(r'\s+', metadata.get('general', 'pageAction')):
+      icon, popup = re.split(r'\s+', metadata.get('general', 'pageAction'), 1)
+    else:
+      icon, popup = (metadata.get('general', 'pageAction'), None)
     templateData['pageAction'] = {'icon': icon, 'popup': popup}
+
+  if metadata.has_option('general', 'browserAction') and metadata.get('general', 'browserAction') != '':
+    if re.search(r'\s+', metadata.get('general', 'browserAction')):
+      icon, popup = re.split(r'\s+', metadata.get('general', 'browserAction'), 1)
+    else:
+      icon, popup = (metadata.get('general', 'browserAction'), None)
+    templateData['browserAction'] = {'icon': icon, 'popup': popup}
 
   if metadata.has_option('general', 'icons'):
     icons = {}
