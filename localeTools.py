@@ -24,6 +24,7 @@ from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 langMappingGecko = {
   'dsb': 'dsb-DE',
   'hsb': 'hsb-DE',
+  'hi-IN': 'hi',
 }
 
 langMappingChrome = {
