@@ -22,10 +22,17 @@ from zipfile import ZipFile
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
 langMappingGecko = {
+  'bn-BD': 'bn',
+  'br': 'br-FR',
   'dsb': 'dsb-DE',
+  'fj-FJ': 'fj',
   'hsb': 'hsb-DE',
   'hi-IN': 'hi',
+  'ml': 'ml-IN',
   'nb-NO': 'nb',
+  'rm': 'rm-CH',
+  'ta-LK': 'ta',
+  'wo-SN': 'wo',
 }
 
 langMappingChrome = {
