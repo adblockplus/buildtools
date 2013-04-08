@@ -25,6 +25,7 @@ langMappingGecko = {
   'dsb': 'dsb-DE',
   'hsb': 'hsb-DE',
   'hi-IN': 'hi',
+  'nb-NO': 'nb',
 }
 
 langMappingChrome = {
@@ -32,7 +33,6 @@ langMappingChrome = {
   'es': 'es-ES',
   'sv': 'sv-SE',
   'ml': 'ml-IN',
-  'nb': 'no',
 }
 
 chromeLocales = [
