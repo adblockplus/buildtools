@@ -297,7 +297,7 @@ def setupTranslations(type, locales, projectName, key):
 
   allowed = set()
   allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
-  for match in re.finditer(r'<tr>\s*<td>([\w\-]+)</td>', allowedLocales, re.S):
+  for match in re.finditer(r'<tr>\s*<td\b[^<>]*>([\w\-]+)</td>', allowedLocales, re.S):
     allowed.add(match.group(1))
   if not allowed.issuperset(locales):
     print 'Warning, following locales aren\'t allowed by server: ' + ', '.join(locales - allowed)
