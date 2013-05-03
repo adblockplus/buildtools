@@ -70,6 +70,11 @@ class Files(dict):
     self.ignoredFiles = ignoredFiles
     self.process = process
 
+  def __setitem__(self, key, value):
+    if self.process:
+      value = self.process(key, value)
+    dict.__setitem__(self, key, value)
+
   def isIncluded(self, relpath):
     parts = relpath.split('/')
     if not parts[0] in self.includedFiles:
@@ -111,10 +116,7 @@ class Files(dict):
     names = self.keys()
     names.sort(key=sortKey)
     for name in names:
-      data = self[name]
-      if self.process:
-        data = self.process(name, data)
-      zip.writestr(name, data)
+      zip.writestr(name, self[name])
     zip.close()
 
   def zipToString(self, sortKey=None):
