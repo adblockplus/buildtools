@@ -147,6 +147,11 @@ def convertJS(params, files):
     except ValueError:
       pass
 
+    # Source files of the conversion shouldn't be part of the build
+    for sourceFile in sourceFiles:
+      if sourceFile in files:
+        del files[sourceFile]
+
     sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
     files[file] = doRewrite(sourceFiles, args)
 
