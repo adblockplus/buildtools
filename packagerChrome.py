@@ -19,18 +19,19 @@ import sys, os, re, json, struct
 from StringIO import StringIO
 
 import packager
-from packager import getDefaultFileName, getBuildVersion, getTemplate, Files
+from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuildVersion, getTemplate, Files
 
 defaultLocale = 'en_US'
 
-def getMetadataPath(baseDir):
-  return packager.getMetadataPath(baseDir, 'chrome')
-
-def readMetadata(baseDir):
-  return packager.readMetadata(baseDir, 'chrome')
-
 def getIgnoredFiles(params):
-  return set(('store.description',))
+  result = set(('store.description',))
+
+  # Hack: ignore all lib subdirectories
+  libDir = os.path.join(params['baseDir'], 'lib')
+  for file in os.listdir(libDir):
+    if os.path.isdir(os.path.join(libDir, file)):
+      result.add(file)
+  return result
 
 def getPackageFiles(params):
   result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui',))
@@ -273,8 +274,8 @@ def writePackage(outputFile, pubkey, signature, zipdata):
     file.write(signature)
   file.write(zipdata)
 
-def createBuild(baseDir, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
-  metadata = readMetadata(baseDir)
+def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
+  metadata = readMetadata(baseDir, type)
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
   if outFile == None:

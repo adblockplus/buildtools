@@ -18,7 +18,7 @@
 import os, sys, re, subprocess, buildtools
 from getopt import getopt, GetoptError
 
-knownTypes = ('gecko', 'chrome')
+knownTypes = ('gecko', 'chrome', 'opera')
 
 class Command(object):
   name = property(lambda self: self._name)
@@ -195,9 +195,9 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          multicompartment=multicompartment)
-  elif type == 'chrome':
+  elif type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
-    packager.createBuild(baseDir, outFile=outFile, buildNum=buildNum,
+    packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          experimentalAPI=experimentalAPI)
 
@@ -235,7 +235,7 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  if type == 'chrome':
+  if type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
     locales = os.listdir(os.path.join(baseDir, '_locales'))
     locales = map(lambda locale: locale.replace('_', '-'), locales)
@@ -257,7 +257,7 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  if type == 'chrome':
+  if type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
     defaultLocaleDir = os.path.join(baseDir, '_locales', packager.defaultLocale)
     metadata = packager.readMetadata(baseDir)
@@ -280,7 +280,7 @@ def uploadTranslations(baseDir, scriptName, opts, args, type):
 
   key = args[0]
 
-  if type == 'chrome':
+  if type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
     localesDir = os.path.join(baseDir, '_locales')
     locales = os.listdir(localesDir)
@@ -308,7 +308,7 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     return
 
   key = args[0]
-  if type == 'chrome':
+  if type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
     localesDir = os.path.join(baseDir, '_locales')
   else:
@@ -418,11 +418,11 @@ with addCommand(runBuild, 'build') as command:
   command.params = '[options] [output_file]'
   command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome'))
+  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'opera'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Enable use of experimental APIs', long='experimental')
-  command.supportedTypes = ('gecko', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome', 'opera')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
@@ -434,31 +434,31 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
 with addCommand(createDevEnv, 'devenv') as command:
   command.shortDescription = 'Set up a development environment'
   command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-  command.supportedTypes = ('chrome')
+  command.supportedTypes = ('chrome', 'opera')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'
   command.description = 'Sets up translation languages for the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome', 'opera')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
   command.description = 'Updates the translation master files in the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome', 'opera')
 
 with addCommand(uploadTranslations, 'uploadtrans') as command:
   command.shortDescription = 'Uploads existing translations'
   command.description = 'Uploads already existing translations to the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome', 'opera')
 
 with addCommand(getTranslations, 'gettranslations') as command:
   command.shortDescription = 'Downloads translation updates'
   command.description = 'Downloads updated translations from crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome')
+  command.supportedTypes = ('gecko', 'chrome', 'opera')
 
 with addCommand(showDescriptions, 'showdesc') as command:
   command.shortDescription = 'Print description strings for all locales'
@@ -488,7 +488,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
 with addCommand(updatePSL, 'updatepsl') as command:
   command.shortDescription = 'Updates Public Suffix List'
   command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
-  command.supportedTypes = ('chrome')
+  command.supportedTypes = ('chrome', 'opera')
 
 def getType(baseDir, scriptName, args):
   # Look for an explicit type parameter (has to be the first parameter)
