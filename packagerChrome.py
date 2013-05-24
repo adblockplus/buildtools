@@ -250,6 +250,20 @@ def importGeckoLocales(params, files):
       files[targetFile] = json.dumps(data, ensure_ascii=False, sort_keys=True,
                             indent=2, separators=(',', ': ')).encode('utf-8') + '\n'
 
+  if params['type'] == 'opera':
+    # Opera has a slightly different locale mapping
+    operaMapping = {
+      'es': 'es_ES',
+      'es_419': 'es_LA',
+      'pt': 'pt_PT',
+    }
+    for chromeLocale, operaLocale in operaMapping.iteritems():
+      chromeFile = '_locales/%s/messages.json' % chromeLocale
+      operaFile = '_locales/%s/messages.json' % operaLocale
+      if chromeFile in files:
+        files[operaFile] = files[chromeFile]
+        del files[chromeFile]
+
 def signBinary(zipdata, keyFile):
   import M2Crypto
   if not os.path.exists(keyFile):
@@ -282,6 +296,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     outFile = getDefaultFileName(baseDir, metadata, version, 'crx' if keyFile else 'zip')
 
   params = {
+    'type': type,
     'baseDir': baseDir,
     'releaseBuild': releaseBuild,
     'version': version,
