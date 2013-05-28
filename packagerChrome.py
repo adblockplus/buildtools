@@ -254,14 +254,15 @@ def importGeckoLocales(params, files):
     # Opera has a slightly different locale mapping
     operaMapping = {
       'es': 'es_ES',
-      'es_419': 'es_LA',
+      'es_419': None,
       'pt': 'pt_PT',
     }
     for chromeLocale, operaLocale in operaMapping.iteritems():
       chromeFile = '_locales/%s/messages.json' % chromeLocale
-      operaFile = '_locales/%s/messages.json' % operaLocale
+      operaFile = '_locales/%s/messages.json' % operaLocale if operaLocale != None else None
       if chromeFile in files:
-        files[operaFile] = files[chromeFile]
+        if operaFile != None:
+          files[operaFile] = files[chromeFile]
         del files[chromeFile]
 
 def signBinary(zipdata, keyFile):
