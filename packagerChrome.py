@@ -330,7 +330,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     pubkey = getPublicKey(keyFile)
   writePackage(outFile, pubkey, signature, zipdata)
 
-def createDevEnv(baseDir):
+def createDevEnv(baseDir, type):
   fileBuffer = StringIO()
   createBuild(baseDir, outFile=fileBuffer, devenv=True, releaseBuild=True)
 
@@ -340,7 +340,7 @@ def createDevEnv(baseDir):
   zip.close()
 
   print 'Development environment created, waiting for connections from active extensions...'
-  metadata = readMetadata(baseDir)
+  metadata = readMetadata(baseDir, type)
   connections = [0]
 
   import SocketServer, time, thread

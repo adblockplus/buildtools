@@ -224,7 +224,7 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
   import buildtools.packagerChrome as packager
-  packager.createDevEnv(baseDir)
+  packager.createDevEnv(baseDir, type=type)
 
 
 def setupTranslations(baseDir, scriptName, opts, args, type):
