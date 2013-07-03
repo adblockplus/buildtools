@@ -367,15 +367,15 @@ def generateDocs(baseDir, scriptName, opts, args, type):
     if not os.path.exists(toolkit):
       subprocess.Popen(['hg', 'clone', 'https://hg.adblockplus.org/jsdoc-toolkit/', toolkit]).communicate()
 
-  command = [sys.executable,
-             os.path.join(toolkit, 'jsrun.py'),
+  command = [os.path.join(toolkit, 'jsrun.js'),
              '-t=' + os.path.join(toolkit, 'templates', 'jsdoc'),
              '-d=' + targetDir,
              '-a',
              '-p',
              '-x=js,jsm',
              os.path.join(baseDir, 'modules'),
-             os.path.join(baseDir, 'components')]
+             os.path.join(baseDir, 'components'),
+             os.path.join(baseDir, 'lib')]
   subprocess.Popen(command).communicate()
 
 
@@ -468,8 +468,8 @@ with addCommand(showDescriptions, 'showdesc') as command:
   command.supportedTypes = ('gecko')
 
 with addCommand(generateDocs, 'docs') as command:
-  command.shortDescription = 'Generate documentation'
-  command.description = 'Generate documentation files and write them into the specified directory.'
+  command.shortDescription = 'Generate documentation (requires node.js)'
+  command.description = 'Generate documentation files and write them into the specified directory. This operation requires node.js to be installed.'
   command.addOption('JsDoc Toolkit location', short='t', long='toolkit', value='dir')
   command.params = '[options] <directory>'
   command.supportedTypes = ('gecko')
