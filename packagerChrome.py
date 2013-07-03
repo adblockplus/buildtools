@@ -243,7 +243,17 @@ def importGeckoLocales(params, files):
               key = re.sub(r'\..*', '', parts[-1]) + '_' + re.sub(r'\W', '_', stringID)
             if key in data:
               print 'Warning: locale string %s defined multiple times' % key
-            data[key] = {'message': sourceData[stringID]}
+
+            # Remove access keys
+            value = sourceData[stringID]
+            match = re.search(r'^(.*?)\s*\(&.\)$', value)
+            if match:
+              value = match.group(1)
+            else:
+              index = value.find("&")
+              if index >= 0:
+                value = value[0:index] + value[index + 1:]
+            data[key] = {'message': value}
       except Exception, e:
         print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 
