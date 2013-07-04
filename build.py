@@ -358,9 +358,12 @@ def generateDocs(baseDir, scriptName, opts, args, type):
   targetDir = args[0]
 
   toolkit = None
+  quiet = False
   for option, value in opts:
     if option in ('-t', '--toolkit'):
       toolkit = value
+    elif option in ('-q', '--quiet'):
+      quiet = True
 
   if toolkit == None:
     toolkit = os.path.join(baseDir, 'jsdoc-toolkit')
@@ -373,11 +376,11 @@ def generateDocs(baseDir, scriptName, opts, args, type):
              '-a',
              '-p',
              '-x=js,jsm',
-             os.path.join(baseDir, 'modules'),
-             os.path.join(baseDir, 'components'),
              os.path.join(baseDir, 'lib')]
-  subprocess.check_call(command)
-
+  if quiet:
+    subprocess.check_call(command)
+  else:
+    subprocess.check_output(command)
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
   keyFile = None
@@ -471,6 +474,7 @@ with addCommand(generateDocs, 'docs') as command:
   command.shortDescription = 'Generate documentation (requires node.js)'
   command.description = 'Generate documentation files and write them into the specified directory. This operation requires node.js to be installed.'
   command.addOption('JsDoc Toolkit location', short='t', long='toolkit', value='dir')
+  command.addOption('Suppress JsDoc Toolkit output', short='q', long='quiet')
   command.params = '[options] <directory>'
   command.supportedTypes = ('gecko')
 
