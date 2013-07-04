@@ -365,7 +365,7 @@ def generateDocs(baseDir, scriptName, opts, args, type):
   if toolkit == None:
     toolkit = os.path.join(baseDir, 'jsdoc-toolkit')
     if not os.path.exists(toolkit):
-      subprocess.Popen(['hg', 'clone', 'https://hg.adblockplus.org/jsdoc-toolkit/', toolkit]).communicate()
+      subprocess.check_call(['hg', 'clone', 'https://hg.adblockplus.org/jsdoc-toolkit/', toolkit])
 
   command = [os.path.join(toolkit, 'jsrun.js'),
              '-t=' + os.path.join(toolkit, 'templates', 'jsdoc'),
@@ -376,7 +376,7 @@ def generateDocs(baseDir, scriptName, opts, args, type):
              os.path.join(baseDir, 'modules'),
              os.path.join(baseDir, 'components'),
              os.path.join(baseDir, 'lib')]
-  subprocess.Popen(command).communicate()
+  subprocess.check_call(command)
 
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):

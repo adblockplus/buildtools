@@ -35,9 +35,9 @@ def readMetadata(baseDir, type):
 
 def getBuildNum(baseDir):
   try:
-    (result, dummy) = subprocess.Popen(['hg', 'id', '-R', baseDir, '-n'], stdout=subprocess.PIPE).communicate()
+    result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'])
     return re.sub(r'\D', '', result)
-  except Exception:
+  except:
     return '0'
 
 def getBuildVersion(baseDir, metadata, releaseBuild, buildNum=None):
