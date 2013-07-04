@@ -378,9 +378,9 @@ def generateDocs(baseDir, scriptName, opts, args, type):
              '-x=js,jsm',
              os.path.join(baseDir, 'lib')]
   if quiet:
-    subprocess.check_call(command)
-  else:
     subprocess.check_output(command)
+  else:
+    subprocess.check_call(command)
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
   keyFile = None
