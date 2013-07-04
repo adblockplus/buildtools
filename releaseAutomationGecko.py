@@ -38,8 +38,8 @@ def run(baseDir, version, keyFile, downloadsRepo):
   metadata = packager.readMetadata(baseDir)
 
   # Now commit the change and tag it
-  subprocess.Popen(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)]).communicate()
-  subprocess.Popen(['hg', 'tag', '-R', baseDir, '-f', version]).communicate()
+  subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
+  subprocess.check_call(['hg', 'tag', '-R', baseDir, '-f', version])
 
   # Create a release build
   buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'xpi'))
@@ -50,7 +50,7 @@ def run(baseDir, version, keyFile, downloadsRepo):
 
   archiveHandle = open(archivePath, 'wb')
   archive = tarfile.open(fileobj=archiveHandle, name=os.path.basename(archivePath), mode='w:gz')
-  (data, dummy) = subprocess.Popen(['hg', 'archive', '-R', baseDir, '-t', 'tar', '-S', '-'], stdout=subprocess.PIPE).communicate()
+  data = subprocess.check_output(['hg', 'archive', '-R', baseDir, '-t', 'tar', '-S', '-'])
   repoArchive = tarfile.open(fileobj=StringIO(data), mode='r:')
   for fileInfo in repoArchive:
     if os.path.basename(fileInfo.name) in ('.hgtags', '.hgignore'):
@@ -63,9 +63,9 @@ def run(baseDir, version, keyFile, downloadsRepo):
   archiveHandle.close()
 
   # Now add the downloads and commit
-  subprocess.Popen(['hg', 'add', '-R', downloadsRepo, buildPath, archivePath]).communicate()
-  subprocess.Popen(['hg', 'commit', '-R', downloadsRepo, '-m', 'Releasing %s %s' % (extensionName, version)]).communicate()
+  subprocess.check_call(['hg', 'add', '-R', downloadsRepo, buildPath, archivePath])
+  subprocess.check_call(['hg', 'commit', '-R', downloadsRepo, '-m', 'Releasing %s %s' % (extensionName, version)])
 
   # Push all changes
-  subprocess.Popen(['hg', 'push', '-R', baseDir]).communicate()
-  subprocess.Popen(['hg', 'push', '-R', downloadsRepo]).communicate()
+  subprocess.check_call(['hg', 'push', '-R', baseDir])
+  subprocess.check_call(['hg', 'push', '-R', downloadsRepo])
