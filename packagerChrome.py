@@ -275,6 +275,11 @@ def importGeckoLocales(params, files):
           files[operaFile] = files[chromeFile]
         del files[chromeFile]
 
+    # Hack: Replace "Chrome" by "Opera" in the locales
+    for path, data in files.iteritems():
+      if path.startswith("_locales/") and path.endswith("/messages.json"):
+        files[path] = re.sub(r"\bChrome\b", "Opera", data)
+
 def signBinary(zipdata, keyFile):
   import M2Crypto
   if not os.path.exists(keyFile):
@@ -342,7 +347,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
 def createDevEnv(baseDir, type):
   fileBuffer = StringIO()
-  createBuild(baseDir, outFile=fileBuffer, devenv=True, releaseBuild=True)
+  createBuild(baseDir, type=type, outFile=fileBuffer, devenv=True, releaseBuild=True)
 
   from zipfile import ZipFile
   zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
