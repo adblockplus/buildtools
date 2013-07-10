@@ -19,15 +19,15 @@ import os, re, subprocess, tarfile
 from StringIO import StringIO
 import buildtools.packagerGecko as packager
 
-def run(baseDir, version, keyFile, downloadsRepo):
+def run(baseDir, type, version, keyFile, downloadsRepo):
   # Replace version number in metadata file "manually", ConfigParser will mess
   # up the order of lines.
-  handle = open(packager.getMetadataPath(baseDir), 'rb')
+  handle = open(packager.getMetadataPath(baseDir, type), 'rb')
   rawMetadata = handle.read()
   handle.close()
   versionRegExp = re.compile(r'^(\s*version\s*=\s*).*', re.I | re.M)
   rawMetadata = re.sub(versionRegExp, r'\g<1>%s' % version, rawMetadata)
-  handle = open(packager.getMetadataPath(baseDir), 'wb')
+  handle = open(packager.getMetadataPath(baseDir, type), 'wb')
   handle.write(rawMetadata)
   handle.close()
 
@@ -35,7 +35,7 @@ def run(baseDir, version, keyFile, downloadsRepo):
   locales = packager.readLocaleMetadata(baseDir, [packager.defaultLocale])
   extensionName = locales[packager.defaultLocale]['name']
 
-  metadata = packager.readMetadata(baseDir)
+  metadata = packager.readMetadata(baseDir, type)
 
   # Now commit the change and tag it
   subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
@@ -43,7 +43,7 @@ def run(baseDir, version, keyFile, downloadsRepo):
 
   # Create a release build
   buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'xpi'))
-  packager.createBuild(baseDir, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
+  packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
 
   # Create source archive
   archivePath = os.path.splitext(buildPath)[0] + '-source.tgz'
