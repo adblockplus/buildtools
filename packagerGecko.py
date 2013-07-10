@@ -22,7 +22,7 @@ import xml.dom.minidom as minidom
 import buildtools.localeTools as localeTools
 
 import packager
-from packager import getDefaultFileName, getBuildVersion, getTemplate, Files
+from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuildVersion, getTemplate, Files
 
 KNOWN_APPS = {
   'conkeror':   '{a79fe89b-6662-4ff4-8e88-09950ad4dfde}',
@@ -39,12 +39,6 @@ KNOWN_APPS = {
 }
 
 defaultLocale = 'en-US'
-
-def getMetadataPath(baseDir):
-  return packager.getMetadataPath(baseDir, 'gecko')
-
-def readMetadata(baseDir):
-  return packager.readMetadata(baseDir, 'gecko')
 
 def getChromeDir(baseDir):
   return os.path.join(baseDir, 'chrome')
@@ -296,13 +290,13 @@ def signFiles(files, keyFile):
   signature.write_der(buffer)
   files['META-INF/zigbert.rsa'] = buffer.read()
 
-def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
+def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
   if locales == None:
     locales = getLocales(baseDir)
   elif locales == 'all':
     locales = getLocales(baseDir, True)
 
-  metadata = readMetadata(baseDir)
+  metadata = readMetadata(baseDir, type)
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
   if outFile == None:
@@ -336,7 +330,7 @@ def createBuild(baseDir, outFile=None, locales=None, buildNum=None, releaseBuild
     signFiles(files, keyFile)
   files.zip(outFile, sortKey=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)
 
-def autoInstall(baseDir, host, port, multicompartment=False):
+def autoInstall(baseDir, type, host, port, multicompartment=False):
   fileBuffer = StringIO()
-  createBuild(baseDir, outFile=fileBuffer, multicompartment=multicompartment)
+  createBuild(baseDir, type=type, outFile=fileBuffer, multicompartment=multicompartment)
   urllib.urlopen('http://%s:%s/' % (host, port), data=fileBuffer.getvalue())

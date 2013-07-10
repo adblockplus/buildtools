@@ -192,7 +192,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
   if type == 'gecko':
     import buildtools.packagerGecko as packager
-    packager.createBuild(baseDir, outFile=outFile, locales=locales, buildNum=buildNum,
+    packager.createBuild(baseDir, type=type, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          multicompartment=multicompartment)
   elif type == 'chrome' or type == 'opera':
@@ -219,7 +219,7 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
     host, port = ('localhost', args[0])
 
   import buildtools.packagerGecko as packager
-  packager.autoInstall(baseDir, host, port, multicompartment=multicompartment)
+  packager.autoInstall(baseDir, type, host, port, multicompartment=multicompartment)
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
@@ -239,11 +239,11 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
     import buildtools.packagerChrome as packager
     locales = os.listdir(os.path.join(baseDir, '_locales'))
     locales = map(lambda locale: locale.replace('_', '-'), locales)
-    basename = packager.readMetadata(baseDir).get('general', 'basename')
+    basename = packager.readMetadata(baseDir, type).get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     locales = packager.getLocales(baseDir, True)
-    basename = packager.readMetadata(baseDir).get('general', 'basename')
+    basename = packager.readMetadata(baseDir, type).get('general', 'basename')
 
   import buildtools.localeTools as localeTools
   localeTools.setupTranslations(type, locales, basename, key)
@@ -260,12 +260,12 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
   if type == 'chrome' or type == 'opera':
     import buildtools.packagerChrome as packager
     defaultLocaleDir = os.path.join(baseDir, '_locales', packager.defaultLocale)
-    metadata = packager.readMetadata(baseDir)
+    metadata = packager.readMetadata(baseDir, type)
     basename = metadata.get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
-    metadata = packager.readMetadata(baseDir)
+    metadata = packager.readMetadata(baseDir, type)
     basename = metadata.get('general', 'basename')
 
   import buildtools.localeTools as localeTools
@@ -285,14 +285,14 @@ def uploadTranslations(baseDir, scriptName, opts, args, type):
     localesDir = os.path.join(baseDir, '_locales')
     locales = os.listdir(localesDir)
     locales = map(lambda locale: (locale.replace('_', '-'), os.path.join(localesDir, locale)), locales)
-    metadata = packager.readMetadata(baseDir)
+    metadata = packager.readMetadata(baseDir, type)
     basename = metadata.get('general', 'basename')
   else:
     import buildtools.packagerGecko as packager
     localesDir = packager.getLocalesDir(baseDir)
     locales = packager.getLocales(baseDir, True)
     locales = map(lambda locale: (locale, os.path.join(localesDir, locale)), locales)
-    metadata = packager.readMetadata(baseDir)
+    metadata = packager.readMetadata(baseDir, type)
     basename = metadata.get('general', 'basename')
 
   import buildtools.localeTools as localeTools
@@ -316,7 +316,7 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     localesDir = packager.getLocalesDir(baseDir)
 
   import buildtools.localeTools as localeTools
-  basename = packager.readMetadata(baseDir).get('general', 'basename')
+  basename = packager.readMetadata(baseDir, type).get('general', 'basename')
   localeTools.getTranslations(type, localesDir, packager.defaultLocale.replace('_', '-'), basename, key)
 
 
@@ -406,7 +406,7 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
       print 'Warning: no key file specified, creating an unsigned release build\n'
 
     import buildtools.releaseAutomationGecko as releaseAutomation
-    releaseAutomation.run(baseDir, version, keyFile, downloadsRepo)
+    releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
 
 def updatePSL(baseDir, scriptName, opts, args, type):
   import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
