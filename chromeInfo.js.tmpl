@@ -15,30 +15,30 @@
  * along with Adblock Plus.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-(function()
-{
-  var basename = {{metadata.get("general", "basename")|json}};
-
-  function doPoll()
+require.scopes.info = {
+  get addonID()
   {
-    var request = new XMLHttpRequest();
-    request.open("GET", "http://localhost:43816/");
-    request.addEventListener("load", function()
-    {
-      if (request.responseText != basename)
-        return;
+    return chrome.i18n.getMessage("@@extension_id");
+  },
+  addonName: {{metadata.get('general', 'basename')|json}},
+  addonVersion: {{metadata.get('general', 'version')|json}},
+  addonRoot: "",
 
-      var views = chrome.extension.getViews();
-      for (var i = 0; i < views.length; i++)
-        if (views[i] != window)
-          views[i].close();
-      window.location.reload();
-    }, false);
-    request.send(null);
+  application: {{type|json}},
+  get applicationVersion()
+  {
+    {%- if type == 'opera' %}
+    var match = /\bOPR\/(\S+)/.exec(navigator.userAgent);
+    return (match ? match[1] : "0");
+    {%- else %}
+    return this.platformVersion;
+    {%- endif %}
+  },
 
-    window.setTimeout(doPoll, 5000);
+  platform: "chromium",
+  get platformVersion()
+  {
+    var match = /\bChrome\/(\S+)/.exec(navigator.userAgent);
+    return (match ? match[1] : "0");
   }
-
-  // Delay first poll to prevent reloading again immediately after a reload
-  window.setTimeout(doPoll, 10000);
-})();
+};

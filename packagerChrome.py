@@ -128,6 +128,10 @@ def createPoller(params):
   template = getTemplate('chromeDevenvPoller__.js.tmpl')
   return template.render(params).encode('utf-8');
 
+def createInfoModule(params):
+  template = getTemplate('chromeInfo.js.tmpl')
+  return template.render(params).encode('utf-8');
+
 def convertJS(params, files):
   from jshydra.abp_rewrite import doRewrite
 
@@ -336,6 +340,11 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   if devenv:
     files['devenvPoller__.js'] = createPoller(params)
+
+  if (metadata.has_option('general', 'backgroundScripts') and
+      'lib/info.js' in re.split(r'\s+', metadata.get('general', 'backgroundScripts')) and
+      'lib/info.js' not in files):
+    files['lib/info.js'] = createInfoModule(params)
 
   zipdata = files.zipToString()
   signature = None
