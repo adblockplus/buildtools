@@ -312,7 +312,7 @@ def setupTranslations(type, locales, projectName, key):
   locales = list(locales & allowed)
   locales.sort()
   params = urllib.urlencode([('languages[]', locale) for locale in locales])
-  result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/edit-project?key=%s&%s' % (projectName, key, params)).read()
+  result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/edit-project?key=%s' % (projectName, key), params).read()
   if result.find('<success') < 0:
     raise Exception('Server indicated that the operation was not successful\n' + result)
 
