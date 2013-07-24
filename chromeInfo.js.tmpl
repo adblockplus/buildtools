@@ -21,7 +21,7 @@ require.scopes.info = {
     return chrome.i18n.getMessage("@@extension_id");
   },
   addonName: {{metadata.get('general', 'basename')|json}},
-  addonVersion: {{metadata.get('general', 'version')|json}},
+  addonVersion: {{version|json}},
   addonRoot: "",
 
   application: {{type|json}},
