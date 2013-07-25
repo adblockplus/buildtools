@@ -28,15 +28,6 @@ function startup(params, reason)
 {
   addonData = params;
 
-  {%- if hasChrome %}
-  if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
-  {
-    Components.manager.addBootstrappedManifestLocation(params.installPath);
-    onShutdown.add(function() Components.manager.removeBootstrappedManifestLocation(params.installPath));
-  }
-  {%- set hasShutdownHandlers = True %}
-  {%- endif %}
-
   {%- if hasChromeRequires %}
   Services.obs.addObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require", true);
   onShutdown.add(function() Services.obs.removeObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require"));
