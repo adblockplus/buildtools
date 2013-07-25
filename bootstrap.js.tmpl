@@ -22,6 +22,10 @@ const Cu = Components.utils;
 
 let {Services, atob, btoa, File} = Cu.import("resource://gre/modules/Services.jsm", null);
 
+{%- if hasXMLHttpRequest %}
+let XMLHttpRequest = Components.Constructor("@mozilla.org/xmlextras/xmlhttprequest;1", "nsIXMLHttpRequest");
+{%- endif %}
+
 let addonData = null;
 
 function startup(params, reason)
@@ -158,6 +162,9 @@ function require(module)
         require: require,
         {% if hasShutdownHandlers %}
         onShutdown: onShutdown,
+        {% endif %}
+        {%- if hasXMLHttpRequest %}
+        XMLHttpRequest: XMLHttpRequest,
         {% endif %}
         exports: {}};
       {%- if multicompartment %}
