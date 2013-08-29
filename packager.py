@@ -18,7 +18,7 @@
 # Note: These are the base functions common to all packagers, the actual
 # packagers are implemented in packagerGecko and packagerChrome.
 
-import sys, os, re, codecs, subprocess, json, zipfile, jinja2
+import sys, os, re, codecs, subprocess, json, zipfile
 from StringIO import StringIO
 from chainedconfigparser import ChainedConfigParser
 
@@ -56,9 +56,11 @@ def getBuildVersion(baseDir, metadata, releaseBuild, buildNum=None):
   return version
 
 def getTemplate(template, autoEscape=False):
+  import jinja2
+
   templatePath = buildtools.__path__[0]
   if autoEscape:
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath), autoescape=True, extensions=['jinja2.ext.autoescape'])
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath), autoescape=True)
   else:
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath))
   env.filters.update({'json': json.dumps})
