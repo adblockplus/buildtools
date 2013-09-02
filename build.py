@@ -391,22 +391,26 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     elif option in ('-d', '--downloads'):
       downloadsRepo = value
 
-  if type == 'gecko':
-    if len(args) == 0:
-      print 'No version number specified for the release'
-      usage(scriptName, type, 'release')
-      return
-    version = args[0]
-    if re.search(r'[^\w\.]', version):
-      print 'Wrong version number format'
+  if len(args) == 0:
+    print 'No version number specified for the release'
+    usage(scriptName, type, 'release')
+    return
+  version = args[0]
+  if re.search(r'[^\d\.]', version):
+    print 'Wrong version number format'
+    usage(scriptName, type, 'release')
+    return
+
+  if keyFile == None:
+    if type == "gecko":
+      print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
+    else:
+      print >>sys.stderr, "Error: key file is required for the release"
       usage(scriptName, type, 'release')
       return
 
-    if keyFile == None:
-      print 'Warning: no key file specified, creating an unsigned release build\n'
-
-    import buildtools.releaseAutomationGecko as releaseAutomation
-    releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
+  import buildtools.releaseAutomation as releaseAutomation
+  releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
 
 def updatePSL(baseDir, scriptName, opts, args, type):
   import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
@@ -484,10 +488,10 @@ with addCommand(runReleaseAutomation, 'release') as command:
     'probably don\'t want to run this!\n\n'\
     'Runs release automation: creates downloads for the new version, tags '\
     'source code repository as well as downloads and buildtools repository.'
-  command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file', types=('gecko'))
+  command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file', types=('gecko', 'chrome'))
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(updatePSL, 'updatepsl') as command:
   command.shortDescription = 'Updates Public Suffix List'
