@@ -270,6 +270,8 @@ def preprocessChromeLocale(path, metadata, isMaster):
 
 def postprocessChromeLocale(path, data):
   parsed = json.loads(data)
+  if isinstance(parsed, list):
+    return
 
   # Delete description from translations
   for key, value in parsed.iteritems():
