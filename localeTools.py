@@ -36,7 +36,7 @@ langMappingGecko = {
 }
 
 langMappingChrome = {
-  'es-419': 'es-AR',
+  'es-419': 'es-MX',
   'es': 'es-ES',
   'sv': 'sv-SE',
   'ml': 'ml-IN',
