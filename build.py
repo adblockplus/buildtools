@@ -18,7 +18,7 @@
 import os, sys, re, subprocess, buildtools
 from getopt import getopt, GetoptError
 
-knownTypes = ('gecko', 'chrome', 'opera')
+knownTypes = ('gecko', 'chrome', 'opera', 'safari')
 
 class Command(object):
   name = property(lambda self: self._name)
@@ -200,6 +200,10 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          experimentalAPI=experimentalAPI)
+  elif type == 'safari':
+    import buildtools.packagerSafari as packager
+    packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
+                         releaseBuild=releaseBuild, keyFile=keyFile)
 
 
 def runAutoInstall(baseDir, scriptName, opts, args, type):
@@ -425,11 +429,11 @@ with addCommand(runBuild, 'build') as command:
   command.params = '[options] [output_file]'
   command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'opera'))
+  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'opera', 'safari'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Enable use of experimental APIs', long='experimental')
-  command.supportedTypes = ('gecko', 'chrome', 'opera')
+  command.supportedTypes = ('gecko', 'chrome', 'opera', 'safari')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'

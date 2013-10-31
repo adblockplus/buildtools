@@ -113,6 +113,15 @@ class Files(dict):
       else:
         print >>sys.stderr, 'Warning: Mapped file %s doesn\'t exist' % source
 
+  def preprocess(self, filenames, params={}):
+    import jinja2
+    env = jinja2.Environment()
+
+    for filename in filenames:
+      env.autoescape = os.path.splitext(filename)[1].lower() in ('.html', '.xml')
+      template = env.from_string(self[filename].decode('utf-8'))
+      self[filename] = template.render(params).encode('utf-8')
+
   def zip(self, outFile, sortKey=None):
     zip = zipfile.ZipFile(outFile, 'w', zipfile.ZIP_DEFLATED)
     names = self.keys()
