@@ -34,7 +34,7 @@ def getIgnoredFiles(params):
   return result
 
 def getPackageFiles(params):
-  result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui',))
+  result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui', 'ext'))
 
   if params['devenv']:
     result.add('qunit')
@@ -279,11 +279,6 @@ def importGeckoLocales(params, files):
           files[operaFile] = files[chromeFile]
         del files[chromeFile]
 
-    # Hack: Replace "Chrome" by "Opera" in the locales
-    for path, data in files.iteritems():
-      if path.startswith("_locales/") and path.endswith("/messages.json"):
-        files[path] = re.sub(r"\bChrome\b", "Opera", data)
-
 def signBinary(zipdata, keyFile):
   import M2Crypto
   if not os.path.exists(keyFile):
@@ -334,6 +329,16 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   if metadata.has_section('convert_js'):
     convertJS(params, files)
+
+  if metadata.has_section('convert_img'):
+    from imageConversion import convertImages
+    convertImages(params, files)
+
+  if metadata.has_section('preprocess'):
+    files.preprocess(
+      [f for f, _ in metadata.items('preprocess')],
+      {'needsExt': True}
+    )
 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)

@@ -329,6 +329,8 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
   fixupLocales(params, files)
   if not 'bootstrap.js' in files:
     addMissingFiles(params, files)
+  if metadata.has_section('preprocess'):
+    files.preprocess([f for f, _ in metadata.items('preprocess')])
   if keyFile:
     signFiles(files, keyFile)
   files.zip(outFile, sortKey=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)

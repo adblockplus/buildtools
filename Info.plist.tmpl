@@ -1,0 +1,159 @@
+{%- macro str_or_real(value) -%}
+{%- if value is number -%}
+  <real>{{ value }}</real>
+{%- else -%}
+  <string>{{ value }}</string>
+{%- endif -%}
+{%- endmacro -%}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>{{ name }}</string>
+  <key>CFBundleIdentifier</key>
+  <string>org.adblockplus.{{ basename }}</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleShortVersionString</key>
+  <string>{{ shortVersion }}</string>
+  <key>CFBundleVersion</key>
+  <string>{{ version }}</string>
+  <key>Chrome</key>
+  <dict>
+    <key>Database Quota</key>
+    <real>104857600</real>
+    <key>Global Page</key>
+    <string>background.html</string>
+    {%- if menus %}
+    <key>Menus</key>
+    <array>
+      {%- for identifier, items in menus.iteritems() %}
+      <dict>
+        <key>Identifier</key>
+        <string>{{ identifier }}</string>
+        <key>Menu Items</key>
+        <array>
+          {%- for identifier, props in items.iteritems() %}
+          <dict>
+            <key>Identifier</key>
+            <string>{{ identifier }}</string>
+            {%- for key, value in props.iteritems() %}
+            <key>{{ key }}</key>
+            {{ str_or_real(value) }}
+            {%- endfor %}
+          </dict>
+          {%- endfor %}
+        </array>
+      </dict>
+      {%- endfor %}
+    </array>
+    {%- endif %}
+    {%- if popovers %}
+    <key>Popovers</key>
+    <array>
+      {%- for identifier, props in popovers.iteritems() %}
+      <dict>
+        <key>Identifier</key>
+        <string>{{ identifier }}</string>
+        {%- for key, value in props.iteritems() %}
+        <key>{{ key }}</key>
+        {{ str_or_real(value) }}
+        {%- endfor %}
+      </dict>
+      {%- endfor %}
+    </array>
+    {%- endif %}
+    {%- if toolbarItems %}
+    <key>Toolbar Items</key>
+    <array>
+      {%- for identifier, props in toolbarItems.iteritems() %}
+      <dict>
+        <key>Identifier</key>
+        <string>{{ identifier }}</string>
+        {%- for key, value in props.iteritems() %}
+        <key>{{ key }}</key>
+        {{ str_or_real(value) }}
+        {%- endfor %}
+      </dict>
+      {%- endfor %}
+    </array>
+    {%- endif %}
+  </dict>
+  {%- if startScripts or endScripts %}
+  <key>Content</key>
+  <dict>
+    <key>Scripts</key>
+    <dict>
+      {%- if startScripts %}
+      <key>Start</key>
+      <array>
+        {%- for script in startScripts %}
+        <string>{{ script }}</string>
+        {%- endfor %}
+      </array>
+      {%- endif %}
+      {%- if endScripts %}
+      <key>End</key>
+      <array>
+        {%- for script in endScripts %}
+        <string>{{ script }}</string>
+        {%- endfor %}
+      </array>
+      {%- endif %}
+    </dict>
+  </dict>
+  {%- endif %}
+  <key>ExtensionInfoDictionaryVersion</key>
+  <string>1.0</string>
+  <key>Permissions</key>
+  <dict>
+    <key>Website Access</key>
+    <dict>
+      {%- if allowedDomains and not allowAllDomains %}
+      <key>Allowed Domains</key>
+      <array>
+        {%- for domain in allowedDomains %}
+        <string>{{ domain }}</string>
+        {%- endfor %}
+      </array>
+      {%- endif %}
+      <key>Include Secure Pages</key>
+      {%- if allowSecurePages %}
+      <true/>
+      {%- else %}
+      <false/>
+      {%- endif %}
+      <key>Level</key>
+      {%- if allowAllDomains %}
+      <string>All</string>
+      {%- elif allowedDomains %}
+      <string>Some</string>
+      {%- else %}
+      <string>None</string>
+      {%- endif %}
+    </dict>
+  </dict>
+  <key>Description</key>
+  <string>{{ description }}</string>
+  {%- if author %}
+  <key>Author</key>
+  <string>{{ author }}</string>
+  {%- endif %}
+  {%- if homepage %}
+  <key>Website</key>
+  <string>{{ homepage }}</string>
+  {%- endif %}
+  {%- if not releaseBuild or updateURL %}
+  <key>Update Manifest URL</key>
+  <string>
+    {%- if not releaseBuild -%}
+      https://adblockplus.org/devbuilds/{{ basename }}/updates.plist
+    {%- else -%}
+      {{ updateURL }}
+    {%- endif -%}
+  </string>
+  {%- endif %}
+</dict>
+</plist>
