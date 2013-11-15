@@ -19,7 +19,12 @@ import os
 import re
 from StringIO import StringIO
 
-import PIL.Image
+try:
+  from PIL import Image
+  from PIL import ImageOps
+except ImportError:
+  import Image
+  import ImageOps
 
 def get_alpha(image):
   if image.mode in ('RGBA', 'LA'):
@@ -48,8 +53,8 @@ def ensure_same_mode(im1, im2):
   # can store transparent pixels too) convert both images
   # to RGBA or LA, otherwise convert both images to RGB or L.
   mode = max(
-    PIL.Image.getmodebase(im1.mode),
-    PIL.Image.getmodebase(im2.mode),
+    Image.getmodebase(im1.mode),
+    Image.getmodebase(im2.mode),
 
     key=('L', 'RGB').index
   )
@@ -72,27 +77,25 @@ def filter_grayscale(image, baseDir):
   return image
 
 def filter_contrastToAlpha(image, baseDir):
-  import PIL.ImageOps
-
-  alpha = PIL.Image.new('L', image.size, 255)
+  alpha = Image.new('L', image.size, 255)
   alpha.paste(image, mask=get_alpha(image))
-  alpha = PIL.ImageOps.invert(alpha)
-  alpha = PIL.ImageOps.autocontrast(alpha)
+  alpha = ImageOps.invert(alpha)
+  alpha = ImageOps.autocontrast(alpha)
 
-  return PIL.Image.merge('LA', [PIL.Image.new('L', image.size), alpha])
+  return Image.merge('LA', [Image.new('L', image.size), alpha])
 
 def filter_blend(image, baseDir, *args):
   if len(args) == 2:
     filename, opacity = args
 
-    overlay = PIL.Image.open(os.path.join(
+    overlay = Image.open(os.path.join(
       baseDir,
       *filename.split('/')
     ))
   else:
     red, green, blue, opacity = args
 
-    overlay = PIL.Image.new('RGB', image.size, (
+    overlay = Image.new('RGB', image.size, (
       int(red),
       int(green),
       int(blue),
@@ -105,7 +108,7 @@ def filter_blend(image, baseDir, *args):
       overlay.putalpha(alpha)
 
   image, overlay = ensure_same_mode(image, overlay)
-  return PIL.Image.blend(image, overlay, float(opacity))
+  return Image.blend(image, overlay, float(opacity))
 
 def convertImages(params, files):
   metadata = params['metadata']
@@ -113,7 +116,7 @@ def convertImages(params, files):
   for filename, chain in metadata.items('convert_img'):
     baseDir = os.path.dirname(metadata.option_source('convert_img', filename))
     steps = re.split(r'\s*->\s*', chain)
-    image = PIL.Image.open(os.path.join(baseDir, *steps.pop(0).split('/')))
+    image = Image.open(os.path.join(baseDir, *steps.pop(0).split('/')))
 
     for step in steps:
       filter, args = re.match(r'([^(]+)(?:\((.*)\))?', step).groups()
