@@ -39,6 +39,12 @@ def get_alpha(image):
 
       return image.point(table, 'L')
 
+def load_image(path):
+  image = Image.open(path)
+  # Make sure the image is loaded, some versions of PIL load images lazily.
+  image.load()
+  return image
+
 def ensure_same_mode(im1, im2):
   # if both images already have the same mode (and palette, in
   # case of mode P), don't convert anything. Images with mode P,
@@ -88,7 +94,7 @@ def filter_blend(image, baseDir, *args):
   if len(args) == 2:
     filename, opacity = args
 
-    overlay = Image.open(os.path.join(
+    overlay = load_image(os.path.join(
       baseDir,
       *filename.split('/')
     ))
@@ -116,8 +122,7 @@ def convertImages(params, files):
   for filename, chain in metadata.items('convert_img'):
     baseDir = os.path.dirname(metadata.option_source('convert_img', filename))
     steps = re.split(r'\s*->\s*', chain)
-    image = Image.open(os.path.join(baseDir, *steps.pop(0).split('/')))
-    image.load()
+    image = load_image(os.path.join(baseDir, *steps.pop(0).split('/')))
 
     for step in steps:
       filter, args = re.match(r'([^(]+)(?:\((.*)\))?', step).groups()
