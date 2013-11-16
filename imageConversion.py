@@ -117,6 +117,7 @@ def convertImages(params, files):
     baseDir = os.path.dirname(metadata.option_source('convert_img', filename))
     steps = re.split(r'\s*->\s*', chain)
     image = Image.open(os.path.join(baseDir, *steps.pop(0).split('/')))
+    image.load()
 
     for step in steps:
       filter, args = re.match(r'([^(]+)(?:\((.*)\))?', step).groups()
