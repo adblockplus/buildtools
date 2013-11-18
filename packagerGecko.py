@@ -73,7 +73,10 @@ def getIgnoredFiles(params):
 def isValidLocale(localesDir, dir, includeIncomplete=False):
   if re.search(r'[^\w\-]', dir):
     return False
-  if not os.path.isdir(os.path.join(localesDir, dir)):
+  curLocaleDir = os.path.join(localesDir, dir)
+  if not os.path.isdir(curLocaleDir):
+    return False
+  if len(os.listdir(curLocaleDir)) == 0:
     return False
   if not includeIncomplete and os.path.exists(os.path.join(localesDir, dir, '.incomplete')):
     return False
