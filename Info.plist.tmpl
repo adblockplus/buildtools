@@ -72,6 +72,8 @@
       <dict>
         <key>Identifier</key>
         <string>{{ identifier }}</string>
+        <key>Label</key>
+        <string>{{ name }}</string>
         {%- for key, value in props.iteritems() %}
         <key>{{ key }}</key>
         {{ str_or_real(value) }}
