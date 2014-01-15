@@ -26,14 +26,17 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
 
   # Replace version number in metadata file "manually", ConfigParser will mess
   # up the order of lines.
-  handle = open(packager.getMetadataPath(baseDir, type), 'rb')
-  rawMetadata = handle.read()
-  handle.close()
-  versionRegExp = re.compile(r'^(\s*version\s*=\s*).*', re.I | re.M)
-  rawMetadata = re.sub(versionRegExp, r'\g<1>%s' % version, rawMetadata)
-  handle = open(packager.getMetadataPath(baseDir, type), 'wb')
-  handle.write(rawMetadata)
-  handle.close()
+  metadata = packager.readMetadata(baseDir, type)
+  with open(metadata.option_source("general", "version"), 'r+b') as file:
+    rawMetadata = file.read()
+    rawMetadata = re.sub(
+      r'^(\s*version\s*=\s*).*', r'\g<1>%s' % version,
+      rawMetadata, flags=re.I | re.M
+    )
+
+    file.seek(0)
+    file.write(rawMetadata)
+    file.truncate()
 
   # Read extension name from locale data
   import buildtools.packagerGecko as packagerGecko
