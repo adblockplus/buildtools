@@ -87,7 +87,6 @@ def createManifest(params, files):
   return template.render(
     basename=metadata.get('general', 'basename'),
     version=params['version'],
-    shortVersion=metadata.get('general', 'version'),
     releaseBuild=params['releaseBuild'],
     name=catalog['name']['message'],
     description=catalog['description_safari']['message'],
