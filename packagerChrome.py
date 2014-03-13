@@ -160,6 +160,12 @@ def convertJS(params, files):
     sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
     files[file] = doRewrite(sourceFiles, args)
 
+def toJson(data):
+  return json.dumps(
+    data, ensure_ascii=False, sort_keys=True,
+    indent=2, separators=(',', ': ')
+  ).encode('utf-8') + '\n'
+
 def importGeckoLocales(params, files):
   import localeTools
 
@@ -261,8 +267,7 @@ def importGeckoLocales(params, files):
       except Exception, e:
         print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 
-      files[targetFile] = json.dumps(data, ensure_ascii=False, sort_keys=True,
-                            indent=2, separators=(',', ': ')).encode('utf-8') + '\n'
+      files[targetFile] = toJson(data)
 
   if params['type'] == 'opera':
     # Opera has a slightly different locale mapping
@@ -278,6 +283,24 @@ def importGeckoLocales(params, files):
         if operaFile != None:
           files[operaFile] = files[chromeFile]
         del files[chromeFile]
+
+def fixMissingTranslations(files):
+  # Chrome requires messages used in manifest.json to be given in all languages
+  defaults = {}
+  data = json.loads(files['_locales/%s/messages.json' % defaultLocale])
+  for match in re.finditer(r'__MSG_(\S+)__', files['manifest.json']):
+    name = match.group(1)
+    defaults[name] = data[name]
+
+  for filename in files:
+    if not filename.startswith('_locales/') or not filename.endswith('/messages.json'):
+      continue
+
+    data = json.loads(files[filename])
+    for name, info in defaults.iteritems():
+      data.setdefault(name, info)
+
+    files[filename] = toJson(data)
 
 def signBinary(zipdata, keyFile):
   import M2Crypto
@@ -342,6 +365,8 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)
+
+  fixMissingTranslations(files)
 
   if devenv:
     files['devenvPoller__.js'] = createPoller(params)
