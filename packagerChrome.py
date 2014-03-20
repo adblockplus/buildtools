@@ -50,7 +50,7 @@ def processFile(path, data, params):
   # that it can be overridden if necessary.
   return data
 
-def createManifest(params):
+def createManifest(params, files):
   template = getTemplate('manifest.json.tmpl')
   templateData = dict(params)
 
@@ -72,19 +72,13 @@ def createManifest(params):
     templateData['browserAction'] = {'icon': icon, 'popup': popup}
 
   if metadata.has_option('general', 'icons'):
+    from PIL import Image
     icons = {}
-    iconsDir = baseDir
-    for dir in metadata.get('general', 'icons').split('/')[0:-1]:
-      iconsDir = os.path.join(iconsDir, dir)
-
-    prefix, suffix = metadata.get('general', 'icons').split('/')[-1].split('?', 1)
-    for file in os.listdir(iconsDir):
-      path = os.path.join(iconsDir, file)
-      if os.path.isfile(path) and file.startswith(prefix) and file.endswith(suffix):
-        size = file[len(prefix):-len(suffix)]
-        if not re.search(r'\D', size):
-          icons[size] = os.path.relpath(path, baseDir).replace('\\', '/')
-
+    for icon in re.split('\s+', metadata.get('general', 'icons')):
+      width, height = Image.open(StringIO(files[icon])).size
+      if(width != height):
+        print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (icon, width, height)
+      icons[width] = icon
     templateData['icons'] = icons
 
   if metadata.has_option('general', 'permissions'):
@@ -345,7 +339,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
-  files['manifest.json'] = createManifest(params)
+  
   if metadata.has_section('mapping'):
     files.readMappedFiles(metadata.items('mapping'))
   files.read(baseDir)
@@ -365,7 +359,8 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)
-
+  
+  files['manifest.json'] = createManifest(params, files)
   fixMissingTranslations(files)
 
   if devenv:
