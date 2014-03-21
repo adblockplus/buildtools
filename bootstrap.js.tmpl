@@ -20,7 +20,7 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 const Cu = Components.utils;
 
-let {Services, atob, btoa, File} = Cu.import("resource://gre/modules/Services.jsm", null);
+let {Services, atob, btoa, File, TextDecoder, TextEncoder} = Cu.import("resource://gre/modules/Services.jsm", null);
 
 {%- if hasXMLHttpRequest %}
 let XMLHttpRequest = Components.Constructor("@mozilla.org/xmlextras/xmlhttprequest;1", "nsIXMLHttpRequest");
