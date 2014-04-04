@@ -50,6 +50,16 @@ def processFile(path, data, params):
   # that it can be overridden if necessary.
   return data
 
+def makeIcons(files, filenames):
+    from PIL import Image
+    icons = {}
+    for filename in filenames:
+      width, height = Image.open(StringIO(files[filename])).size
+      if(width != height):
+        print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (filename, width, height)
+      icons[width] = filename
+    return icons
+
 def createManifest(params, files):
   template = getTemplate('manifest.json.tmpl')
   templateData = dict(params)
@@ -57,29 +67,29 @@ def createManifest(params, files):
   baseDir = templateData['baseDir']
   metadata = templateData['metadata']
 
-  if metadata.has_option('general', 'pageAction') and metadata.get('general', 'pageAction') != '':
-    if re.search(r'\s+', metadata.get('general', 'pageAction')):
-      icon, popup = re.split(r'\s+', metadata.get('general', 'pageAction'), 1)
-    else:
-      icon, popup = (metadata.get('general', 'pageAction'), None)
-    templateData['pageAction'] = {'icon': icon, 'popup': popup}
+  for opt in ('browserAction', 'pageAction'):
+    if not metadata.has_option('general', opt):
+      continue
 
-  if metadata.has_option('general', 'browserAction') and metadata.get('general', 'browserAction') != '':
-    if re.search(r'\s+', metadata.get('general', 'browserAction')):
-      icon, popup = re.split(r'\s+', metadata.get('general', 'browserAction'), 1)
+    icons = metadata.get('general', opt).split()
+    if not icons:
+      continue
+
+    if len(icons) == 1:
+      # ... = icon.png
+      icon, popup = icons[0], None
+    elif len(icons) == 2:
+      # ... = icon.png popup.html
+      icon, popup = icons
     else:
-      icon, popup = (metadata.get('general', 'browserAction'), None)
-    templateData['browserAction'] = {'icon': icon, 'popup': popup}
+      # ... = icon-19.png icon-38.png popup.html
+      popup = icons.pop()
+      icon = makeIcons(files, icons)
+
+    templateData[opt] = {'icon': icon, 'popup': popup}
 
   if metadata.has_option('general', 'icons'):
-    from PIL import Image
-    icons = {}
-    for icon in re.split('\s+', metadata.get('general', 'icons')):
-      width, height = Image.open(StringIO(files[icon])).size
-      if(width != height):
-        print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (icon, width, height)
-      icons[width] = icon
-    templateData['icons'] = icons
+    templateData['icons'] = makeIcons(files, metadata.get('general', 'icons').split())
 
   if metadata.has_option('general', 'permissions'):
     templateData['permissions'] = re.split(r'\s+', metadata.get('general', 'permissions'))
