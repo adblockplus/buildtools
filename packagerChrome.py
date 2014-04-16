@@ -128,10 +128,6 @@ def createManifest(params, files):
 
   return manifest.encode('utf-8')
 
-def createPoller(params):
-  template = getTemplate('chromeDevenvPoller__.js.tmpl')
-  return template.render(params).encode('utf-8');
-
 def createInfoModule(params):
   template = getTemplate('chromeInfo.js.tmpl')
   return template.render(params).encode('utf-8');
@@ -349,7 +345,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
-  
+
   if metadata.has_section('mapping'):
     files.readMappedFiles(metadata.items('mapping'))
   files.read(baseDir)
@@ -369,12 +365,15 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)
-  
+
   files['manifest.json'] = createManifest(params, files)
   fixMissingTranslations(files)
 
   if devenv:
-    files['devenvPoller__.js'] = createPoller(params)
+    import buildtools
+    import random
+    files.read(os.path.join(buildtools.__path__[0], 'chromeDevenvPoller__.js'), relpath='devenvPoller__.js')
+    files['devenvVersion__'] = str(random.random())
 
   if (metadata.has_option('general', 'backgroundScripts') and
       'lib/info.js' in re.split(r'\s+', metadata.get('general', 'backgroundScripts')) and
@@ -397,27 +396,3 @@ def createDevEnv(baseDir, type):
   zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
   zip.extractall(os.path.join(baseDir, 'devenv'))
   zip.close()
-
-  print 'Development environment created, waiting for connections from active extensions...'
-  metadata = readMetadata(baseDir, type)
-  connections = [0]
-
-  import SocketServer, time, thread
-
-  class ConnectionHandler(SocketServer.BaseRequestHandler):
-    def handle(self):
-      connections[0] += 1
-      self.request.sendall('HTTP/1.0 OK\nConnection: close\n\n%s' % metadata.get('general', 'basename'))
-
-  server = SocketServer.TCPServer(('localhost', 43816), ConnectionHandler)
-
-  def shutdown_server(server):
-    time.sleep(10)
-    server.shutdown()
-  thread.start_new_thread(shutdown_server, (server,))
-  server.serve_forever()
-
-  if connections[0] == 0:
-    print 'Warning: No incoming connections, extension probably not active in the browser yet'
-  else:
-    print 'Handled %i connection(s)' % connections[0]

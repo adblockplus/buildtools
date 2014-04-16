@@ -17,28 +17,24 @@
 
 (function()
 {
-  var basename = {{metadata.get("general", "basename")|json}};
-
+  var version = null;
   function doPoll()
   {
     var request = new XMLHttpRequest();
-    request.open("GET", "http://localhost:43816/");
+    request.open("GET", chrome.extension.getURL("devenvVersion__"));
     request.addEventListener("load", function()
     {
-      if (request.responseText != basename)
-        return;
+      if (version == null)
+        version = request.responseText;
 
-      var views = chrome.extension.getViews();
-      for (var i = 0; i < views.length; i++)
-        if (views[i] != window)
-          views[i].close();
-      window.location.reload();
+      if (request.responseText != version)
+        chrome.runtime.reload();
+      else
+        window.setTimeout(doPoll, 5000);
     }, false);
     request.send(null);
-
-    window.setTimeout(doPoll, 5000);
   }
 
   // Delay first poll to prevent reloading again immediately after a reload
-  window.setTimeout(doPoll, 10000);
+  doPoll();
 })();
