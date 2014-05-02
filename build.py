@@ -387,11 +387,11 @@ def generateDocs(baseDir, scriptName, opts, args, type):
     subprocess.check_call(command)
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
-  keyFile = None
+  keyFiles = []
   downloadsRepo = os.path.join(baseDir, '..', 'downloads')
   for option, value in opts:
     if option in ('-k', '--key'):
-      keyFile = value
+      keyFiles.append(value)
     elif option in ('-d', '--downloads'):
       downloadsRepo = value
 
@@ -405,16 +405,19 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     usage(scriptName, type, 'release')
     return
 
-  if keyFile == None:
-    if type == "gecko":
-      print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
-    else:
-      print >>sys.stderr, "Error: key file is required for the release"
-      usage(scriptName, type, 'release')
-      return
+  if type == "gecko" and len(keyFiles) == 0:
+    print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
+  elif type == "gecko" and len(keyFiles) > 1:
+    print >>sys.stderr, "Error: too many key files, only one required"
+    usage(scriptName, type, 'release')
+    return
+  elif type == "chrome" and len(keyFiles) != 2:
+    print >>sys.stderr, "Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release"
+    usage(scriptName, type, 'release')
+    return
 
   import buildtools.releaseAutomation as releaseAutomation
-  releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
+  releaseAutomation.run(baseDir, type, version, keyFiles, downloadsRepo)
 
 def updatePSL(baseDir, scriptName, opts, args, type):
   import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
@@ -492,7 +495,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
     'probably don\'t want to run this!\n\n'\
     'Runs release automation: creates downloads for the new version, tags '\
     'source code repository as well as downloads and buildtools repository.'
-  command.addOption('File containing private key and certificates required to sign the release', short='k', long='key', value='file', types=('gecko', 'chrome'))
+  command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome/Opera builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
   command.supportedTypes = ('gecko', 'chrome')
