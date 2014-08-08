@@ -51,7 +51,10 @@ def processFile(path, data, params):
   return data
 
 def makeIcons(files, filenames):
-  from PIL import Image
+  try:
+    from PIL import Image
+  except ImportError:
+    import Image
   icons = {}
   for filename in filenames:
     width, height = Image.open(StringIO(files[filename])).size
