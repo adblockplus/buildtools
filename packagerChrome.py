@@ -51,14 +51,14 @@ def processFile(path, data, params):
   return data
 
 def makeIcons(files, filenames):
-    from PIL import Image
-    icons = {}
-    for filename in filenames:
-      width, height = Image.open(StringIO(files[filename])).size
-      if(width != height):
-        print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (filename, width, height)
-      icons[width] = filename
-    return icons
+  from PIL import Image
+  icons = {}
+  for filename in filenames:
+    width, height = Image.open(StringIO(files[filename])).size
+    if(width != height):
+      print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (filename, width, height)
+    icons[width] = filename
+  return icons
 
 def createManifest(params, files):
   template = getTemplate('manifest.json.tmpl')
