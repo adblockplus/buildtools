@@ -268,11 +268,6 @@ def preprocessChromeLocale(path, metadata, isMaster):
 
   return json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2)
 
-def truncate(text, length_limit):
-  if len(text) <= length_limit:
-    return text
-  return text[:length_limit - 1].rstrip() + u"\u2026"
-
 def postprocessChromeLocale(path, data):
   parsed = json.loads(data)
   if isinstance(parsed, list):
@@ -282,11 +277,6 @@ def postprocessChromeLocale(path, data):
   for key, value in parsed.iteritems():
     if "description" in value:
       del value["description"]
-
-  # Crop Chrome description, we need to enforce the length limit
-  if "description_chrome" in parsed:
-    description_chrome = parsed["description_chrome"]
-    description_chrome["message"] = truncate(description_chrome["message"], 132)
 
   file = codecs.open(path, 'wb', encoding='utf-8')
   json.dump(parsed, file, ensure_ascii=False, sort_keys=True, indent=2, separators=(',', ': '))

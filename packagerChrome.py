@@ -288,13 +288,27 @@ def importGeckoLocales(params, files):
           files[operaFile] = files[chromeFile]
         del files[chromeFile]
 
-def fixMissingTranslations(files):
-  # Chrome requires messages used in manifest.json to be given in all languages
+def truncate(text, length_limit):
+  if len(text) <= length_limit:
+    return text
+  return text[:length_limit - 1].rstrip() + u"\u2026"
+
+def fixTranslationsForCWS(files):
+  # Chrome Web Store requires messages used in manifest.json to be present in
+  # all languages. It also enforces length limits for extension names and
+  # descriptions.
   defaults = {}
   data = json.loads(files['_locales/%s/messages.json' % defaultLocale])
   for match in re.finditer(r'__MSG_(\S+)__', files['manifest.json']):
     name = match.group(1)
     defaults[name] = data[name]
+
+  limits = {}
+  manifest = json.loads(files['manifest.json'])
+  for key, limit in (('name', 45), ('description', 132), ('short_name', 12)):
+    match = re.search(r'__MSG_(\S+)__', manifest.get(key, ""))
+    if match:
+      limits[match.group(1)] = limit
 
   for filename in files:
     if not filename.startswith('_locales/') or not filename.endswith('/messages.json'):
@@ -303,7 +317,9 @@ def fixMissingTranslations(files):
     data = json.loads(files[filename])
     for name, info in defaults.iteritems():
       data.setdefault(name, info)
-
+    for name, limit in limits.iteritems():
+      if name in data:
+        data[name]['message'] = truncate(data[name]['message'], limit)
     files[filename] = toJson(data)
 
 def signBinary(zipdata, keyFile):
@@ -371,7 +387,8 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     importGeckoLocales(params, files)
 
   files['manifest.json'] = createManifest(params, files)
-  fixMissingTranslations(files)
+  if type == 'chrome':
+    fixTranslationsForCWS(files)
 
   if devenv:
     import buildtools
