@@ -5,7 +5,37 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os, re, codecs, subprocess, tarfile, json
-from StringIO import StringIO
+
+def get_dependencies(prefix, repos):
+  from ensure_dependencies import read_deps, safe_join
+  repo = repos[prefix]
+  deps = read_deps(repo)
+  if deps:
+    for subpath in deps:
+      if subpath.startswith('_'):
+        continue
+      depprefix = prefix + subpath + '/'
+      deppath = safe_join(repo, subpath)
+      repos[depprefix] = deppath
+      get_dependencies(depprefix, repos)
+
+def create_sourcearchive(repo, output):
+  with tarfile.open(output, mode='w:gz') as archive:
+    repos = {'': repo}
+    get_dependencies('', repos)
+    for prefix, path in repos.iteritems():
+      process = subprocess.Popen(['hg', 'archive', '-R', path, '-t', 'tar', '-S', '-'], stdout=subprocess.PIPE)
+      try:
+        with tarfile.open(fileobj=process.stdout, mode='r|') as repoarchive:
+          for fileinfo in repoarchive:
+            if os.path.basename(fileinfo.name) in ('.hgtags', '.hgignore'):
+              continue
+            filedata = repoarchive.extractfile(fileinfo)
+            fileinfo.name = re.sub(r'^[^/]+/', prefix, fileinfo.name)
+            archive.addfile(fileinfo, filedata)
+      finally:
+        process.stdout.close()
+        process.wait()
 
 def run(baseDir, type, version, keyFiles, downloadsRepo):
   if type == "gecko":
@@ -74,20 +104,7 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
 
   # Create source archive
   archivePath = os.path.splitext(buildPath)[0] + '-source.tgz'
-
-  archiveHandle = open(archivePath, 'wb')
-  archive = tarfile.open(fileobj=archiveHandle, name=os.path.basename(archivePath), mode='w:gz')
-  data = subprocess.check_output(['hg', 'archive', '-R', baseDir, '-t', 'tar', '-S', '-'])
-  repoArchive = tarfile.open(fileobj=StringIO(data), mode='r:')
-  for fileInfo in repoArchive:
-    if os.path.basename(fileInfo.name) in ('.hgtags', '.hgignore'):
-      continue
-    fileData = repoArchive.extractfile(fileInfo)
-    fileInfo.name = re.sub(r'^[^/]+/', '', fileInfo.name)
-    archive.addfile(fileInfo, fileData)
-  repoArchive.close()
-  archive.close()
-  archiveHandle.close()
+  create_sourcearchive(baseDir, archivePath)
   downloads.append(archivePath)
 
   # Now add the downloads and commit
