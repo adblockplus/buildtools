@@ -64,7 +64,7 @@ class Git():
     source = source.rstrip("/")
     if not source.endswith(".git"):
       source += ".git"
-    subprocess.check_call(["git", "clone", "--quiet", "--no-checkout", source, target])
+    subprocess.check_call(["git", "clone", "--quiet", source, target])
 
   def get_revision_id(self, repo, rev="HEAD"):
     command = ["git", "-C", repo, "rev-parse", "--revs-only", rev]
