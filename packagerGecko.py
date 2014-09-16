@@ -54,10 +54,7 @@ def getPackageFiles(params):
   return result
 
 def getIgnoredFiles(params):
-  result = set(('.incomplete', 'meta.properties',))
-  if params['releaseBuild']:
-    result.add('timeline.js')
-  return result
+  return {'.incomplete', 'meta.properties'}
 
 def isValidLocale(localesDir, dir, includeIncomplete=False):
   if re.search(r'[^\w\-]', dir):
@@ -83,13 +80,6 @@ def processFile(path, data, params):
     localesRegExp = re.compile(r'^(.*?){{LOCALE}}(.*?){{LOCALE}}(.*)$', re.M)
     replacement = '\n'.join(map(lambda locale: r'\1%s\2%s\3' % (locale, locale), params['locales']))
     data = re.sub(localesRegExp, replacement, data)
-
-  if params['releaseBuild'] and path.endswith('.js'):
-    # Remove timeline calls from release builds
-    timelineRegExp1 = re.compile(r'^.*\b[tT]imeLine\.(\w+)\(.*', re.M)
-    timelineRegExp2 = re.compile(r'^.*\brequire\(\"timeline\"\).*', re.M)
-    data = re.sub(timelineRegExp1, '', data)
-    data = re.sub(timelineRegExp2, '', data)
 
   return data
 
