@@ -4,8 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os, sys, re, subprocess, buildtools
+import os, sys, re, subprocess, shutil, buildtools
 from getopt import getopt, GetoptError
+from StringIO import StringIO
+from zipfile import ZipFile
 
 knownTypes = ('gecko', 'chrome', 'opera', 'safari')
 
@@ -216,8 +218,20 @@ def runAutoInstall(baseDir, scriptName, opts, args, type):
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
-  import buildtools.packagerChrome as packager
-  packager.createDevEnv(baseDir, type=type)
+  if type == 'safari':
+    import buildtools.packagerSafari as packager
+  else:
+    import buildtools.packagerChrome as packager
+
+  file = StringIO()
+  packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
+
+  devenv_dir = os.path.join(baseDir, 'devenv')
+  shutil.rmtree(devenv_dir, ignore_errors=True)
+
+  file.seek(0)
+  with ZipFile(file, 'r') as zip_file:
+    zip_file.extractall(devenv_dir)
 
 
 def setupTranslations(baseDir, scriptName, opts, args, type):
@@ -437,7 +451,7 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
 with addCommand(createDevEnv, 'devenv') as command:
   command.shortDescription = 'Set up a development environment'
   command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-  command.supportedTypes = ('chrome', 'opera')
+  command.supportedTypes = ('chrome', 'opera', 'safari')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'
