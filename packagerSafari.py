@@ -203,7 +203,7 @@ def createSignedXarArchive(outFile, files, keyFile):
   finally:
     os.unlink(signature_filename)
 
-def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, keyFile=None):
+def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, devenv=False):
   metadata = readMetadata(baseDir, type)
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
@@ -215,7 +215,7 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
     'baseDir': baseDir,
     'releaseBuild': releaseBuild,
     'version': version,
-    'devenv': False,
+    'devenv': devenv,
     'metadata': metadata,
   }
 
@@ -247,11 +247,13 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
 
   fixAbsoluteUrls(files)
 
-  dirname = metadata.get('general', 'basename') + '.safariextension'
-  for filename in files.keys():
-    files[os.path.join(dirname, filename)] = files.pop(filename)
+  if not devenv:
+    dirname = metadata.get('general', 'basename') + '.safariextension'
+    for filename in files.keys():
+      files[os.path.join(dirname, filename)] = files.pop(filename)
 
-  if keyFile:
-    createSignedXarArchive(outFile, files, keyFile)
-  else:
-    files.zip(outFile)
+    if keyFile:
+      createSignedXarArchive(outFile, files, keyFile)
+      return
+
+  files.zip(outFile)

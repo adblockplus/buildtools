@@ -397,12 +397,3 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     signature = signBinary(zipdata, keyFile)
     pubkey = getPublicKey(keyFile)
   writePackage(outFile, pubkey, signature, zipdata)
-
-def createDevEnv(baseDir, type):
-  fileBuffer = StringIO()
-  createBuild(baseDir, type=type, outFile=fileBuffer, devenv=True, releaseBuild=True)
-
-  from zipfile import ZipFile
-  zip = ZipFile(StringIO(fileBuffer.getvalue()), 'r')
-  zip.extractall(os.path.join(baseDir, 'devenv'))
-  zip.close()
