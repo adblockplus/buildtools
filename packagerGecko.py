@@ -4,7 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os, sys, re, hashlib, base64, urllib, json
+import os
+import sys
+import re
+import hashlib
+import base64
+import urllib
+import json
+import io
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 import xml.dom.minidom as minidom
@@ -55,6 +62,9 @@ def getPackageFiles(params):
 
 def getIgnoredFiles(params):
   return {'.incomplete', 'meta.properties'}
+
+def archive_path(path, baseDir):
+  return '/'.join(os.path.split(os.path.relpath(path, baseDir)))
 
 def isValidLocale(localesDir, dir, includeIncomplete=False):
   if re.search(r'[^\w\-]', dir):
@@ -143,20 +153,49 @@ def createManifest(params):
   templateData['defaultLocale'] = defaultLocale
   return template.render(templateData).encode('utf-8')
 
+def importLocales(params, files):
+  SECTION = 'import_locales'
+  if not params['metadata'].has_section(SECTION):
+    return
+
+  import localeTools
+
+  for locale in params['locales']:
+    for item in params['metadata'].items(SECTION):
+      path, keys = item
+      parts = [locale if p == '*' else p for p in path.split('/')]
+      source = os.path.join(os.path.dirname(item.source), *parts)
+      if not os.path.exists(source):
+        continue
+
+      with io.open(source, 'r', encoding='utf-8') as handle:
+        data = json.load(handle)
+
+      target_name = os.path.splitext(os.path.basename(source))[0] + '.properties'
+      target = archive_path(os.path.join(getLocalesDir(params['baseDir']), locale, target_name), params['baseDir'])
+
+      files[target] = ''
+      for key, value in sorted(data.items()):
+        message = value['message']
+        files[target] += localeTools.generateStringEntry(key, message, target).encode('utf-8')
+
 def fixupLocales(params, files):
   global defaultLocale
 
-  # Read in default locale data, it might not be included in files
+  # Read in default locale data, it might not be included in package files
   defaultLocaleDir = os.path.join(getLocalesDir(params['baseDir']), defaultLocale)
+  reference_files = Files(getPackageFiles(params), getIgnoredFiles(params))
+  reference_files.read(defaultLocaleDir, archive_path(defaultLocaleDir, params['baseDir']))
+  reference_params = dict(params)
+  reference_params['locales'] = [defaultLocale]
+  importLocales(reference_params, reference_files)
+
   reference = {}
-  ignoredFiles = getIgnoredFiles(params)
-  for file in os.listdir(defaultLocaleDir):
-    path = os.path.join(defaultLocaleDir, file)
-    if file in ignoredFiles or not os.path.isfile(path):
-      continue
-    data = localeTools.readFile(path)
+  for path, data in reference_files.iteritems():
+    filename = path.split('/')[-1]
+    data = localeTools.parseString(data.decode('utf-8'), filename)
     if data:
-      reference[file] = data
+      reference[filename] = data
 
   for locale in params['locales']:
     for file in reference.iterkeys():
@@ -308,6 +347,7 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
       files.read(path, 'chrome/%s' % name)
+  importLocales(params, files)
   fixupLocales(params, files)
   if not 'bootstrap.js' in files:
     addMissingFiles(params, files)
