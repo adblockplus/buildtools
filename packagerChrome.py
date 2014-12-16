@@ -4,7 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import sys, os, re, json, struct
+import sys
+import os
+import re
+import json
+import struct
+import io
 from StringIO import StringIO
 
 import packager
@@ -162,53 +167,28 @@ def toJson(data):
 def importGeckoLocales(params, files):
   import localeTools
 
-  localeCodeMapping = {
-    'ar': 'ar',
-    'bg': 'bg',
-    'ca': 'ca',
-    'cs': 'cs',
-    'da': 'da',
-    'de': 'de',
-    'el': 'el',
-    'en-US': 'en_US',
-    'en-GB': 'en_GB',
-    'es-ES': 'es',
-    'es-AR': 'es_419',
-    'et': 'et',
-    'fi': 'fi',
-  #   '': 'fil', ???
-    'fr': 'fr',
-    'he': 'he',
-    'hi-IN': 'hi',
-    'hr': 'hr',
-    'hu': 'hu',
-    'id': 'id',
-    'it': 'it',
-    'ja': 'ja',
-    'ko': 'ko',
-    'lt': 'lt',
-    'lv': 'lv',
-    'nl': 'nl',
-  #    'nb-NO': 'no', ???
-    'pl': 'pl',
-    'pt-BR': 'pt_BR',
-    'pt-PT': 'pt_PT',
-    'ro': 'ro',
-    'ru': 'ru',
-    'sk': 'sk',
-    'sl': 'sl',
-    'sr': 'sr',
-    'sv-SE': 'sv',
-    'th': 'th',
-    'tr': 'tr',
-    'uk': 'uk',
-    'vi': 'vi',
-    'zh-CN': 'zh_CN',
-    'zh-TW': 'zh_TW',
-  }
+  # FIXME: localeTools doesn't use real Chrome locales, it uses dash as
+  # separator instead.
+  convert_locale_code = lambda code: code.replace('-', '_')
 
-  for source, target in localeCodeMapping.iteritems():
+  # We need to map Chrome locales to Gecko locales. Start by mapping Chrome
+  # locales to themselves, merely with the dash as separator.
+  locale_mapping = {convert_locale_code(l): l for l in localeTools.chromeLocales}
+
+  # Convert values to Crowdin locales first (use Chrome => Crowdin mapping).
+  for chrome_locale, crowdin_locale in localeTools.langMappingChrome.iteritems():
+    locale_mapping[convert_locale_code(chrome_locale)] = crowdin_locale
+
+  # Now convert values to Gecko locales (use Gecko => Crowdin mapping).
+  reverse_mapping = {v: k for k, v in locale_mapping.iteritems()}
+  for gecko_locale, crowdin_locale in localeTools.langMappingGecko.iteritems():
+    if crowdin_locale in reverse_mapping:
+      locale_mapping[reverse_mapping[crowdin_locale]] = gecko_locale
+
+  for target, source in locale_mapping.iteritems():
     targetFile = '_locales/%s/messages.json' % target
+    if not targetFile in files:
+      continue
 
     for item in params['metadata'].items('import_locales'):
       fileName, keys = item
@@ -218,12 +198,14 @@ def importGeckoLocales(params, files):
       if not os.path.exists(sourceFile) or os.path.exists(incompleteMarker):
         continue
 
-      data = {}
-      if targetFile in files:
-        data = json.loads(files[targetFile].decode('utf-8'))
+      data = json.loads(files[targetFile].decode('utf-8'))
 
       try:
-        sourceData = localeTools.readFile(sourceFile)
+        if sourceFile.endswith('.json'):
+          with io.open(sourceFile, 'r', encoding='utf-8') as handle:
+            sourceData = {k: v['message'] for k, v in json.load(handle).iteritems()}
+        else:
+          sourceData = localeTools.readFile(sourceFile)
 
         # Resolve wildcard imports
         if keys == '*' or keys == '=*':
