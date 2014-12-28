@@ -29,6 +29,7 @@ langMappingChrome = {
   'es': 'es-ES',
   'sv': 'sv-SE',
   'ml': 'ml-IN',
+  'gu': 'gu-IN',
 }
 
 chromeLocales = [
