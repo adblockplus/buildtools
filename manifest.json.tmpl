@@ -72,6 +72,10 @@
   "options_page": {{metadata.get('general', 'options')|json}},
   {%- endif %}
 
+  {%- if metadata.has_option('general', 'devtools') %}
+  "devtools_page": {{metadata.get('general', 'devtools')|json}},
+  {%- endif %}
+
   {%- if contentScripts %}
   "content_scripts": {{contentScripts|json}},
   {%- endif %}
