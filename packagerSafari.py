@@ -247,13 +247,11 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
 
   fixAbsoluteUrls(files)
 
-  if not devenv:
-    dirname = metadata.get('general', 'basename') + '.safariextension'
-    for filename in files.keys():
-      files[os.path.join(dirname, filename)] = files.pop(filename)
+  dirname = metadata.get('general', 'basename') + '.safariextension'
+  for filename in files.keys():
+    files[os.path.join(dirname, filename)] = files.pop(filename)
 
-    if keyFile:
-      createSignedXarArchive(outFile, files, keyFile)
-      return
-
-  files.zip(outFile)
+  if not devenv and keyFile:
+    createSignedXarArchive(outFile, files, keyFile)
+  else:
+    files.zip(outFile)
