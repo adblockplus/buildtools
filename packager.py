@@ -24,10 +24,17 @@ def readMetadata(baseDir, type):
 
 def getBuildNum(baseDir):
   try:
-    result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'])
-    return re.sub(r'\D', '', result)
-  except:
-    return '0'
+    from buildtools.ensure_dependencies import Mercurial, Git
+    if Mercurial().istype(baseDir):
+      result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'])
+      return re.sub(r'\D', '', result)
+    elif Git().istype(baseDir):
+      result = subprocess.check_output(['git', 'rev-list', 'HEAD'], cwd=baseDir)
+      return len(result.splitlines())
+  except subprocess.CalledProcessError:
+    pass
+
+  return '0'
 
 def getBuildVersion(baseDir, metadata, releaseBuild, buildNum=None):
   version = metadata.get('general', 'version')
