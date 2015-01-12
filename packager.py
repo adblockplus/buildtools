@@ -24,7 +24,8 @@ def readMetadata(baseDir, type):
 
 def getBuildNum(baseDir):
   try:
-    result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'])
+    with open(os.devnull, 'r+b') as null:
+      result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'], stderr=null)
     return re.sub(r'\D', '', result)
   except:
     return '0'
