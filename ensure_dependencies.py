@@ -280,6 +280,6 @@ if __name__ == "__main__":
   logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
   repos = sys.argv[1:]
   if not len(repos):
-    repos = [os.getcwd()]
+    repos = [os.path.dirname(__file__)]
   for repo in repos:
     resolve_deps(repo)
