@@ -187,7 +187,11 @@ def ensure_repo(parentrepo, target, roots, sourcename):
   if type is None:
     raise Exception("No valid source found to create %s" % target)
 
-  url = urlparse.urljoin(roots[type], sourcename)
+  if os.path.exists(roots[type]):
+    url = os.path.join(roots[type], sourcename)
+  else:
+    url = urlparse.urljoin(roots[type], sourcename)
+
   logging.info("Cloning repository %s into %s" % (url, target))
   repo_types[type].clone(url, target)
 
