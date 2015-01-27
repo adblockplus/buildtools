@@ -27,7 +27,7 @@ def get_alpha(image):
   # value of Image.info['transparency'] since in some cases it might be an
   # unparsed string instead an int indicating the value of transparent pixels.
   if image.mode == 'P' and 'transparency' in image.info:
-    return image.convert('RGBA').split()[4]
+    return image.convert('RGBA').split()[3]
 
 def load_image(path):
   image = Image.open(path)
