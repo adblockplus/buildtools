@@ -20,13 +20,14 @@ def get_alpha(image):
     return image.split()[image.getbands().index('A')]
 
   # In order to generate an alpha channel for images using a palette, we
-  # convert the image to grayscale+alpha. Initially, we created an alpha
-  # channel by replacing opaque pixels with a high mark and transparent
+  # convert the image to RGBA. It's important to use RGBA, not LA (grayscale+alpha),
+  # since PIL can't reliably convert P to LA. Also initially, we created an
+  # alpha channel by replacing opaque pixels with a high mark and transparent
   # pixels with a low mark. However, it turned out that you can't rely on the
   # value of Image.info['transparency'] since in some cases it might be an
   # unparsed string instead an int indicating the value of transparent pixels.
   if image.mode == 'P' and 'transparency' in image.info:
-    return image.convert('LA').split()[1]
+    return image.convert('RGBA').split()[4]
 
 def load_image(path):
   image = Image.open(path)
