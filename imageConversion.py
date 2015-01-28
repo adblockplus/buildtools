@@ -6,7 +6,6 @@
 
 import os
 import re
-from StringIO import StringIO
 
 try:
   from PIL import Image
@@ -14,6 +13,8 @@ try:
 except ImportError:
   import Image
   import ImageOps
+
+from imageCompression import image_to_file
 
 def get_alpha(image):
   if image.mode in ('RGBA', 'LA'):
@@ -95,7 +96,8 @@ def convertImages(params, files):
       args = re.split(r'\s*,\s*', args) if args else ()
       image = globals()['filter_' + filter](image, baseDir, *args)
 
-    f = StringIO()
-    f.name = filename
-    image.save(f)
-    files[filename] = f.getvalue()
+    file = image_to_file(image, filename)
+    try:
+      files[filename] = file.read()
+    finally:
+      file.close()
