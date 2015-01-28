@@ -63,15 +63,6 @@ def ensure_same_mode(im1, im2):
     im2 if im2.mode == mode else im2.convert(mode),
   )
 
-def filter_grayscale(image, baseDir):
-  alpha = get_alpha(image)
-  image = image.convert('L')
-
-  if alpha:
-    image.putalpha(alpha)
-
-  return image
-
 def filter_contrastToAlpha(image, baseDir):
   alpha = Image.new('L', image.size, 255)
   alpha.paste(image, mask=get_alpha(image))
@@ -80,30 +71,15 @@ def filter_contrastToAlpha(image, baseDir):
 
   return Image.merge('LA', [Image.new('L', image.size), alpha])
 
-def filter_blend(image, baseDir, *args):
-  if len(args) == 2:
-    filename, opacity = args
-
-    overlay = load_image(os.path.join(
+def filter_blend(image, baseDir, filename, opacity):
+  image, overlay = ensure_same_mode(
+    image,
+    load_image(os.path.join(
       baseDir,
       *filename.split('/')
     ))
-  else:
-    red, green, blue, opacity = args
+  )
 
-    overlay = Image.new('RGB', image.size, (
-      int(red),
-      int(green),
-      int(blue),
-    ))
-
-    # if the background image has an alpha channel copy it to
-    # the overlay, so that transparent areas stay transparent.
-    alpha = get_alpha(image)
-    if alpha:
-      overlay.putalpha(alpha)
-
-  image, overlay = ensure_same_mode(image, overlay)
   return Image.blend(image, overlay, float(opacity))
 
 def convertImages(params, files):
