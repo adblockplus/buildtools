@@ -16,20 +16,6 @@ except ImportError:
 
 from imageCompression import image_to_file
 
-def get_alpha(image):
-  if image.mode in ('RGBA', 'LA'):
-    return image.split()[image.getbands().index('A')]
-
-  # In order to generate an alpha channel for images using a palette, we
-  # convert the image to RGBA. It's important to use RGBA, not LA (grayscale+alpha),
-  # since PIL can't reliably convert P to LA. Also initially, we created an
-  # alpha channel by replacing opaque pixels with a high mark and transparent
-  # pixels with a low mark. However, it turned out that you can't rely on the
-  # value of Image.info['transparency'] since in some cases it might be an
-  # unparsed string instead an int indicating the value of transparent pixels.
-  if image.mode == 'P' and 'transparency' in image.info:
-    return image.convert('RGBA').split()[3]
-
 def load_image(path):
   image = Image.open(path)
   # Make sure the image is loaded, some versions of PIL load images lazily.
@@ -65,8 +51,28 @@ def ensure_same_mode(im1, im2):
   )
 
 def filter_contrastToAlpha(image, baseDir):
+  # In order to generate an alpha channel for images using a palette, we must
+  # convert the image to RGBA. It's important to use RGBA, not LA (grayscale+alpha),
+  # since PIL can't reliably convert P to LA. Also initially, we created an
+  # alpha channel by replacing opaque pixels with a high mark and transparent
+  # pixels with a low mark. However, it turned out that you can't rely on the
+  # value of Image.info['transparency'] since in case the transparency is
+  # specified in bytes (pngout loves to do that), we can't associate that value
+  # with transparent pixels. Moreover, some versions of PIL raise a warning
+  # when such images are pasted into another image.
+  if image.mode == 'P' and 'transparency' in image.info:
+    image = image.convert('RGBA')
+
+  # Image.paste() ignores the alpha channel of the pasted image, but expects
+  # the mask to be passed as separate argument. So we have to extract the alpha
+  # channel (if any) from the image we are going to paste.
+  if image.mode in ('RGBA', 'LA'):
+    mask = image.split()[image.getbands().index('A')]
+  else:
+    mask = None
+
   alpha = Image.new('L', image.size, 255)
-  alpha.paste(image, mask=get_alpha(image))
+  alpha.paste(image, mask=mask)
   alpha = ImageOps.invert(alpha)
   alpha = ImageOps.autocontrast(alpha)
 
