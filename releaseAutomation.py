@@ -77,28 +77,28 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
   if type == "gecko":
     keyFile = keyFiles[0] if keyFiles else None
     metadata = packager.readMetadata(baseDir, type)
-    buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'xpi'))
+    buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'xpi'))
     packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
     downloads.append(buildPath)
   elif type == "chrome":
     # We actually have to create four different builds for Chrome: signed a unsigned Chrome builds
     # (the latter for Chrome Web Store), a signed Opera build and a signed Safari build.
     metadata = packager.readMetadata(baseDir, type)
-    buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadata, version, 'crx'))
+    buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'crx'))
     packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFiles[0])
     downloads.append(buildPath)
 
-    buildPathUnsigned = os.path.join(baseDir, packager.getDefaultFileName(baseDir, metadata, version, 'zip'))
+    buildPathUnsigned = os.path.join(baseDir, packager.getDefaultFileName(metadata, version, 'zip'))
     packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
 
     metadataOpera = packager.readMetadata(baseDir, "opera")
-    buildPathOpera = os.path.join(downloadsRepo, packager.getDefaultFileName(baseDir, metadataOpera, version, 'crx'))
+    buildPathOpera = os.path.join(downloadsRepo, packager.getDefaultFileName(metadataOpera, version, 'crx'))
     packager.createBuild(baseDir, type="opera", outFile=buildPathOpera, releaseBuild=True, keyFile=keyFiles[0])
     downloads.append(buildPathOpera)
 
     import buildtools.packagerSafari as packagerSafari
     metadataSafari = packagerSafari.readMetadata(baseDir, "safari")
-    buildPathSafari = os.path.join(downloadsRepo, packagerSafari.getDefaultFileName(baseDir, metadataSafari, version, 'safariextz'))
+    buildPathSafari = os.path.join(downloadsRepo, packagerSafari.getDefaultFileName(metadataSafari, version, 'safariextz'))
     packagerSafari.createBuild(baseDir, type="safari", outFile=buildPathSafari, releaseBuild=True, keyFile=keyFiles[1])
     downloads.append(buildPathSafari)
 

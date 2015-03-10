@@ -324,7 +324,7 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
   if outFile == None:
-    outFile = getDefaultFileName(baseDir, metadata, version, 'xpi')
+    outFile = getDefaultFileName(metadata, version, 'xpi')
 
   contributors = getContributors(metadata)
 

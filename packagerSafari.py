@@ -208,7 +208,7 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
   if not outFile:
-    outFile = getDefaultFileName(baseDir, metadata, version, 'safariextz' if keyFile else 'zip')
+    outFile = getDefaultFileName(metadata, version, 'safariextz' if keyFile else 'zip')
 
   params = {
     'type': type,
