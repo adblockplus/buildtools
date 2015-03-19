@@ -76,5 +76,11 @@
   "web_accessible_resources": {{webAccessible|json}},
   {%- endif %}
 
+  {%- if metadata.has_option('general', 'managedStorageSchema') %}
+  "storage": {
+    "managed_schema": {{metadata.get('general', 'managedStorageSchema')|json}}
+  },
+  {%- endif %}
+
   "_dummy": false
 }
