@@ -111,6 +111,7 @@ def createManifest(params, files):
         'js': re.split(r'\s+', scripts),
         'run_at': run_at,
         'all_frames': True,
+        'match_about_blank': True,
       })
     templateData['contentScripts'] = contentScripts
 
