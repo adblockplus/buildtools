@@ -369,27 +369,11 @@ def generateDocs(baseDir, scriptName, opts, args, type):
     return
   targetDir = args[0]
 
-  toolkit = None
-  quiet = False
-  for option, value in opts:
-    if option in ('-t', '--toolkit'):
-      toolkit = value
-    elif option in ('-q', '--quiet'):
-      quiet = True
-
-  if toolkit == None:
-    toolkit = os.path.join(baseDir, 'jsdoc-toolkit')
-    if not os.path.exists(toolkit):
-      subprocess.check_call(['hg', 'clone', 'https://hg.adblockplus.org/jsdoc-toolkit/', toolkit])
-
-  command = [os.path.join(toolkit, 'jsrun.js'),
-             '-t=' + os.path.join(toolkit, 'templates', 'jsdoc'),
-             '-d=' + targetDir,
-             '-a',
-             '-p',
-             '-x=js,jsm',
+  command = ['jsdoc',
+             '--destination', targetDir,
+             '--access', 'all',
              os.path.join(baseDir, 'lib')]
-  if quiet:
+  if any(opt in ('-q', '--quiet') for opt, _ in opts):
     subprocess.check_output(command)
   else:
     subprocess.check_call(command)
@@ -491,9 +475,8 @@ with addCommand(showDescriptions, 'showdesc') as command:
 
 with addCommand(generateDocs, 'docs') as command:
   command.shortDescription = 'Generate documentation (requires node.js)'
-  command.description = 'Generate documentation files and write them into the specified directory. This operation requires node.js to be installed.'
-  command.addOption('JsDoc Toolkit location', short='t', long='toolkit', value='dir')
-  command.addOption('Suppress JsDoc Toolkit output', short='q', long='quiet')
+  command.description = 'Generate documentation files and write them into the specified directory. This operation requires JsDoc 3 to be installed.'
+  command.addOption('Suppress JsDoc output', short='q', long='quiet')
   command.params = '[options] <directory>'
   command.supportedTypes = ('gecko')
 
