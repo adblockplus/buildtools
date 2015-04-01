@@ -374,7 +374,12 @@ def generateDocs(baseDir, scriptName, opts, args, type):
              '--access', 'all',
              os.path.join(baseDir, 'lib')]
   if any(opt in ('-q', '--quiet') for opt, _ in opts):
-    subprocess.check_output(command)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderr = process.communicate()[1]
+    retcode = process.poll()
+    if retcode:
+      sys.stderr.write(stderr)
+      raise subprocess.CalledProcessError(command, retcode)
   else:
     subprocess.check_call(command)
 
