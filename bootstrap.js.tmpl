@@ -172,7 +172,7 @@ function require(module)
   }
   return scopes[module].exports;
 }
-require.scopes = {__proto__: null};
+require.scopes = Object.create(null);
 
 {%- if hasChromeRequires %}
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
