@@ -369,10 +369,14 @@ def generateDocs(baseDir, scriptName, opts, args, type):
     return
   targetDir = args[0]
 
-  command = ['jsdoc',
-             '--destination', targetDir,
-             '--access', 'all',
-             os.path.join(baseDir, 'lib')]
+  source_dir = os.path.join(baseDir, 'lib')
+  sources = [source_dir]
+
+  # JSDoc struggles wih huge objects: https://github.com/jsdoc3/jsdoc/issues/976
+  if type == 'chrome':
+    sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
+
+  command = ['jsdoc', '--destination', targetDir, '--access', 'all'] + sources
   if any(opt in ('-q', '--quiet') for opt, _ in opts):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = process.communicate()[1]
@@ -483,7 +487,7 @@ with addCommand(generateDocs, 'docs') as command:
   command.description = 'Generate documentation files and write them into the specified directory. This operation requires JsDoc 3 to be installed.'
   command.addOption('Suppress JsDoc output', short='q', long='quiet')
   command.params = '[options] <directory>'
-  command.supportedTypes = ('gecko')
+  command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(runReleaseAutomation, 'release') as command:
   command.shortDescription = 'Run release automation'
