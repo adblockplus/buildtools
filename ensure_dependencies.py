@@ -167,7 +167,7 @@ def read_deps(repodir):
 
 def safe_join(path, subpath):
   # This has been inspired by Flask's safe_join() function
-  forbidden = set([os.sep, os.altsep]) - set([posixpath.sep, None])
+  forbidden = {os.sep, os.altsep} - {posixpath.sep, None}
   if any(sep in subpath for sep in forbidden):
     raise Exception("Illegal directory separator in dependency path %s" % subpath)
 
