@@ -247,6 +247,7 @@ def resolve_deps(repodir, level=0, self_update=True, overrideroots=None, skipdep
     return
   if level >= 10:
     logging.warning("Too much subrepository nesting, ignoring %s" % repo)
+    return
 
   if overrideroots is not None:
     config["_root"] = overrideroots
