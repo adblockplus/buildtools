@@ -97,7 +97,20 @@ class Git():
     return subprocess.check_output(command, cwd=repo).strip()
 
   def pull(self, repo):
+    # Fetch tracked branches, new tags and the list of available remote branches
     subprocess.check_call(["git", "fetch", "--quiet", "--all", "--tags"], cwd=repo)
+    # Next we need to ensure all remote branches are tracked
+    newly_tracked = False
+    remotes = subprocess.check_output(["git", "branch", "--remotes"], cwd=repo)
+    for match in re.finditer(r"^\s*(origin/(\S+))$", remotes, re.M):
+      remote, local = match.groups()
+      with open(os.devnull, "wb") as devnull:
+        if subprocess.call(["git", "branch", "--track", local, remote],
+                           cwd=repo, stdout=devnull, stderr=devnull) == 0:
+          newly_tracked = True
+    # Finally fetch any newly tracked remote branches
+    if newly_tracked:
+      subprocess.check_call(["git", "fetch", "--quiet", "origin"], cwd=repo)
 
   def update(self, repo, rev):
     subprocess.check_call(["git", "checkout", "--quiet", rev], cwd=repo)
