@@ -34,6 +34,10 @@ A dependencies file should look like this:
   buildtools = buildtools hg:016d16f7137b git:f3f8692f82e5
 """
 
+SKIP_DEPENDENCY_UPDATES = os.environ.get(
+  "SKIP_DEPENDENCY_UPDATES", ""
+).lower() not in ("", "0", "false")
+
 class Mercurial():
   def istype(self, repodir):
     return os.path.exists(os.path.join(repodir, ".hg"))
@@ -201,6 +205,11 @@ def ensure_repo(parentrepo, target, roots, sourcename):
   if os.path.exists(target):
     return
 
+  if SKIP_DEPENDENCY_UPDATES:
+    logging.warning("SKIP_DEPENDENCY_UPDATES environment variable set, "
+                    "%s not cloned", target)
+    return
+
   parenttype = get_repo_type(parentrepo)
   type = None
   for key in roots:
@@ -240,15 +249,21 @@ def update_repo(target, revisions):
     return
 
   resolved_revision = repo_types[type].get_revision_id(target, revision)
-  if not resolved_revision:
-    logging.info("Revision %s is unknown, downloading remote changes" % revision)
-    repo_types[type].pull(target)
-    resolved_revision = repo_types[type].get_revision_id(target, revision)
-    if not resolved_revision:
-      raise Exception("Failed to resolve revision %s" % revision)
-
   current_revision = repo_types[type].get_revision_id(target)
+
   if resolved_revision != current_revision:
+    if SKIP_DEPENDENCY_UPDATES:
+      logging.warning("SKIP_DEPENDENCY_UPDATES environment variable set, "
+                      "%s not checked out to %s", target, revision)
+      return
+
+    if not resolved_revision:
+      logging.info("Revision %s is unknown, downloading remote changes" % revision)
+      repo_types[type].pull(target)
+      resolved_revision = repo_types[type].get_revision_id(target, revision)
+      if not resolved_revision:
+        raise Exception("Failed to resolve revision %s" % revision)
+
     logging.info("Updating repository %s to revision %s" % (target, resolved_revision))
     repo_types[type].update(target, resolved_revision)
 
