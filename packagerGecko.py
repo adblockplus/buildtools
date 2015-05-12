@@ -32,6 +32,7 @@ KNOWN_APPS = {
   'songbird':   'songbird@songbirdnest.com',
   'thunderbird':  '{3550f703-e582-4d05-9a08-453d09bdfdc6}',
   'toolkit':    'toolkit@mozilla.org',
+  'adblockbrowser': '{55aba3ac-94d3-41a8-9e25-5c21fe874539}',
 }
 
 defaultLocale = 'en-US'
