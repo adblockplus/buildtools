@@ -231,9 +231,6 @@ def addMissingFiles(params, files):
         templateData['hasChromeRequires'] = True
     if name.startswith('lib/') and re.search(r'\bXMLHttpRequest\b', content):
       templateData['hasXMLHttpRequest'] = True
-    if name == 'defaults/prefs.js':
-      if re.search(r'\.currentVersion"', content):
-        templateData['hasVersionPref'] = True
     if not '/' in name or name.startswith('lib/'):
       if re.search(r'(?:^|\s)onShutdown\.', content):
         templateData['hasShutdownHandlers'] = True
@@ -241,6 +238,8 @@ def addMissingFiles(params, files):
   for name, content in files.iteritems():
     if name == 'chrome.manifest':
       templateData['hasChrome'] = True
+    elif name == 'defaults/prefs.json':
+      templateData['hasVersionPref'] = 'currentVersion' in json.loads(content).get('defaults', {})
     elif name.endswith('.js'):
       checkScript(name)
     elif name.endswith('.xul'):
