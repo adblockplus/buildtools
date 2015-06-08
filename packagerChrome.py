@@ -244,21 +244,6 @@ def importGeckoLocales(params, files):
 
       files[targetFile] = toJson(data)
 
-  if params['type'] == 'opera':
-    # Opera has a slightly different locale mapping
-    operaMapping = {
-      'es': 'es_ES',
-      'es_419': None,
-      'pt': 'pt_PT',
-    }
-    for chromeLocale, operaLocale in operaMapping.iteritems():
-      chromeFile = '_locales/%s/messages.json' % chromeLocale
-      operaFile = '_locales/%s/messages.json' % operaLocale if operaLocale != None else None
-      if chromeFile in files:
-        if operaFile != None:
-          files[operaFile] = files[chromeFile]
-        del files[chromeFile]
-
 def truncate(text, length_limit):
   if len(text) <= length_limit:
     return text
