@@ -4,7 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os, codecs, ConfigParser
+import os
+import io
+import ConfigParser
+from StringIO import StringIO
 
 class Item(tuple):
   def __new__(cls, name, value, source):
@@ -12,8 +15,16 @@ class Item(tuple):
     result.source = source
     return result
 
-class ChainedConfigParser:
-  """
+class DiffForUnknownOptionError(ConfigParser.Error):
+  def __init__(self, option, section):
+    ConfigParser.Error.__init__(self, 'Failed to apply diff for unknown option '
+                                      '%r in section %r' % (option, section))
+    self.option = option
+    self.section = section
+    self.args = (option, section)
+
+class ChainedConfigParser(ConfigParser.SafeConfigParser):
+  '''
     This class provides essentially the same interfaces as SafeConfigParser but
     allows chaining configuration files so that one config file provides the
     default values for the other. To specify the config file to inherit from
@@ -22,93 +33,138 @@ class ChainedConfigParser:
     [default]
     inherit = foo/bar.config
 
+    It is also possible to add values to or remove values from
+    whitespace-separated lists given by an inherited option:
+
+    [section]
+    opt1 += foo
+    opt2 -= bar
+
     The value of the inherit option has to be a relative path with forward
     slashes as delimiters. Up to 5 configuration files can be chained this way,
     longer chains are disallowed to deal with circular references.
 
-    A main API difference to SafeConfigParser is the way a class instance is
-    constructed: a file path has to be passed, this file is assumed to be
-    encoded as UTF-8. Also, ChainedConfigParser data is read-only and the
-    options are case-sensitive. An additional option_source(section, option)
-    method is provided to get the path of the configuration file defining this
-    option (for relative paths). Items returned by the items() function also
-    have a source attribute serving the same purpose.
-  """
+    As opposed to SafeConfigParser, files are decoded as UTF-8 while
+    reading. Also, ChainedConfigParser data is read-only. An additional
+    option_source(section, option) method is provided to get the path
+    of the configuration file defining this option (for relative paths).
+    Items returned by the items() function also have a source attribute
+    serving the same purpose.
+  '''
 
-  def __init__(self, path):
-    self.chain = []
-    self.read_path(path)
+  def __init__(self):
+    ConfigParser.SafeConfigParser.__init__(self)
+    self._origin = {}
 
-  def read_path(self, path):
-    if len(self.chain) >= 5:
-      raise Exception('Too much inheritance in config files')
+  def _make_parser(self, filename):
+    parser = ConfigParser.SafeConfigParser()
+    parser.optionxform = lambda option: option
 
-    config = ConfigParser.SafeConfigParser()
-    config.optionxform = str
-    config.source_path = path
-    handle = codecs.open(path, 'rb', encoding='utf-8')
-    config.readfp(handle)
-    handle.close()
-    self.chain.append(config)
+    with io.open(filename, encoding='utf-8') as file:
+      parser.readfp(file, filename)
 
-    if config.has_section('default') and config.has_option('default', 'inherit'):
-      parts = config.get('default', 'inherit').split('/')
-      defaults_path = os.path.join(os.path.dirname(path), *parts)
-      self.read_path(defaults_path)
+    return parser
 
-  def defaults(self):
-    result = {}
-    for config in reverse(self.chain):
-      for key, value in config.defaults().iteritems():
-        result[key] = value
-    return result
+  def _get_parser_chain(self, parser, filename):
+    parsers = []
 
-  def sections(self):
-    result = set()
-    for config in self.chain:
-      for section in config.sections():
-        result.add(section)
-    return list(result)
+    while True:
+      parsers.insert(0, (parser, filename))
 
-  def has_section(self, section):
-    for config in self.chain:
-      if config.has_section(section):
-        return True
-    return False
+      try:
+        inherit = parser.get('default', 'inherit')
+      except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        return parsers
 
-  def options(self, section):
-    result = set()
-    for config in self.chain:
-      if config.has_section(section):
-        for option in config.options(section):
-          result.add(option)
-    return list(result)
+      filename = os.path.join(os.path.dirname(filename), *inherit.split('/'))
+      parser = self._make_parser(filename)
 
-  def has_option(self, section, option):
-    for config in self.chain:
-      if config.has_section(section) and config.has_option(section, option):
-        return True
-    return False
+  def _apply_diff(self, section, option, value):
+    is_addition = option.endswith('+')
+    is_diff = is_addition or option.endswith('-')
 
-  def get(self, section, option):
-    for config in self.chain:
-      if config.has_section(section) and config.has_option(section, option):
-        return config.get(section, option)
-    raise ConfigParser.NoOptionError(option, section)
+    if is_diff:
+      option = option[:-1].rstrip()
+      try:
+        orig_value = self.get(section, option)
+      except ConfigParser.NoOptionError:
+        raise DiffForUnknownOptionError(option, section)
 
-  def items(self, section):
-    seen = set()
-    result = []
-    for config in self.chain:
-      if config.has_section(section):
-        for name, value in config.items(section):
-          if name not in seen:
-            seen.add(name)
-            result.append(Item(name, value, config.source_path))
-    return result
+      orig_values = orig_value.split()
+      diff_values = value.split()
+
+      if is_addition:
+        new_values = orig_values + [v for v in diff_values if v not in orig_values]
+      else:
+        new_values = [v for v in orig_values if v not in diff_values]
+
+      value = ' '.join(new_values)
+
+    return is_diff, option, value
+
+  def _process_parsers(self, parsers):
+    for parser, filename in parsers:
+      for section in parser.sections():
+        if not self.has_section(section):
+          try:
+            ConfigParser.SafeConfigParser.add_section(self, section)
+          except ValueError:
+            # add_section() hardcodes 'default' and raises a ValueError if
+            # you try to add a section called like that (case insensitive).
+            # This bug has been fixed in Python 3.
+            ConfigParser.SafeConfigParser.readfp(self, StringIO('[%s]' % section))
+
+        for option, value in parser.items(section):
+          is_diff, option, value = self._apply_diff(section, option, value)
+          ConfigParser.SafeConfigParser.set(self, section, option, value)
+
+          if not is_diff:
+            self._origin[(section, self.optionxform(option))] = filename
+
+  def read(self, filenames):
+    if isinstance(filenames, basestring):
+      filenames = [filenames]
+
+    read_ok = []
+    for filename in filenames:
+      try:
+        parser = self._make_parser(filename)
+      except IOError:
+        continue
+      self._process_parsers(self._get_parser_chain(parser, filename))
+      read_ok.append(filename)
+
+    return read_ok
+
+  def items(self, section, *args, **kwargs):
+    items = []
+    for option, value in ConfigParser.SafeConfigParser.items(self, section, *args, **kwargs):
+      items.append(Item(
+        option, value,
+        self._origin[(section, self.optionxform(option))]
+      ))
+    return items
 
   def option_source(self, section, option):
-    for config in self.chain:
-      if config.has_section(section) and config.has_option(section, option):
-        return config.source_path
-    raise ConfigParser.NoOptionError(option, section)
+    option = self.optionxform(option)
+    try:
+      return self._origin[(section, option)]
+    except KeyError:
+      if not self.has_section(section):
+        raise ConfigParser.NoSectionError(section)
+      raise ConfigParser.NoOptionError(option, section)
+
+  def readfp(self, fp, filename=None):
+    raise NotImplementedError
+
+  def set(self, section, option, value=None):
+    raise NotImplementedError
+
+  def add_section(self, section):
+    raise NotImplementedError
+
+  def remove_option(self, section, option):
+    raise NotImplementedError
+
+  def remove_section(self, section):
+    raise NotImplementedError

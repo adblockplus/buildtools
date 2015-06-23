@@ -20,7 +20,10 @@ def getMetadataPath(baseDir, type):
   return os.path.join(baseDir, 'metadata.%s' % type)
 
 def readMetadata(baseDir, type):
-  return ChainedConfigParser(getMetadataPath(baseDir, type))
+  parser = ChainedConfigParser()
+  parser.optionxform = lambda option: option
+  parser.read(getMetadataPath(baseDir, type))
+  return parser
 
 def getBuildNum(baseDir):
   try:
