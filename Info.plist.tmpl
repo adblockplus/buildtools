@@ -20,6 +20,10 @@
   <string>{{ version }}</string>
   <key>CFBundleVersion</key>
   <string>{{ version }}</string>
+  {%- if developerIdentifier %}
+  <key>DeveloperIdentifier</key>
+  <string>{{ developerIdentifier }}</string>
+  {%- endif %}
   <key>Chrome</key>
   <dict>
     <key>Database Quota</key>

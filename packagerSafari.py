@@ -89,7 +89,8 @@ def createManifest(params, files):
     endScripts=(get_optional('contentScripts', 'document_end') or '').split(),
     menus=parse_section('menus', 2),
     toolbarItems=parse_section('toolbar_items'),
-    popovers=parse_section('popovers')
+    popovers=parse_section('popovers'),
+    developerIdentifier=params.get('developerIdentifier')
   ).encode('utf-8')
 
 def createBackgroundPage(params):
@@ -113,7 +114,36 @@ def fixAbsoluteUrls(files):
         content, re.S | re.I
       )
 
-def createSignedXarArchive(outFile, files, keyFile):
+def get_certificates_and_key(keyfile):
+  import M2Crypto
+
+  certs = []
+  bio = M2Crypto.BIO.openfile(keyfile)
+
+  try:
+    key = M2Crypto.RSA.load_key_bio(bio)
+    bio.reset()
+    while True:
+      try:
+        certs.append(M2Crypto.X509.load_cert_bio(bio))
+      except M2Crypto.X509.X509Error:
+        break
+  finally:
+    bio.close()
+
+  return certs, key
+
+def get_developer_identifier(certs):
+  for cert in certs:
+    subject = cert.get_subject()
+    for entry in subject.get_entries_by_nid(subject.nid['CN']):
+      m = re.match(r'Safari Developer: \((.*?)\)', entry.get_data().as_text())
+      if m:
+        return m.group(1)
+
+  raise Exception('No Safari developer certificate found in chain')
+
+def createSignedXarArchive(outFile, files, certs, key):
   import subprocess
   import tempfile
   import shutil
@@ -142,28 +172,15 @@ def createSignedXarArchive(outFile, files, keyFile):
 
   certificate_filenames = []
   try:
-    # load key and certificates from the all-in-one key file
-    # and write each certificate in DER format to a seperate
+    # write each certificate in DER format to a separate
     # temporary file, that they can be passed to xar
-    bio = M2Crypto.BIO.openfile(keyFile)
-    try:
-      key = M2Crypto.RSA.load_key_bio(bio)
-
-      bio.reset()
-      while True:
-        try:
-          cert = M2Crypto.X509.load_cert_bio(bio)
-        except M2Crypto.X509.X509Error:
-          break
-
-        fd, filename = tempfile.mkstemp()
-        try:
-          certificate_filenames.append(filename)
-          os.write(fd, cert.as_der())
-        finally:
-          os.close(fd)
-    finally:
-      bio.close()
+    for cert in certs:
+      fd, filename = tempfile.mkstemp()
+      try:
+        certificate_filenames.append(filename)
+        os.write(fd, cert.as_der())
+      finally:
+        os.close(fd)
 
     # add certificates and placeholder signature
     # to the xar archive, and get data to sign
@@ -241,6 +258,10 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)
 
+  if keyFile:
+    certs, key = get_certificates_and_key(keyFile)
+    params['developerIdentifier'] = get_developer_identifier(certs)
+
   files['lib/info.js'] = createInfoModule(params)
   files['background.html'] = createBackgroundPage(params)
   files['Info.plist'] = createManifest(params, files)
@@ -252,6 +273,6 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
     files[os.path.join(dirname, filename)] = files.pop(filename)
 
   if not devenv and keyFile:
-    createSignedXarArchive(outFile, files, keyFile)
+    createSignedXarArchive(outFile, files, certs, key)
   else:
     files.zip(outFile)
