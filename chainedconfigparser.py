@@ -66,18 +66,20 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
     return parser
 
   def _get_parser_chain(self, parser, filename):
-    parsers = []
+    parsers = [(parser, filename)]
 
-    while True:
-      parsers.insert(0, (parser, filename))
+    try:
+      inherit = parser.get('default', 'inherit')
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+      return parsers
 
-      try:
-        inherit = parser.get('default', 'inherit')
-      except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-        return parsers
+    dirname = os.path.dirname(filename)
+    for parent in inherit.split():
+      parent_filename = os.path.join(dirname, *parent.split('/'))
+      parent_parser = self._make_parser(parent_filename)
+      parsers[:0] = self._get_parser_chain(parent_parser, parent_filename)
 
-      filename = os.path.join(os.path.dirname(filename), *inherit.split('/'))
-      parser = self._make_parser(filename)
+    return parsers
 
   def _apply_diff(self, section, option, value):
     is_addition = option.endswith('+')
