@@ -19,6 +19,9 @@ def getDefaultFileName(metadata, version, ext):
 def getMetadataPath(baseDir, type):
   return os.path.join(baseDir, 'metadata.%s' % type)
 
+def getDevEnvPath(baseDir):
+  return os.path.join(baseDir, 'devenv')
+
 def readMetadata(baseDir, type):
   parser = ChainedConfigParser()
   parser.optionxform = lambda option: option

@@ -226,7 +226,9 @@ def createDevEnv(baseDir, scriptName, opts, args, type):
   file = StringIO()
   packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
 
-  devenv_dir = os.path.join(baseDir, 'devenv')
+  from buildtools.packager import getDevEnvPath
+  devenv_dir = getDevEnvPath(baseDir)
+
   shutil.rmtree(devenv_dir, ignore_errors=True)
 
   file.seek(0)
