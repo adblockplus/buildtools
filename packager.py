@@ -95,11 +95,11 @@ class Files(dict):
         if (skip == None or file not in skip) and self.isIncluded(name):
           self.read(os.path.join(path, file), name)
     else:
-      file = open(path, 'rb')
-      if relpath in self:
-        print >>sys.stderr, 'Warning: File %s defined multiple times' % relpath
-      self[relpath] = file.read()
-      file.close()
+      with open(path, 'rb') as file:
+        if relpath in self:
+          print >>sys.stderr, 'Warning: File %s defined multiple times' % relpath
+        else:
+          self[relpath] = file.read()
 
   def readMappedFiles(self, mappings):
     for item in mappings:
