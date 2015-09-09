@@ -11,7 +11,7 @@ import ConfigParser
 from urlparse import urlparse
 
 from packager import readMetadata, getDefaultFileName, getBuildVersion, getTemplate, Files
-from packagerChrome import convertJS, importGeckoLocales, getIgnoredFiles, getPackageFiles, defaultLocale
+from packagerChrome import convertJS, importGeckoLocales, getIgnoredFiles, getPackageFiles, defaultLocale, createScriptPage
 
 def processFile(path, data, params):
   return data
@@ -91,14 +91,6 @@ def createManifest(params, files):
     toolbarItems=parse_section('toolbar_items'),
     popovers=parse_section('popovers'),
     developerIdentifier=params.get('developerIdentifier')
-  ).encode('utf-8')
-
-def createBackgroundPage(params):
-  template = getTemplate('background.html.tmpl', autoEscape=True)
-  return template.render(
-    backgroundScripts=params['metadata'].get(
-      'general', 'backgroundScripts'
-    ).split()
   ).encode('utf-8')
 
 def createInfoModule(params):
@@ -258,12 +250,17 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
   if metadata.has_section('import_locales'):
     importGeckoLocales(params, files)
 
+  if metadata.has_option('general', 'testScripts'):
+    files['qunit/index.html'] = createScriptPage(params, 'testIndex.html.tmpl',
+                                                 ('general', 'testScripts'))
+
   if keyFile:
     certs, key = get_certificates_and_key(keyFile)
     params['developerIdentifier'] = get_developer_identifier(certs)
 
   files['lib/info.js'] = createInfoModule(params)
-  files['background.html'] = createBackgroundPage(params)
+  files['background.html'] = createScriptPage(params, 'background.html.tmpl',
+                                              ('general', 'backgroundScripts'))
   files['Info.plist'] = createManifest(params, files)
 
   fixAbsoluteUrls(files)

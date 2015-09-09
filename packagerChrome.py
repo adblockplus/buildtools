@@ -57,6 +57,13 @@ def makeIcons(files, filenames):
     icons[width] = filename
   return icons
 
+def createScriptPage(params, template_name, script_option):
+  template = getTemplate(template_name, autoEscape=True)
+  return template.render(
+    basename=params['metadata'].get('general', 'basename'),
+    scripts=params['metadata'].get(*script_option).split()
+  ).encode('utf-8')
+
 def createManifest(params, files):
   template = getTemplate('manifest.json.tmpl')
   templateData = dict(params)
@@ -356,6 +363,10 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
       'lib/info.js' in re.split(r'\s+', metadata.get('general', 'backgroundScripts')) and
       'lib/info.js' not in files):
     files['lib/info.js'] = createInfoModule(params)
+
+  if metadata.has_option('general', 'testScripts'):
+    files['qunit/index.html'] = createScriptPage(params, 'testIndex.html.tmpl',
+                                                 ('general', 'testScripts'))
 
   zipdata = files.zipToString()
   signature = None
