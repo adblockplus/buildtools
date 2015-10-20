@@ -126,7 +126,7 @@ class Git():
     subprocess.check_call(["git", "checkout", "--quiet", rev], cwd=repo)
 
   def ignore(self, target, repo):
-    module = os.path.relpath(target, repo)
+    module = os.path.sep + os.path.relpath(target, repo)
     exclude_file = os.path.join(repo, ".git", "info", "exclude")
     _ensure_line_exists(exclude_file, module)
 
