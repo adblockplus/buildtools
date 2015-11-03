@@ -21,7 +21,10 @@ function startup(params, reason)
 
   {%- if hasChromeRequires %}
   Services.obs.addObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require", true);
-  onShutdown.add(function() Services.obs.removeObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require"));
+  onShutdown.add(function()
+  {
+    Services.obs.removeObserver(RequireObserver, "{{metadata.get('general', 'basename')}}-require");
+  });
   {%- set hasShutdownHandlers = True %}
   {%- endif %}
 
