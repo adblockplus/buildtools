@@ -66,7 +66,7 @@ class Mercurial():
   def pull(self, repo):
     subprocess.check_call(["hg", "pull", "--repository", repo, "--quiet"])
 
-  def update(self, repo, rev):
+  def update(self, repo, rev, revname):
     subprocess.check_call(["hg", "update", "--repository", repo, "--quiet", "--check", "--rev", rev])
 
   def ignore(self, target, repo):
@@ -122,8 +122,8 @@ class Git():
     if newly_tracked:
       subprocess.check_call(["git", "fetch", "--quiet", "origin"], cwd=repo)
 
-  def update(self, repo, rev):
-    subprocess.check_call(["git", "checkout", "--quiet", rev], cwd=repo)
+  def update(self, repo, rev, revname):
+    subprocess.check_call(["git", "checkout", "--quiet", revname], cwd=repo)
 
   def ignore(self, target, repo):
     module = os.path.sep + os.path.relpath(target, repo)
@@ -280,7 +280,7 @@ def update_repo(target, type, revision):
         raise Exception("Failed to resolve revision %s" % revision)
 
     logging.info("Updating repository %s to revision %s" % (target, resolved_revision))
-    repo_types[type].update(target, resolved_revision)
+    repo_types[type].update(target, resolved_revision, revision)
 
 def resolve_deps(repodir, level=0, self_update=True, overrideroots=None, skipdependencies=set()):
   config = read_deps(repodir)
