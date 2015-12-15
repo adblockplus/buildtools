@@ -3,13 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 require.scopes.info = {
-  get addonID()
-  {
-    return chrome.i18n.getMessage("@@extension_id");
-  },
   addonName: {{metadata.get('general', 'basename')|json}},
   addonVersion: {{version|json}},
-  addonRoot: "",
 
   application: {{type|json}},
   get applicationVersion()
