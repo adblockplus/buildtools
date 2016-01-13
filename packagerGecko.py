@@ -338,15 +338,16 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
     'multicompartment': multicompartment,
   }
 
+  mapped = metadata.items('mapping') if metadata.has_section('mapping') else []
+  skip = [opt for opt, _ in mapped] + ['chrome']
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
   files['install.rdf'] = createManifest(params)
-  if metadata.has_section('mapping'):
-    files.readMappedFiles(metadata.items('mapping'))
-  files.read(baseDir, skip=('chrome'))
+  files.readMappedFiles(mapped)
+  files.read(baseDir, skip=skip)
   for name, path in getChromeSubdirs(baseDir, params['locales']).iteritems():
     if os.path.isdir(path):
-      files.read(path, 'chrome/%s' % name)
+      files.read(path, 'chrome/%s' % name, skip=skip)
   importLocales(params, files)
   fixupLocales(params, files)
   if not 'bootstrap.js' in files:

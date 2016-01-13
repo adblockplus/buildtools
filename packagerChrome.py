@@ -326,12 +326,12 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     'metadata': metadata,
   }
 
+  mapped = metadata.items('mapping') if metadata.has_section('mapping') else []
   files = Files(getPackageFiles(params), getIgnoredFiles(params),
                 process=lambda path, data: processFile(path, data, params))
 
-  if metadata.has_section('mapping'):
-    files.readMappedFiles(metadata.items('mapping'))
-  files.read(baseDir)
+  files.readMappedFiles(mapped)
+  files.read(baseDir, skip=[opt for opt, _ in mapped])
 
   if metadata.has_section('convert_js'):
     convertJS(params, files)

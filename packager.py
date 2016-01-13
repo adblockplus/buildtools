@@ -88,18 +88,17 @@ class Files(dict):
         return False
     return True
 
-  def read(self, path, relpath='', skip=None):
+  def read(self, path, relpath='', skip=()):
     if os.path.isdir(path):
       for file in os.listdir(path):
         name = relpath + ('/' if relpath != '' else '') + file
-        if (skip == None or file not in skip) and self.isIncluded(name):
-          self.read(os.path.join(path, file), name)
+        if name not in skip and self.isIncluded(name):
+          self.read(os.path.join(path, file), name, skip)
     else:
       with open(path, 'rb') as file:
         if relpath in self:
           print >>sys.stderr, 'Warning: File %s defined multiple times' % relpath
-        else:
-          self[relpath] = file.read()
+        self[relpath] = file.read()
 
   def readMappedFiles(self, mappings):
     for item in mappings:
