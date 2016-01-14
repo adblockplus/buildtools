@@ -93,20 +93,23 @@ def createManifest(params, files):
     templateData[opt] = {'icon': icon, 'popup': popup}
 
   if metadata.has_option('general', 'icons'):
-    templateData['icons'] = makeIcons(files, metadata.get('general', 'icons').split())
+    templateData['icons'] = makeIcons(files,
+                                      metadata.get('general', 'icons').split())
 
   if metadata.has_option('general', 'permissions'):
-    templateData['permissions'] = re.split(r'\s+', metadata.get('general', 'permissions'))
+    templateData['permissions'] = metadata.get('general', 'permissions').split()
     if params['experimentalAPI']:
       templateData['permissions'].append('experimental')
 
   if metadata.has_option('general', 'backgroundScripts'):
-    templateData['backgroundScripts'] = re.split(r'\s+', metadata.get('general', 'backgroundScripts'))
+    templateData['backgroundScripts'] = metadata.get(
+      'general', 'backgroundScripts').split()
     if params['devenv']:
       templateData['backgroundScripts'].append('devenvPoller__.js')
 
   if metadata.has_option('general', 'webAccessible') and metadata.get('general', 'webAccessible') != '':
-    templateData['webAccessible'] = re.split(r'\s+', metadata.get('general', 'webAccessible'))
+    templateData['webAccessible'] = metadata.get('general',
+                                                 'webAccessible').split()
 
   if metadata.has_section('contentScripts'):
     contentScripts = []
@@ -115,7 +118,7 @@ def createManifest(params, files):
         continue
       contentScripts.append({
         'matches': ['http://*/*', 'https://*/*'],
-        'js': re.split(r'\s+', scripts),
+        'js': scripts.split(),
         'run_at': run_at,
         'all_frames': True,
         'match_about_blank': True,
@@ -148,7 +151,7 @@ def convertJS(params, files):
     if '/' in file and not files.isIncluded(file):
       continue
 
-    sourceFiles = re.split(r'\s+', sources)
+    sourceFiles = sources.split()
     args = []
     try:
       argsStart = sourceFiles.index('--arg')
@@ -222,7 +225,7 @@ def importGeckoLocales(params, files):
             importList = map(lambda k: '=' + k, importList)
           keys = ' '.join(importList)
 
-        for stringID in re.split(r'\s+', keys):
+        for stringID in keys.split():
           noMangling = False
           if stringID.startswith('='):
             stringID = stringID[1:]
@@ -360,7 +363,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     files['devenvVersion__'] = str(random.random())
 
   if (metadata.has_option('general', 'backgroundScripts') and
-      'lib/info.js' in re.split(r'\s+', metadata.get('general', 'backgroundScripts')) and
+      'lib/info.js' in metadata.get('general', 'backgroundScripts').split() and
       'lib/info.js' not in files):
     files['lib/info.js'] = createInfoModule(params)
 
