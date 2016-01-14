@@ -7,19 +7,21 @@
   var version = null;
   function doPoll()
   {
-    var request = new XMLHttpRequest();
-    request.open("GET", chrome.extension.getURL("devenvVersion__"));
-    request.addEventListener("load", function()
-    {
-      if (version == null)
-        version = request.responseText;
+    fetch(chrome.extension.getURL("devenvVersion__"))
+      .then(function(response)
+      {
+        return response.text();
+      })
+      .then(function(text)
+      {
+        if (version == null)
+          version = text;
 
-      if (request.responseText != version)
-        chrome.runtime.reload();
-      else
-        window.setTimeout(doPoll, 5000);
-    }, false);
-    request.send(null);
+        if (text != version)
+          chrome.runtime.reload();
+        else
+          window.setTimeout(doPoll, 5000);
+      });
   }
 
   // Delay first poll to prevent reloading again immediately after a reload
