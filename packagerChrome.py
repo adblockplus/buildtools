@@ -101,6 +101,10 @@ def createManifest(params, files):
     if params['experimentalAPI']:
       templateData['permissions'].append('experimental')
 
+  if metadata.has_option('general', 'optionalPermissions'):
+    templateData['optionalPermissions'] = metadata.get(
+      'general', 'optionalPermissions').split()
+
   if metadata.has_option('general', 'backgroundScripts'):
     templateData['backgroundScripts'] = metadata.get(
       'general', 'backgroundScripts').split()

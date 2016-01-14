@@ -58,6 +58,10 @@
   "permissions": {{permissions|json}},
   {%- endif %}
 
+  {%- if optionalPermissions %}
+    "optional_permissions": {{optionalPermissions|json}},
+  {%- endif %}
+
   {%- if backgroundScripts %}
   "background": {
     "scripts": {{backgroundScripts|json}}
