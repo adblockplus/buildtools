@@ -18,14 +18,7 @@ from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuild
 defaultLocale = 'en_US'
 
 def getIgnoredFiles(params):
-  result = set(('store.description',))
-
-  # Hack: ignore all lib subdirectories
-  libDir = os.path.join(params['baseDir'], 'lib')
-  for file in os.listdir(libDir):
-    if os.path.isdir(os.path.join(libDir, file)):
-      result.add(file)
-  return result
+  return {'store.description'}
 
 def getPackageFiles(params):
   result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui', 'ext'))
