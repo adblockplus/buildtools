@@ -336,10 +336,6 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
   if metadata.has_section('convert_js'):
     convertJS(params, files)
 
-  if metadata.has_section('convert_img'):
-    from imageConversion import convertImages
-    convertImages(params, files)
-
   if metadata.has_section('preprocess'):
     files.preprocess(
       [f for f, _ in metadata.items('preprocess')],

@@ -237,10 +237,6 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
   if metadata.has_section('convert_js'):
     convertJS(params, files)
 
-  if metadata.has_section('convert_img'):
-    from imageConversion import convertImages
-    convertImages(params, files)
-
   if metadata.has_section('preprocess'):
     files.preprocess(
       [f for f, _ in metadata.items('preprocess')],
