@@ -19,8 +19,8 @@ def getDefaultFileName(metadata, version, ext):
 def getMetadataPath(baseDir, type):
   return os.path.join(baseDir, 'metadata.%s' % type)
 
-def getDevEnvPath(baseDir):
-  return os.path.join(baseDir, 'devenv')
+def getDevEnvPath(baseDir, type):
+  return os.path.join(baseDir, 'devenv.' + type)
 
 def readMetadata(baseDir, type):
   parser = ChainedConfigParser()
