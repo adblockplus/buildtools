@@ -378,7 +378,9 @@ def generateDocs(baseDir, scriptName, opts, args, type):
   if type == 'chrome':
     sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
 
-  command = ['jsdoc', '--destination', targetDir, '--access', 'all'] + sources
+
+  config = os.path.join(os.path.dirname(__file__), 'jsdoc.conf')
+  command = ['jsdoc', '--destination', targetDir, '--configure', config] + sources
   if any(opt in ('-q', '--quiet') for opt, _ in opts):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = process.communicate()[1]
