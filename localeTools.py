@@ -108,7 +108,7 @@ def unescapeEntity(value):
   return value.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
 def mapLocale(type, locale):
-  mapping = langMappingChrome if type == 'chrome' else langMappingGecko
+  mapping = langMappingChrome if type == 'ISO-15897' else langMappingGecko
   return mapping.get(locale, locale)
 
 def parseDTDString(data, path):
@@ -272,27 +272,26 @@ def postprocessChromeLocale(path, data):
   json.dump(parsed, file, ensure_ascii=False, sort_keys=True, indent=2, separators=(',', ': '))
   file.close()
 
-def setupTranslations(type, locales, projectName, key):
-  # Copy locales list, we don't want to change the parameter
-  locales = set(locales)
+def setupTranslations(localeConfig, projectName, key):
+  # Make a new set from the locales list, mapping to Crowdin friendly format
+  locales = {mapLocale(localeConfig['name_format'], locale)
+             for locale in localeConfig['locales']}
 
   # Fill up with locales that we don't have but the browser supports
-  if type == 'chrome':
+  if 'chrome' in localeConfig['target_platforms']:
     for locale in chromeLocales:
-      locales.add(locale)
-  else:
+      locales.add(mapLocale('ISO-15897', locale))
+
+  if 'gecko' in localeConfig['target_platforms']:
     firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
     for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
-      locales.add(mapLocale(type, match.group(1)))
+      locales.add(mapLocale('BCP-47', match.group(1)))
     langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
     for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
       if match.group(0).find('Install Language Pack') >= 0:
         match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
         if match2:
-          locales.add(mapLocale(type, match2.group(1)))
-
-  # Convert locale codes to the ones that Crowdin will understand
-  locales = set(map(lambda locale: mapLocale(type, locale), locales))
+          locales.add(mapLocale('BCP-47', match2.group(1)))
 
   allowed = set()
   allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
@@ -327,7 +326,7 @@ def postFiles(files, url):
   if result.find('<success') < 0:
     raise Exception('Server indicated that the operation was not successful\n' + result)
 
-def updateTranslationMaster(type, metadata, dir, projectName, key):
+def updateTranslationMaster(localeConfig, metadata, dir, projectName, key):
   result = json.load(urllib2.urlopen('http://api.crowdin.net/api/project/%s/info?key=%s&json=1' % (projectName, key)))
 
   existing = set(map(lambda f: f['name'], result['files']))
@@ -336,10 +335,10 @@ def updateTranslationMaster(type, metadata, dir, projectName, key):
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
-      if type == 'chrome' and file.endswith('.json'):
+      if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
         data = preprocessChromeLocale(path, metadata, True)
         newName = file
-      elif type == 'chrome':
+      elif localeConfig['file_format'] == 'chrome-json':
         fileHandle = codecs.open(path, 'rb', encoding='utf-8')
         data = json.dumps({file: {'message': fileHandle.read()}})
         fileHandle.close()
@@ -365,15 +364,15 @@ def updateTranslationMaster(type, metadata, dir, projectName, key):
     if result.find('<success') < 0:
       raise Exception('Server indicated that the operation was not successful\n' + result)
 
-def uploadTranslations(type, metadata, dir, locale, projectName, key):
+def uploadTranslations(localeConfig, metadata, dir, locale, projectName, key):
   files = []
   for file in os.listdir(dir):
     path = os.path.join(dir, file)
     if os.path.isfile(path):
-      if type == 'chrome' and file.endswith('.json'):
+      if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
         data = preprocessChromeLocale(path, metadata, False)
         newName = file
-      elif type == 'chrome':
+      elif localeConfig['file_format'] == 'chrome-json':
         fileHandle = codecs.open(path, 'rb', encoding='utf-8')
         data = json.dumps({file: {'message': fileHandle.read()}})
         fileHandle.close()
@@ -385,9 +384,11 @@ def uploadTranslations(type, metadata, dir, locale, projectName, key):
       if data:
         files.append((newName, data))
   if len(files):
-    postFiles(files, 'http://api.crowdin.net/api/project/%s/upload-translation?key=%s&language=%s' % (projectName, key, mapLocale(type, locale)))
+    postFiles(files, 'http://api.crowdin.net/api/project/%s/upload-translation?key=%s&language=%s' % (
+      projectName, key, mapLocale(localeConfig['name_format'], locale))
+    )
 
-def getTranslations(type, localesDir, defaultLocale, projectName, key):
+def getTranslations(localeConfig, projectName, key):
   result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/export?key=%s' % (projectName, key)).read()
   if result.find('<success') < 0:
     raise Exception('Server indicated that the operation was not successful\n' + result)
@@ -395,25 +396,38 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
   result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/download/all.zip?key=%s' % (projectName, key)).read()
   zip = ZipFile(StringIO(result))
   dirs = {}
+
+  normalizedDefaultLocale = localeConfig['default_locale']
+  if localeConfig['name_format'] == 'ISO-15897':
+    normalizedDefaultLocale = normalizedDefaultLocale.replace('_', '-')
+  normalizedDefaultLocale = mapLocale(localeConfig['name_format'],
+                                      normalizedDefaultLocale)
+
   for info in zip.infolist():
     if not info.filename.endswith('.json'):
       continue
 
     dir, file = os.path.split(info.filename)
-    if not re.match(r'^[\w\-]+$', dir) or dir == defaultLocale:
+    if not re.match(r'^[\w\-]+$', dir) or dir == normalizedDefaultLocale:
       continue
-    if type == 'chrome' and file.count('.') == 1:
+    if localeConfig['file_format'] == 'chrome-json' and file.count('.') == 1:
       origFile = file
     else:
       origFile = re.sub(r'\.json$', '', file)
-    if type == 'gecko' and not origFile.endswith('.dtd') and not origFile.endswith('.properties'):
+    if (localeConfig['file_format'] == 'gecko-dtd' and
+        not origFile.endswith('.dtd') and
+        not origFile.endswith('.properties')):
       continue
 
-    mapping = langMappingChrome if type == 'chrome' else langMappingGecko
+    if localeConfig['name_format'] == 'ISO-15897':
+      mapping = langMappingChrome
+    else:
+      mapping = langMappingGecko
+
     for key, value in mapping.iteritems():
       if value == dir:
         dir = key
-    if type == 'chrome':
+    if localeConfig['name_format'] == 'ISO-15897':
       dir = dir.replace('-', '_')
 
     data = zip.open(info.filename).read()
@@ -424,12 +438,12 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
       dirs[dir] = set()
     dirs[dir].add(origFile)
 
-    path = os.path.join(localesDir, dir, origFile)
+    path = os.path.join(localeConfig['base_path'], dir, origFile)
     if not os.path.exists(os.path.dirname(path)):
       os.makedirs(os.path.dirname(path))
-    if type == 'chrome' and origFile.endswith('.json'):
+    if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
       postprocessChromeLocale(path, data)
-    elif type == 'chrome':
+    elif localeConfig['file_format'] == 'chrome-json':
       data = json.loads(data)
       if origFile in data:
         fileHandle = codecs.open(path, 'wb', encoding='utf-8')
@@ -440,7 +454,7 @@ def getTranslations(type, localesDir, defaultLocale, projectName, key):
 
   # Remove any extra files
   for dir, files in dirs.iteritems():
-    baseDir = os.path.join(localesDir, dir)
+    baseDir = os.path.join(localeConfig['base_path'], dir)
     if not os.path.exists(baseDir):
       continue
     for file in os.listdir(baseDir):

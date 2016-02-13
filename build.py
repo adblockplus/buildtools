@@ -9,7 +9,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'chrome', 'opera', 'safari')
+knownTypes = ('gecko', 'chrome', 'opera', 'safari', 'generic')
 
 class Command(object):
   name = property(lambda self: self._name)
@@ -236,6 +236,47 @@ def createDevEnv(baseDir, scriptName, opts, args, type):
     zip_file.extractall(devenv_dir)
 
 
+def readLocaleConfig(baseDir, type, metadata):
+  if type == 'gecko':
+    import buildtools.packagerGecko as packager
+    localeDir = packager.getLocalesDir(baseDir)
+    localeConfig = {
+      'name_format': 'BCP-47',
+      'file_format': 'gecko-dtd',
+      'target_platforms': {'gecko'},
+      'default_locale': packager.defaultLocale
+    }
+  elif type == 'chrome' or type == 'opera':
+    import buildtools.packagerChrome as packager
+    localeDir = os.path.join(baseDir, '_locales')
+    localeConfig = {
+      'name_format': 'ISO-15897',
+      'file_format': 'chrome-json',
+      'target_platforms': {'chrome'},
+      'default_locale': packager.defaultLocale,
+    }
+  else:
+    localeDir = os.path.join(baseDir,
+                             *metadata.get('locales', 'base_path').split('/'))
+    localeConfig = {
+      'name_format': metadata.get('locales', 'name_format'),
+      'file_format': metadata.get('locales', 'file_format'),
+      'target_platforms': set(metadata.get('locales',
+                                           'target_platforms').split()),
+      'default_locale': metadata.get('locales', 'default_locale')
+    }
+
+  localeConfig['base_path'] = localeDir
+
+  locales = [(locale, os.path.join(localeDir, locale))
+             for locale in os.listdir(localeDir)]
+  if localeConfig['name_format'] == 'ISO-15897':
+    locales = [(locale.replace('_', '-'), localePath)
+               for locale, localePath in locales]
+  localeConfig['locales'] = dict(locales)
+
+  return localeConfig
+
 def setupTranslations(baseDir, scriptName, opts, args, type):
   if len(args) < 1:
     print 'Project key is required to update translation master files.'
@@ -246,18 +287,12 @@ def setupTranslations(baseDir, scriptName, opts, args, type):
 
   from buildtools.packager import readMetadata
   metadata = readMetadata(baseDir, type)
-  basename = metadata.get('general', 'basename')
 
-  if type == 'chrome' or type == 'opera':
-    import buildtools.packagerChrome as packager
-    locales = os.listdir(os.path.join(baseDir, '_locales'))
-    locales = map(lambda locale: locale.replace('_', '-'), locales)
-  else:
-    import buildtools.packagerGecko as packager
-    locales = packager.getLocales(baseDir, True)
+  basename = metadata.get('general', 'basename')
+  localeConfig = readLocaleConfig(baseDir, type, metadata)
 
   import buildtools.localeTools as localeTools
-  localeTools.setupTranslations(type, locales, basename, key)
+  localeTools.setupTranslations(localeConfig, basename, key)
 
 
 def updateTranslationMaster(baseDir, scriptName, opts, args, type):
@@ -270,17 +305,16 @@ def updateTranslationMaster(baseDir, scriptName, opts, args, type):
 
   from buildtools.packager import readMetadata
   metadata = readMetadata(baseDir, type)
-  basename = metadata.get('general', 'basename')
 
-  if type == 'chrome' or type == 'opera':
-    import buildtools.packagerChrome as packager
-    defaultLocaleDir = os.path.join(baseDir, '_locales', packager.defaultLocale)
-  else:
-    import buildtools.packagerGecko as packager
-    defaultLocaleDir = os.path.join(packager.getLocalesDir(baseDir), packager.defaultLocale)
+  basename = metadata.get('general', 'basename')
+  localeConfig = readLocaleConfig(baseDir, type, metadata)
+
+  defaultLocaleDir = os.path.join(localeConfig['base_path'],
+                                  localeConfig['default_locale'])
 
   import buildtools.localeTools as localeTools
-  localeTools.updateTranslationMaster(type, metadata, defaultLocaleDir, basename, key)
+  localeTools.updateTranslationMaster(localeConfig, metadata, defaultLocaleDir,
+                                      basename, key)
 
 
 def uploadTranslations(baseDir, scriptName, opts, args, type):
@@ -293,23 +327,15 @@ def uploadTranslations(baseDir, scriptName, opts, args, type):
 
   from buildtools.packager import readMetadata
   metadata = readMetadata(baseDir, type)
-  basename = metadata.get('general', 'basename')
 
-  if type == 'chrome' or type == 'opera':
-    import buildtools.packagerChrome as packager
-    localesDir = os.path.join(baseDir, '_locales')
-    locales = os.listdir(localesDir)
-    locales = map(lambda locale: (locale.replace('_', '-'), os.path.join(localesDir, locale)), locales)
-  else:
-    import buildtools.packagerGecko as packager
-    localesDir = packager.getLocalesDir(baseDir)
-    locales = packager.getLocales(baseDir, True)
-    locales = map(lambda locale: (locale, os.path.join(localesDir, locale)), locales)
+  basename = metadata.get('general', 'basename')
+  localeConfig = readLocaleConfig(baseDir, type, metadata)
 
   import buildtools.localeTools as localeTools
-  for locale, localeDir in locales:
-    if locale != packager.defaultLocale:
-      localeTools.uploadTranslations(type, metadata, localeDir, locale, basename, key)
+  for locale, localeDir in localeConfig['locales'].iteritems():
+    if locale != localeConfig['default_locale']:
+      localeTools.uploadTranslations(localeConfig, metadata, localeDir, locale,
+                                     basename, key)
 
 
 def getTranslations(baseDir, scriptName, opts, args, type):
@@ -318,20 +344,16 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     usage(scriptName, type, 'translate')
     return
 
+  key = args[0]
+
   from buildtools.packager import readMetadata
   metadata = readMetadata(baseDir, type)
-  basename = metadata.get('general', 'basename')
 
-  key = args[0]
-  if type == 'chrome' or type == 'opera':
-    import buildtools.packagerChrome as packager
-    localesDir = os.path.join(baseDir, '_locales')
-  else:
-    import buildtools.packagerGecko as packager
-    localesDir = packager.getLocalesDir(baseDir)
+  basename = metadata.get('general', 'basename')
+  localeConfig = readLocaleConfig(baseDir, type, metadata)
 
   import buildtools.localeTools as localeTools
-  localeTools.getTranslations(type, localesDir, packager.defaultLocale.replace('_', '-'), basename, key)
+  localeTools.getTranslations(localeConfig, basename, key)
 
 
 def showDescriptions(baseDir, scriptName, opts, args, type):
@@ -459,25 +481,25 @@ with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'
   command.description = 'Sets up translation languages for the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera')
+  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
   command.description = 'Updates the translation master files in the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera')
+  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
 
 with addCommand(uploadTranslations, 'uploadtrans') as command:
   command.shortDescription = 'Uploads existing translations'
   command.description = 'Uploads already existing translations to the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera')
+  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
 
 with addCommand(getTranslations, 'gettranslations') as command:
   command.shortDescription = 'Downloads translation updates'
   command.description = 'Downloads updated translations from crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera')
+  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
 
 with addCommand(showDescriptions, 'showdesc') as command:
   command.shortDescription = 'Print description strings for all locales'
