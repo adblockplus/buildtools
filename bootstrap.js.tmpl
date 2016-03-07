@@ -83,7 +83,7 @@ function install(params, reason) {}
 
 function uninstall(params, reason)
 {
-  {%- if hasVersionPref %}
+  {%- if 'currentVersion' in jsonRequires.get('prefs.json', {}).get('defaults', {}) %}
   const ADDON_UNINSTALL = 6;  // https://developer.mozilla.org/en/Extensions/Bootstrapped_extensions#Reason_constants
   if (reason == ADDON_UNINSTALL)
   {
@@ -173,6 +173,9 @@ function require(module)
   return scopes[module].exports;
 }
 require.scopes = Object.create(null);
+{%- for name, data in jsonRequires.iteritems() %}
+require.scopes[{{name|json}}] = {exports: {{data|json}}};
+{%- endfor %}
 
 {%- if hasChromeRequires %}
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");

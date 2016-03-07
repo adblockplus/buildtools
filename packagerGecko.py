@@ -53,7 +53,7 @@ def getChromeSubdirs(baseDir, locales):
   return result
 
 def getPackageFiles(params):
-  result = set(('chrome', 'components', 'modules', 'lib', 'resources', 'defaults', 'chrome.manifest', 'icon.png', 'icon64.png',))
+  result = set(('chrome', 'components', 'modules', 'lib', 'resources', 'chrome.manifest', 'icon.png', 'icon64.png',))
 
   baseDir = params['baseDir']
   for file in os.listdir(baseDir):
@@ -209,15 +209,23 @@ def fixupLocales(params, files):
       else:
         files[path] = reference[file]['_origData'].encode('utf-8')
 
+def processJSONFiles(params, files):
+  prefix = 'lib/'
+  for name, content in files.iteritems():
+    if name.startswith(prefix) and name.endswith('.json'):
+      params['jsonRequires'][name[len(prefix):]] = json.loads(content)
+  for name in params['jsonRequires'].iterkeys():
+    del files[prefix + name]
+
 def addMissingFiles(params, files):
   templateData = {
     'hasChrome': False,
     'hasChromeRequires': False,
     'hasShutdownHandlers': False,
     'hasXMLHttpRequest': False,
-    'hasVersionPref': False,
     'chromeWindows': [],
-    'requires': {},
+    'requires': set(),
+    'jsonRequires': params['jsonRequires'],
     'metadata': params['metadata'],
     'multicompartment': params['multicompartment'],
     'applications': dict((v, k) for k, v in KNOWN_APPS.iteritems()),
@@ -226,7 +234,7 @@ def addMissingFiles(params, files):
   def checkScript(name):
     content = files[name]
     for match in re.finditer(r'(?:^|\s)require\(\s*"([\w\-]+)"\s*\)', content):
-      templateData['requires'][match.group(1)] = True
+      templateData['requires'].add(match.group(1))
       if name.startswith('chrome/content/'):
         templateData['hasChromeRequires'] = True
     if name.startswith('lib/') and re.search(r'\bXMLHttpRequest\b', content):
@@ -238,8 +246,6 @@ def addMissingFiles(params, files):
   for name, content in files.iteritems():
     if name == 'chrome.manifest':
       templateData['hasChrome'] = True
-    elif name == 'defaults/prefs.json':
-      templateData['hasVersionPref'] = 'currentVersion' in json.loads(content).get('defaults', {})
     elif name.endswith('.js'):
       checkScript(name)
     elif name.endswith('.xul'):
@@ -336,6 +342,7 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
     'metadata': metadata,
     'contributors': contributors,
     'multicompartment': multicompartment,
+    'jsonRequires': {},
   }
 
   mapped = metadata.items('mapping') if metadata.has_section('mapping') else []
@@ -350,6 +357,7 @@ def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None
       files.read(path, 'chrome/%s' % name, skip=skip)
   importLocales(params, files)
   fixupLocales(params, files)
+  processJSONFiles(params, files)
   if not 'bootstrap.js' in files:
     addMissingFiles(params, files)
   if metadata.has_section('preprocess'):
