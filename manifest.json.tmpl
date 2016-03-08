@@ -11,23 +11,12 @@
   {%- endif %}
 
   "short_name": "__MSG_name__",
-  "description": "__MSG_description_{{ type }}__",
+  "description": "__MSG_description__",
   "default_locale": "en_US",
   "version": {{version|json}},
 
   {%- if metadata.has_section('compat') and metadata.has_option('compat', 'chrome') %}
   "minimum_chrome_version": {{metadata.get('compat', 'chrome')|json}},
-  {%- endif %}
-
-  {%- if not releaseBuild and type != "chrome" %}
-  "update_url": "https://adblockplus.org/devbuilds/
-    {{- metadata.get('general', 'basename') -}}
-    {%- if experimentalAPI -%}
-    -experimental
-    {%- endif -%}
-    /updates.xml",
-  {%- elif metadata.has_option('general', 'updateURL') %}
-  "update_url": {{metadata.get('general', 'updateURL')|json}},
   {%- endif %}
 
   {%- if pageAction %}

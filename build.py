@@ -9,7 +9,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'chrome', 'opera', 'safari', 'generic')
+knownTypes = ('gecko', 'chrome', 'safari', 'generic')
 
 class Command(object):
   name = property(lambda self: self._name)
@@ -186,7 +186,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
     packager.createBuild(baseDir, type=type, outFile=outFile, locales=locales, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
                          multicompartment=multicompartment)
-  elif type == 'chrome' or type == 'opera':
+  elif type == 'chrome':
     import buildtools.packagerChrome as packager
     packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
                          releaseBuild=releaseBuild, keyFile=keyFile,
@@ -246,7 +246,7 @@ def readLocaleConfig(baseDir, type, metadata):
       'target_platforms': {'gecko'},
       'default_locale': packager.defaultLocale
     }
-  elif type == 'chrome' or type == 'opera':
+  elif type == 'chrome':
     import buildtools.packagerChrome as packager
     localeDir = os.path.join(baseDir, '_locales')
     localeConfig = {
@@ -459,11 +459,11 @@ with addCommand(runBuild, 'build') as command:
   command.params = '[options] [output_file]'
   command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
   command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'opera', 'safari'))
+  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'safari'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
   command.addOption('Enable use of experimental APIs', long='experimental')
-  command.supportedTypes = ('gecko', 'chrome', 'opera', 'safari')
+  command.supportedTypes = ('gecko', 'chrome', 'safari')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
   command.shortDescription = 'Install extension automatically'
@@ -475,31 +475,31 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
 with addCommand(createDevEnv, 'devenv') as command:
   command.shortDescription = 'Set up a development environment'
   command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-  command.supportedTypes = ('chrome', 'opera', 'safari')
+  command.supportedTypes = ('chrome', 'safari')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
   command.shortDescription = 'Sets up translation languages'
   command.description = 'Sets up translation languages for the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
+  command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
   command.shortDescription = 'Updates translation master files'
   command.description = 'Updates the translation master files in the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
+  command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(uploadTranslations, 'uploadtrans') as command:
   command.shortDescription = 'Uploads existing translations'
   command.description = 'Uploads already existing translations to the project on crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
+  command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(getTranslations, 'gettranslations') as command:
   command.shortDescription = 'Downloads translation updates'
   command.description = 'Downloads updated translations from crowdin.net.'
   command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'opera', 'generic')
+  command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(showDescriptions, 'showdesc') as command:
   command.shortDescription = 'Print description strings for all locales'
@@ -521,7 +521,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
     'probably don\'t want to run this!\n\n'\
     'Runs release automation: creates downloads for the new version, tags '\
     'source code repository as well as downloads and buildtools repository.'
-  command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome/Opera builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
+  command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
   command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
   command.params = '[options] <version>'
   command.supportedTypes = ('gecko', 'chrome')
@@ -529,7 +529,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
 with addCommand(updatePSL, 'updatepsl') as command:
   command.shortDescription = 'Updates Public Suffix List'
   command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
-  command.supportedTypes = ('chrome', 'opera')
+  command.supportedTypes = ('chrome',)
 
 def getType(baseDir, scriptName, args):
   # Look for an explicit type parameter (has to be the first parameter)

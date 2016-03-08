@@ -81,8 +81,8 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
     packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
     downloads.append(buildPath)
   elif type == "chrome":
-    # We actually have to create four different builds for Chrome: signed a unsigned Chrome builds
-    # (the latter for Chrome Web Store), a signed Opera build and a signed Safari build.
+    # We actually have to create three different builds: signed and unsigned
+    # Chrome builds (the latter for Chrome Web Store), and a signed Safari build.
     metadata = packager.readMetadata(baseDir, type)
     buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'crx'))
     packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFiles[0])
@@ -90,11 +90,6 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
 
     buildPathUnsigned = os.path.join(baseDir, packager.getDefaultFileName(metadata, version, 'zip'))
     packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
-
-    metadataOpera = packager.readMetadata(baseDir, "opera")
-    buildPathOpera = os.path.join(downloadsRepo, packager.getDefaultFileName(metadataOpera, version, 'crx'))
-    packager.createBuild(baseDir, type="opera", outFile=buildPathOpera, releaseBuild=True, keyFile=keyFiles[0])
-    downloads.append(buildPathOpera)
 
     import buildtools.packagerSafari as packagerSafari
     metadataSafari = packagerSafari.readMetadata(baseDir, "safari")

@@ -78,7 +78,7 @@ def createManifest(params, files):
     version=params['version'],
     releaseBuild=params['releaseBuild'],
     name=catalog['name']['message'],
-    description=catalog['description_safari']['message'],
+    description=catalog['description']['message'],
     author=get_optional('general', 'author'),
     homepage=get_optional('general', 'homepage'),
     updateURL=get_optional('general', 'updateURL'),
