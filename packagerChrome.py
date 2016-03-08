@@ -91,8 +91,6 @@ def createManifest(params, files):
 
   if metadata.has_option('general', 'permissions'):
     templateData['permissions'] = metadata.get('general', 'permissions').split()
-    if params['experimentalAPI']:
-      templateData['permissions'].append('experimental')
 
   if metadata.has_option('general', 'optionalPermissions'):
     templateData['optionalPermissions'] = metadata.get(
@@ -309,7 +307,7 @@ def writePackage(outputFile, pubkey, signature, zipdata):
     file.write(signature)
   file.write(zipdata)
 
-def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuild=False, keyFile=None, experimentalAPI=False, devenv=False):
+def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuild=False, keyFile=None, devenv=False):
   metadata = readMetadata(baseDir, type)
   version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
@@ -321,7 +319,6 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     'baseDir': baseDir,
     'releaseBuild': releaseBuild,
     'version': version,
-    'experimentalAPI': experimentalAPI,
     'devenv': devenv,
     'metadata': metadata,
   }

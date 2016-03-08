@@ -165,7 +165,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
   multicompartment = False
   releaseBuild = False
   keyFile = None
-  experimentalAPI = False
   for option, value in opts:
     if option in ('-l', '--locales'):
       locales = value.split(',')
@@ -177,8 +176,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
       multicompartment = True
     elif option in ('-r', '--release'):
       releaseBuild = True
-    elif option == '--experimental':
-      experimentalAPI = True
   outFile = args[0] if len(args) > 0 else None
 
   if type == 'gecko':
@@ -189,8 +186,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
   elif type == 'chrome':
     import buildtools.packagerChrome as packager
     packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
-                         releaseBuild=releaseBuild, keyFile=keyFile,
-                         experimentalAPI=experimentalAPI)
+                         releaseBuild=releaseBuild, keyFile=keyFile)
   elif type == 'safari':
     import buildtools.packagerSafari as packager
     packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
@@ -462,7 +458,6 @@ with addCommand(runBuild, 'build') as command:
   command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'safari'))
   command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
   command.addOption('Create a release build', short='r', long='release')
-  command.addOption('Enable use of experimental APIs', long='experimental')
   command.supportedTypes = ('gecko', 'chrome', 'safari')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
