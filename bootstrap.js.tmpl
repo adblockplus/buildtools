@@ -7,10 +7,13 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 const Cu = Components.utils;
 
-let {Services, atob, btoa, File, TextDecoder, TextEncoder} = Cu.import("resource://gre/modules/Services.jsm", null);
+let {Services} = Cu.import("resource://gre/modules/Services.jsm", {});
+
+Cu.importGlobalProperties(["atob", "btoa", "File", "URL",
+    "TextDecoder", "TextEncoder"]);
 
 {%- if hasXMLHttpRequest %}
-let XMLHttpRequest = Components.Constructor("@mozilla.org/xmlextras/xmlhttprequest;1", "nsIXMLHttpRequest");
+Cu.importGlobalProperties(["XMLHttpRequest"]);
 {%- endif %}
 
 let addonData = null;
@@ -142,19 +145,12 @@ function require(module)
     {%- endif %}
       let url = addonData.resourceURI.spec + "lib/" + module + ".js";
       scopes[module] = {
-        Cc: Cc,
-        Ci: Ci,
-        Cr: Cr,
-        Cu: Cu,
-        atob: atob,
-        btoa: btoa,
-        File: File,
-        require: require,
+        Cc, Ci, Cr, Cu, atob, btoa, File, URL, require,
         {% if hasShutdownHandlers %}
-        onShutdown: onShutdown,
+        onShutdown,
         {% endif %}
         {%- if hasXMLHttpRequest %}
-        XMLHttpRequest: XMLHttpRequest,
+        XMLHttpRequest,
         {% endif %}
         exports: {}};
       {%- if multicompartment %}
