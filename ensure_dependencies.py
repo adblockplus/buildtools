@@ -238,7 +238,7 @@ def get_repo_type(repo):
   for name, repotype in repo_types.iteritems():
     if repotype.istype(repo):
       return name
-  return None
+  return "hg"
 
 def ensure_repo(parentrepo, parenttype, target, type, root, sourcename):
   if os.path.exists(target):
