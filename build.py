@@ -4,110 +4,128 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os, sys, re, subprocess, shutil, buildtools
+import os
+import sys
+import re
+import subprocess
+import shutil
+import buildtools
 from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
 knownTypes = ('gecko', 'chrome', 'safari', 'generic')
 
+
 class Command(object):
-  name = property(lambda self: self._name)
-  shortDescription = property(lambda self: self._shortDescription,
-      lambda self, value: self.__dict__.update({'_shortDescription': value}))
-  description = property(lambda self: self._description,
-      lambda self, value: self.__dict__.update({'_description': value}))
-  params = property(lambda self: self._params,
-      lambda self, value: self.__dict__.update({'_params': value}))
-  supportedTypes = property(lambda self: self._supportedTypes,
-      lambda self, value: self.__dict__.update({'_supportedTypes': value}))
-  options = property(lambda self: self._options)
-
-  def __init__(self, handler, name):
-    self._handler = handler
-    self._name = name
-    self._shortDescription = ''
-    self._description = ''
-    self._params = ''
-    self._supportedTypes = None
-    self._options = []
-    self.addOption('Show this message and exit', short='h', long='help')
-
-  def __enter__(self):
-    return self
-
-  def __exit__(self, exc_type, exc_value, traceback):
-    pass
-
-  def __call__(self, baseDir, scriptName, opts, args, type):
-    return self._handler(baseDir, scriptName, opts, args, type)
-
-  def isSupported(self, type):
-    return self._supportedTypes == None or type in self._supportedTypes
-
-  def addOption(self, description, short=None, long=None, value=None, types=None):
-    self._options.append((description, short, long, value, types))
-
-  def parseArgs(self, type, args):
-    shortOptions = map(
-      lambda o: o[1]+':' if o[3] != None else o[1],
-      filter(
-        lambda o: o[1] != None and (o[4] == None or type in o[4]),
-        self._options
-      )
+    name = property(lambda self: self._name)
+    shortDescription = property(
+        lambda self: self._shortDescription,
+        lambda self, value: self.__dict__.update({'_shortDescription': value})
     )
-    longOptions = map(
-      lambda o: o[2]+'=' if o[3] != None else o[2],
-      filter(
-        lambda o: o[2] != None and (o[4] == None or type in o[4]),
-        self._options
-      )
+    description = property(
+        lambda self: self._description,
+        lambda self, value: self.__dict__.update({'_description': value})
     )
-    return getopt(args, ''.join(shortOptions), longOptions)
+    params = property(
+        lambda self: self._params,
+        lambda self, value: self.__dict__.update({'_params': value})
+    )
+    supportedTypes = property(
+        lambda self: self._supportedTypes,
+        lambda self, value: self.__dict__.update({'_supportedTypes': value})
+    )
+    options = property(lambda self: self._options)
+
+    def __init__(self, handler, name):
+        self._handler = handler
+        self._name = name
+        self._shortDescription = ''
+        self._description = ''
+        self._params = ''
+        self._supportedTypes = None
+        self._options = []
+        self.addOption('Show this message and exit', short='h', long='help')
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __call__(self, baseDir, scriptName, opts, args, type):
+        return self._handler(baseDir, scriptName, opts, args, type)
+
+    def isSupported(self, type):
+        return self._supportedTypes == None or type in self._supportedTypes
+
+    def addOption(self, description, short=None, long=None, value=None, types=None):
+        self._options.append((description, short, long, value, types))
+
+    def parseArgs(self, type, args):
+        shortOptions = map(
+            lambda o: o[1] + ':' if o[3] != None else o[1],
+            filter(
+                lambda o: o[1] != None and (o[4] == None or type in o[4]),
+                self._options
+            )
+        )
+        longOptions = map(
+            lambda o: o[2] + '=' if o[3] != None else o[2],
+            filter(
+                lambda o: o[2] != None and (o[4] == None or type in o[4]),
+                self._options
+            )
+        )
+        return getopt(args, ''.join(shortOptions), longOptions)
 
 
 commandsList = []
 commands = {}
-def addCommand(handler, name):
-  if isinstance(name, basestring):
-    aliases = ()
-  else:
-    name, aliases = (name[0], name[1:])
 
-  global commandsList, commands
-  command = Command(handler, name)
-  commandsList.append(command)
-  commands[name] = command
-  for alias in aliases:
-    commands[alias] = command
-  return command
+
+def addCommand(handler, name):
+    if isinstance(name, basestring):
+        aliases = ()
+    else:
+        name, aliases = (name[0], name[1:])
+
+    global commandsList, commands
+    command = Command(handler, name)
+    commandsList.append(command)
+    commands[name] = command
+    for alias in aliases:
+        commands[alias] = command
+    return command
+
 
 def splitByLength(string, maxLen):
-  parts = []
-  currentPart = ''
-  for match in re.finditer(r'\s*(\S+)', string):
-    if len(match.group(0)) + len(currentPart) < maxLen:
-      currentPart += match.group(0)
-    else:
-      parts.append(currentPart)
-      currentPart = match.group(1)
-  if len(currentPart):
-    parts.append(currentPart)
-  return parts
+    parts = []
+    currentPart = ''
+    for match in re.finditer(r'\s*(\S+)', string):
+        if len(match.group(0)) + len(currentPart) < maxLen:
+            currentPart += match.group(0)
+        else:
+            parts.append(currentPart)
+            currentPart = match.group(1)
+    if len(currentPart):
+        parts.append(currentPart)
+    return parts
+
 
 def usage(scriptName, type, commandName=None):
-  if commandName == None:
-    global commandsList
-    descriptions = []
-    for command in commandsList:
-      if not command.isSupported(type):
-        continue
-      commandText = ('%s %s' % (command.name, command.params)).ljust(39)
-      descriptionParts = splitByLength(command.shortDescription, 29)
-      descriptions.append('  %s [-t %s] %s %s' % (scriptName, type, commandText, descriptionParts[0]))
-      for part in descriptionParts[1:]:
-        descriptions.append('  %s     %s  %s %s' % (' ' * len(scriptName), ' ' * len(type), ' ' * len(commandText), part))
-    print '''Usage:
+    if commandName == None:
+        global commandsList
+        descriptions = []
+        for command in commandsList:
+            if not command.isSupported(type):
+                continue
+            commandText = ('%s %s' % (command.name, command.params)).ljust(39)
+            descriptionParts = splitByLength(command.shortDescription, 29)
+            descriptions.append('  %s [-t %s] %s %s' % (scriptName, type, commandText, descriptionParts[0]))
+            for part in descriptionParts[1:]:
+                descriptions.append('  %s     %s  %s %s' % (' ' * len(scriptName), ' ' * len(type), ' ' * len(commandText), part))
+        print '''Usage:
 
 %(descriptions)s
 
@@ -115,485 +133,490 @@ For details on a command run:
 
   %(scriptName)s [-t %(type)s] <command> --help
 ''' % {
-    'scriptName': scriptName,
-    'type': type,
-    'descriptions': '\n'.join(descriptions)
-  }
-  else:
-    global commands
-    command = commands[commandName]
-    description = '\n'.join(map(lambda s: '\n'.join(splitByLength(s, 80)), command.description.split('\n')))
-    options = []
-    for descr, short, long, value, types in command.options:
-      if types != None and type not in types:
-        continue
-      if short == None:
-        shortText = ''
-      elif value == None:
-        shortText = '-%s' % short
-      else:
-        shortText = '-%s %s' % (short, value)
-      if long == None:
-        longText = ''
-      elif value == None:
-        longText = '--%s' % long
-      else:
-        longText = '--%s=%s' % (long, value)
-      descrParts = splitByLength(descr, 46)
-      options.append('  %s %s %s' % (shortText.ljust(11), longText.ljust(19), descrParts[0]))
-      for part in descrParts[1:]:
-        options.append('  %s %s %s' % (' ' * 11, ' ' * 19, part))
-    print '''%(scriptName)s [-t %(type)s] %(name)s %(params)s
+            'scriptName': scriptName,
+            'type': type,
+            'descriptions': '\n'.join(descriptions)
+        }
+    else:
+        global commands
+        command = commands[commandName]
+        description = '\n'.join(map(lambda s: '\n'.join(splitByLength(s, 80)), command.description.split('\n')))
+        options = []
+        for descr, short, long, value, types in command.options:
+            if types != None and type not in types:
+                continue
+            if short == None:
+                shortText = ''
+            elif value == None:
+                shortText = '-%s' % short
+            else:
+                shortText = '-%s %s' % (short, value)
+            if long == None:
+                longText = ''
+            elif value == None:
+                longText = '--%s' % long
+            else:
+                longText = '--%s=%s' % (long, value)
+            descrParts = splitByLength(descr, 46)
+            options.append('  %s %s %s' % (shortText.ljust(11), longText.ljust(19), descrParts[0]))
+            for part in descrParts[1:]:
+                options.append('  %s %s %s' % (' ' * 11, ' ' * 19, part))
+        print '''%(scriptName)s [-t %(type)s] %(name)s %(params)s
 
 %(description)s
 
 Options:
 %(options)s
 ''' % {
-      'scriptName': scriptName,
-      'type': type,
-      'name': command.name,
-      'params': command.params,
-      'description': description,
-      'options': '\n'.join(options)
-    }
+            'scriptName': scriptName,
+            'type': type,
+            'name': command.name,
+            'params': command.params,
+            'description': description,
+            'options': '\n'.join(options)
+        }
 
 
 def runBuild(baseDir, scriptName, opts, args, type):
-  locales = None
-  buildNum = None
-  multicompartment = False
-  releaseBuild = False
-  keyFile = None
-  for option, value in opts:
-    if option in ('-l', '--locales'):
-      locales = value.split(',')
-    elif option in ('-b', '--build'):
-      buildNum = int(value)
-    elif option in ('-k', '--key'):
-      keyFile = value
-    elif option in ('-m', '--multi-compartment'):
-      multicompartment = True
-    elif option in ('-r', '--release'):
-      releaseBuild = True
-  outFile = args[0] if len(args) > 0 else None
+    locales = None
+    buildNum = None
+    multicompartment = False
+    releaseBuild = False
+    keyFile = None
+    for option, value in opts:
+        if option in ('-l', '--locales'):
+            locales = value.split(',')
+        elif option in ('-b', '--build'):
+            buildNum = int(value)
+        elif option in ('-k', '--key'):
+            keyFile = value
+        elif option in ('-m', '--multi-compartment'):
+            multicompartment = True
+        elif option in ('-r', '--release'):
+            releaseBuild = True
+    outFile = args[0] if len(args) > 0 else None
 
-  if type == 'gecko':
-    import buildtools.packagerGecko as packager
-    packager.createBuild(baseDir, type=type, outFile=outFile, locales=locales, buildNum=buildNum,
-                         releaseBuild=releaseBuild, keyFile=keyFile,
-                         multicompartment=multicompartment)
-  elif type == 'chrome':
-    import buildtools.packagerChrome as packager
-    packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
-                         releaseBuild=releaseBuild, keyFile=keyFile)
-  elif type == 'safari':
-    import buildtools.packagerSafari as packager
-    packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
-                         releaseBuild=releaseBuild, keyFile=keyFile)
+    if type == 'gecko':
+        import buildtools.packagerGecko as packager
+        packager.createBuild(baseDir, type=type, outFile=outFile, locales=locales, buildNum=buildNum,
+                             releaseBuild=releaseBuild, keyFile=keyFile,
+                             multicompartment=multicompartment)
+    elif type == 'chrome':
+        import buildtools.packagerChrome as packager
+        packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
+                             releaseBuild=releaseBuild, keyFile=keyFile)
+    elif type == 'safari':
+        import buildtools.packagerSafari as packager
+        packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
+                             releaseBuild=releaseBuild, keyFile=keyFile)
 
 
 def runAutoInstall(baseDir, scriptName, opts, args, type):
-  if len(args) == 0:
-    print 'Port of the Extension Auto-Installer needs to be specified'
-    usage(scriptName, type, 'autoinstall')
-    return
+    if len(args) == 0:
+        print 'Port of the Extension Auto-Installer needs to be specified'
+        usage(scriptName, type, 'autoinstall')
+        return
 
-  multicompartment = False
-  for option, value in opts:
-    if option in ('-m', '--multi-compartment'):
-      multicompartment = True
+    multicompartment = False
+    for option, value in opts:
+        if option in ('-m', '--multi-compartment'):
+            multicompartment = True
 
-  if ':' in args[0]:
-    host, port = args[0].rsplit(':', 1)
-  else:
-    host, port = ('localhost', args[0])
+    if ':' in args[0]:
+        host, port = args[0].rsplit(':', 1)
+    else:
+        host, port = ('localhost', args[0])
 
-  import buildtools.packagerGecko as packager
-  packager.autoInstall(baseDir, type, host, port, multicompartment=multicompartment)
+    import buildtools.packagerGecko as packager
+    packager.autoInstall(baseDir, type, host, port, multicompartment=multicompartment)
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
-  if type == 'safari':
-    import buildtools.packagerSafari as packager
-  else:
-    import buildtools.packagerChrome as packager
+    if type == 'safari':
+        import buildtools.packagerSafari as packager
+    else:
+        import buildtools.packagerChrome as packager
 
-  file = StringIO()
-  packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
+    file = StringIO()
+    packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
 
-  from buildtools.packager import getDevEnvPath
-  devenv_dir = getDevEnvPath(baseDir, type)
+    from buildtools.packager import getDevEnvPath
+    devenv_dir = getDevEnvPath(baseDir, type)
 
-  shutil.rmtree(devenv_dir, ignore_errors=True)
+    shutil.rmtree(devenv_dir, ignore_errors=True)
 
-  file.seek(0)
-  with ZipFile(file, 'r') as zip_file:
-    zip_file.extractall(devenv_dir)
+    file.seek(0)
+    with ZipFile(file, 'r') as zip_file:
+        zip_file.extractall(devenv_dir)
 
 
 def readLocaleConfig(baseDir, type, metadata):
-  if type == 'gecko':
-    import buildtools.packagerGecko as packager
-    localeDir = packager.getLocalesDir(baseDir)
-    localeConfig = {
-      'name_format': 'BCP-47',
-      'file_format': 'gecko-dtd',
-      'target_platforms': {'gecko'},
-      'default_locale': packager.defaultLocale
-    }
-  elif type == 'chrome':
-    import buildtools.packagerChrome as packager
-    localeDir = os.path.join(baseDir, '_locales')
-    localeConfig = {
-      'name_format': 'ISO-15897',
-      'file_format': 'chrome-json',
-      'target_platforms': {'chrome'},
-      'default_locale': packager.defaultLocale,
-    }
-  else:
-    localeDir = os.path.join(baseDir,
-                             *metadata.get('locales', 'base_path').split('/'))
-    localeConfig = {
-      'name_format': metadata.get('locales', 'name_format'),
-      'file_format': metadata.get('locales', 'file_format'),
-      'target_platforms': set(metadata.get('locales',
-                                           'target_platforms').split()),
-      'default_locale': metadata.get('locales', 'default_locale')
-    }
+    if type == 'gecko':
+        import buildtools.packagerGecko as packager
+        localeDir = packager.getLocalesDir(baseDir)
+        localeConfig = {
+            'name_format': 'BCP-47',
+            'file_format': 'gecko-dtd',
+            'target_platforms': {'gecko'},
+            'default_locale': packager.defaultLocale
+        }
+    elif type == 'chrome':
+        import buildtools.packagerChrome as packager
+        localeDir = os.path.join(baseDir, '_locales')
+        localeConfig = {
+            'name_format': 'ISO-15897',
+            'file_format': 'chrome-json',
+            'target_platforms': {'chrome'},
+            'default_locale': packager.defaultLocale,
+        }
+    else:
+        localeDir = os.path.join(
+            baseDir, *metadata.get('locales', 'base_path').split('/')
+        )
+        localeConfig = {
+            'name_format': metadata.get('locales', 'name_format'),
+            'file_format': metadata.get('locales', 'file_format'),
+            'target_platforms': set(metadata.get('locales',
+                                                 'target_platforms').split()),
+            'default_locale': metadata.get('locales', 'default_locale')
+        }
 
-  localeConfig['base_path'] = localeDir
+    localeConfig['base_path'] = localeDir
 
-  locales = [(locale, os.path.join(localeDir, locale))
-             for locale in os.listdir(localeDir)]
-  if localeConfig['name_format'] == 'ISO-15897':
-    locales = [(locale.replace('_', '-'), localePath)
-               for locale, localePath in locales]
-  localeConfig['locales'] = dict(locales)
+    locales = [(locale, os.path.join(localeDir, locale))
+               for locale in os.listdir(localeDir)]
+    if localeConfig['name_format'] == 'ISO-15897':
+        locales = [(locale.replace('_', '-'), localePath)
+                   for locale, localePath in locales]
+    localeConfig['locales'] = dict(locales)
 
-  return localeConfig
+    return localeConfig
+
 
 def setupTranslations(baseDir, scriptName, opts, args, type):
-  if len(args) < 1:
-    print 'Project key is required to update translation master files.'
-    usage(scriptName, type, 'setuptrans')
-    return
+    if len(args) < 1:
+        print 'Project key is required to update translation master files.'
+        usage(scriptName, type, 'setuptrans')
+        return
 
-  key = args[0]
+    key = args[0]
 
-  from buildtools.packager import readMetadata
-  metadata = readMetadata(baseDir, type)
+    from buildtools.packager import readMetadata
+    metadata = readMetadata(baseDir, type)
 
-  basename = metadata.get('general', 'basename')
-  localeConfig = readLocaleConfig(baseDir, type, metadata)
+    basename = metadata.get('general', 'basename')
+    localeConfig = readLocaleConfig(baseDir, type, metadata)
 
-  import buildtools.localeTools as localeTools
-  localeTools.setupTranslations(localeConfig, basename, key)
+    import buildtools.localeTools as localeTools
+    localeTools.setupTranslations(localeConfig, basename, key)
 
 
 def updateTranslationMaster(baseDir, scriptName, opts, args, type):
-  if len(args) < 1:
-    print 'Project key is required to update translation master files.'
-    usage(scriptName, type, 'translate')
-    return
+    if len(args) < 1:
+        print 'Project key is required to update translation master files.'
+        usage(scriptName, type, 'translate')
+        return
 
-  key = args[0]
+    key = args[0]
 
-  from buildtools.packager import readMetadata
-  metadata = readMetadata(baseDir, type)
+    from buildtools.packager import readMetadata
+    metadata = readMetadata(baseDir, type)
 
-  basename = metadata.get('general', 'basename')
-  localeConfig = readLocaleConfig(baseDir, type, metadata)
+    basename = metadata.get('general', 'basename')
+    localeConfig = readLocaleConfig(baseDir, type, metadata)
 
-  defaultLocaleDir = os.path.join(localeConfig['base_path'],
-                                  localeConfig['default_locale'])
+    defaultLocaleDir = os.path.join(localeConfig['base_path'],
+                                    localeConfig['default_locale'])
 
-  import buildtools.localeTools as localeTools
-  localeTools.updateTranslationMaster(localeConfig, metadata, defaultLocaleDir,
-                                      basename, key)
+    import buildtools.localeTools as localeTools
+    localeTools.updateTranslationMaster(localeConfig, metadata, defaultLocaleDir,
+                                        basename, key)
 
 
 def uploadTranslations(baseDir, scriptName, opts, args, type):
-  if len(args) < 1:
-    print 'Project key is required to upload existing translations.'
-    usage(scriptName, type, 'uploadtrans')
-    return
+    if len(args) < 1:
+        print 'Project key is required to upload existing translations.'
+        usage(scriptName, type, 'uploadtrans')
+        return
 
-  key = args[0]
+    key = args[0]
 
-  from buildtools.packager import readMetadata
-  metadata = readMetadata(baseDir, type)
+    from buildtools.packager import readMetadata
+    metadata = readMetadata(baseDir, type)
 
-  basename = metadata.get('general', 'basename')
-  localeConfig = readLocaleConfig(baseDir, type, metadata)
+    basename = metadata.get('general', 'basename')
+    localeConfig = readLocaleConfig(baseDir, type, metadata)
 
-  import buildtools.localeTools as localeTools
-  for locale, localeDir in localeConfig['locales'].iteritems():
-    if locale != localeConfig['default_locale']:
-      localeTools.uploadTranslations(localeConfig, metadata, localeDir, locale,
-                                     basename, key)
+    import buildtools.localeTools as localeTools
+    for locale, localeDir in localeConfig['locales'].iteritems():
+        if locale != localeConfig['default_locale']:
+            localeTools.uploadTranslations(localeConfig, metadata, localeDir, locale,
+                                           basename, key)
 
 
 def getTranslations(baseDir, scriptName, opts, args, type):
-  if len(args) < 1:
-    print 'Project key is required to update translation master files.'
-    usage(scriptName, type, 'translate')
-    return
+    if len(args) < 1:
+        print 'Project key is required to update translation master files.'
+        usage(scriptName, type, 'translate')
+        return
 
-  key = args[0]
+    key = args[0]
 
-  from buildtools.packager import readMetadata
-  metadata = readMetadata(baseDir, type)
+    from buildtools.packager import readMetadata
+    metadata = readMetadata(baseDir, type)
 
-  basename = metadata.get('general', 'basename')
-  localeConfig = readLocaleConfig(baseDir, type, metadata)
+    basename = metadata.get('general', 'basename')
+    localeConfig = readLocaleConfig(baseDir, type, metadata)
 
-  import buildtools.localeTools as localeTools
-  localeTools.getTranslations(localeConfig, basename, key)
+    import buildtools.localeTools as localeTools
+    localeTools.getTranslations(localeConfig, basename, key)
 
 
 def showDescriptions(baseDir, scriptName, opts, args, type):
-  locales = None
-  for option, value in opts:
-    if option in ('-l', '--locales'):
-      locales = value.split(',')
+    locales = None
+    for option, value in opts:
+        if option in ('-l', '--locales'):
+            locales = value.split(',')
 
-  import buildtools.packagerGecko as packager
-  if locales == None:
-    locales = packager.getLocales(baseDir)
-  elif locales == 'all':
-    locales = packager.getLocales(baseDir, True)
+    import buildtools.packagerGecko as packager
+    if locales == None:
+        locales = packager.getLocales(baseDir)
+    elif locales == 'all':
+        locales = packager.getLocales(baseDir, True)
 
-  data = packager.readLocaleMetadata(baseDir, locales)
-  localeCodes = data.keys()
-  localeCodes.sort()
-  for localeCode in localeCodes:
-    locale = data[localeCode]
-    print ('''%s
+    data = packager.readLocaleMetadata(baseDir, locales)
+    localeCodes = data.keys()
+    localeCodes.sort()
+    for localeCode in localeCodes:
+        locale = data[localeCode]
+        print ('''%s
 %s
 %s
 %s
 %s
 ''' % (localeCode,
-       locale['name'] if 'name' in locale else 'None',
-       locale['description'] if 'description' in locale else 'None',
-       locale['description.short'] if 'description.short' in locale else 'None',
-       locale['description.long'] if 'description.long' in locale else 'None',
-      )).encode('utf-8')
+            locale['name'] if 'name' in locale else 'None',
+            locale['description'] if 'description' in locale else 'None',
+            locale['description.short'] if 'description.short' in locale else 'None',
+            locale['description.long'] if 'description.long' in locale else 'None',
+       )).encode('utf-8')
 
 
 def generateDocs(baseDir, scriptName, opts, args, type):
-  if len(args) == 0:
-    print 'No target directory specified for the documentation'
-    usage(scriptName, type, 'docs')
-    return
-  targetDir = args[0]
+    if len(args) == 0:
+        print 'No target directory specified for the documentation'
+        usage(scriptName, type, 'docs')
+        return
+    targetDir = args[0]
 
-  source_dir = os.path.join(baseDir, 'lib')
-  sources = [source_dir]
+    source_dir = os.path.join(baseDir, 'lib')
+    sources = [source_dir]
 
-  # JSDoc struggles wih huge objects: https://github.com/jsdoc3/jsdoc/issues/976
-  if type == 'chrome':
-    sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
+    # JSDoc struggles wih huge objects: https://github.com/jsdoc3/jsdoc/issues/976
+    if type == 'chrome':
+        sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
 
+    config = os.path.join(os.path.dirname(__file__), 'jsdoc.conf')
+    command = ['jsdoc', '--destination', targetDir, '--configure', config] + sources
+    if any(opt in ('-q', '--quiet') for opt, _ in opts):
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stderr = process.communicate()[1]
+        retcode = process.poll()
+        if retcode:
+            sys.stderr.write(stderr)
+            raise subprocess.CalledProcessError(command, retcode)
+    else:
+        subprocess.check_call(command)
 
-  config = os.path.join(os.path.dirname(__file__), 'jsdoc.conf')
-  command = ['jsdoc', '--destination', targetDir, '--configure', config] + sources
-  if any(opt in ('-q', '--quiet') for opt, _ in opts):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stderr = process.communicate()[1]
-    retcode = process.poll()
-    if retcode:
-      sys.stderr.write(stderr)
-      raise subprocess.CalledProcessError(command, retcode)
-  else:
-    subprocess.check_call(command)
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
-  keyFiles = []
-  downloadsRepo = os.path.join(baseDir, '..', 'downloads')
-  for option, value in opts:
-    if option in ('-k', '--key'):
-      keyFiles.append(value)
-    elif option in ('-d', '--downloads'):
-      downloadsRepo = value
+    keyFiles = []
+    downloadsRepo = os.path.join(baseDir, '..', 'downloads')
+    for option, value in opts:
+        if option in ('-k', '--key'):
+            keyFiles.append(value)
+        elif option in ('-d', '--downloads'):
+            downloadsRepo = value
 
-  if len(args) == 0:
-    print 'No version number specified for the release'
-    usage(scriptName, type, 'release')
-    return
-  version = args[0]
-  if re.search(r'[^\d\.]', version):
-    print 'Wrong version number format'
-    usage(scriptName, type, 'release')
-    return
+    if len(args) == 0:
+        print 'No version number specified for the release'
+        usage(scriptName, type, 'release')
+        return
+    version = args[0]
+    if re.search(r'[^\d\.]', version):
+        print 'Wrong version number format'
+        usage(scriptName, type, 'release')
+        return
 
-  if type == "gecko" and len(keyFiles) == 0:
-    print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
-  elif type == "gecko" and len(keyFiles) > 1:
-    print >>sys.stderr, "Error: too many key files, only one required"
-    usage(scriptName, type, 'release')
-    return
-  elif type == "chrome" and len(keyFiles) != 2:
-    print >>sys.stderr, "Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release"
-    usage(scriptName, type, 'release')
-    return
+    if type == "gecko" and len(keyFiles) == 0:
+        print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
+    elif type == "gecko" and len(keyFiles) > 1:
+        print >>sys.stderr, "Error: too many key files, only one required"
+        usage(scriptName, type, 'release')
+        return
+    elif type == "chrome" and len(keyFiles) != 2:
+        print >>sys.stderr, "Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release"
+        usage(scriptName, type, 'release')
+        return
 
-  import buildtools.releaseAutomation as releaseAutomation
-  releaseAutomation.run(baseDir, type, version, keyFiles, downloadsRepo)
+    import buildtools.releaseAutomation as releaseAutomation
+    releaseAutomation.run(baseDir, type, version, keyFiles, downloadsRepo)
+
 
 def updatePSL(baseDir, scriptName, opts, args, type):
-  import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
-  publicSuffixListUpdater.updatePSL(baseDir)
+    import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
+    publicSuffixListUpdater.updatePSL(baseDir)
 
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
-  command.shortDescription = 'Show this message'
+    command.shortDescription = 'Show this message'
 
 with addCommand(runBuild, 'build') as command:
-  command.shortDescription = 'Create a build'
-  command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
-  command.params = '[options] [output_file]'
-  command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
-  command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-  command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'safari'))
-  command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
-  command.addOption('Create a release build', short='r', long='release')
-  command.supportedTypes = ('gecko', 'chrome', 'safari')
+    command.shortDescription = 'Create a build'
+    command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
+    command.params = '[options] [output_file]'
+    command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
+    command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
+    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'safari'))
+    command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
+    command.addOption('Create a release build', short='r', long='release')
+    command.supportedTypes = ('gecko', 'chrome', 'safari')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
-  command.shortDescription = 'Install extension automatically'
-  command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
-  command.params = '[<host>:]<port>'
-  command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
-  command.supportedTypes = ('gecko')
+    command.shortDescription = 'Install extension automatically'
+    command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
+    command.params = '[<host>:]<port>'
+    command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
+    command.supportedTypes = ('gecko')
 
 with addCommand(createDevEnv, 'devenv') as command:
-  command.shortDescription = 'Set up a development environment'
-  command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-  command.supportedTypes = ('chrome', 'safari')
+    command.shortDescription = 'Set up a development environment'
+    command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
+    command.supportedTypes = ('chrome', 'safari')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
-  command.shortDescription = 'Sets up translation languages'
-  command.description = 'Sets up translation languages for the project on crowdin.net.'
-  command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'generic')
+    command.shortDescription = 'Sets up translation languages'
+    command.description = 'Sets up translation languages for the project on crowdin.net.'
+    command.params = '[options] project-key'
+    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
-  command.shortDescription = 'Updates translation master files'
-  command.description = 'Updates the translation master files in the project on crowdin.net.'
-  command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'generic')
+    command.shortDescription = 'Updates translation master files'
+    command.description = 'Updates the translation master files in the project on crowdin.net.'
+    command.params = '[options] project-key'
+    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(uploadTranslations, 'uploadtrans') as command:
-  command.shortDescription = 'Uploads existing translations'
-  command.description = 'Uploads already existing translations to the project on crowdin.net.'
-  command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'generic')
+    command.shortDescription = 'Uploads existing translations'
+    command.description = 'Uploads already existing translations to the project on crowdin.net.'
+    command.params = '[options] project-key'
+    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(getTranslations, 'gettranslations') as command:
-  command.shortDescription = 'Downloads translation updates'
-  command.description = 'Downloads updated translations from crowdin.net.'
-  command.params = '[options] project-key'
-  command.supportedTypes = ('gecko', 'chrome', 'generic')
+    command.shortDescription = 'Downloads translation updates'
+    command.description = 'Downloads updated translations from crowdin.net.'
+    command.params = '[options] project-key'
+    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(showDescriptions, 'showdesc') as command:
-  command.shortDescription = 'Print description strings for all locales'
-  command.description = 'Display description strings for all locales as specified in the corresponding meta.properties files.'
-  command.addOption('Only include the given locales', short='l', long='locales', value='l1,l2,l3')
-  command.params = '[options]'
-  command.supportedTypes = ('gecko')
+    command.shortDescription = 'Print description strings for all locales'
+    command.description = 'Display description strings for all locales as specified in the corresponding meta.properties files.'
+    command.addOption('Only include the given locales', short='l', long='locales', value='l1,l2,l3')
+    command.params = '[options]'
+    command.supportedTypes = ('gecko')
 
 with addCommand(generateDocs, 'docs') as command:
-  command.shortDescription = 'Generate documentation (requires node.js)'
-  command.description = 'Generate documentation files and write them into the specified directory. This operation requires JsDoc 3 to be installed.'
-  command.addOption('Suppress JsDoc output', short='q', long='quiet')
-  command.params = '[options] <directory>'
-  command.supportedTypes = ('gecko', 'chrome')
+    command.shortDescription = 'Generate documentation (requires node.js)'
+    command.description = 'Generate documentation files and write them into the specified directory. This operation requires JsDoc 3 to be installed.'
+    command.addOption('Suppress JsDoc output', short='q', long='quiet')
+    command.params = '[options] <directory>'
+    command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(runReleaseAutomation, 'release') as command:
-  command.shortDescription = 'Run release automation'
-  command.description = 'Note: If you are not the project owner then you '\
-    'probably don\'t want to run this!\n\n'\
-    'Runs release automation: creates downloads for the new version, tags '\
-    'source code repository as well as downloads and buildtools repository.'
-  command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
-  command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
-  command.params = '[options] <version>'
-  command.supportedTypes = ('gecko', 'chrome')
+    command.shortDescription = 'Run release automation'
+    command.description = 'Note: If you are not the project owner then you '\
+        'probably don\'t want to run this!\n\n'\
+        'Runs release automation: creates downloads for the new version, tags '\
+        'source code repository as well as downloads and buildtools repository.'
+    command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
+    command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
+    command.params = '[options] <version>'
+    command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(updatePSL, 'updatepsl') as command:
-  command.shortDescription = 'Updates Public Suffix List'
-  command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
-  command.supportedTypes = ('chrome',)
+    command.shortDescription = 'Updates Public Suffix List'
+    command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
+    command.supportedTypes = ('chrome',)
+
 
 def getType(baseDir, scriptName, args):
-  # Look for an explicit type parameter (has to be the first parameter)
-  if len(args) >= 2 and args[0] == '-t':
-    type = args[1]
-    del args[1]
-    del args[0]
-    if type not in knownTypes:
-      print '''
+    # Look for an explicit type parameter (has to be the first parameter)
+    if len(args) >= 2 and args[0] == '-t':
+        type = args[1]
+        del args[1]
+        del args[0]
+        if type not in knownTypes:
+            print '''
 Unknown type %s specified, supported types are: %s
 ''' % (type, ', '.join(knownTypes))
-      return None
-    return type
+            return None
+        return type
 
-  # Try to guess repository type
-  types = []
-  for t in knownTypes:
-    if os.path.exists(os.path.join(baseDir, 'metadata.%s' % t)):
-      types.append(t)
+    # Try to guess repository type
+    types = []
+    for t in knownTypes:
+        if os.path.exists(os.path.join(baseDir, 'metadata.%s' % t)):
+            types.append(t)
 
-  if len(types) == 1:
-    return types[0]
-  elif len(types) > 1:
-    print '''
+    if len(types) == 1:
+        return types[0]
+    elif len(types) > 1:
+        print '''
 Ambiguous repository type, please specify -t parameter explicitly, e.g.
 %s -t %s build
 ''' % (scriptName, types[0])
-    return None
-  else:
-    print '''
+        return None
+    else:
+        print '''
 No metadata file found in this repository, a metadata file like
 metadata.%s is required.
 ''' % knownTypes[0]
-    return None
+        return None
+
 
 def processArgs(baseDir, args):
-  global commands
+    global commands
 
-  scriptName = os.path.basename(args[0])
-  args = args[1:]
-  type = getType(baseDir, scriptName, args)
-  if type == None:
-    return
+    scriptName = os.path.basename(args[0])
+    args = args[1:]
+    type = getType(baseDir, scriptName, args)
+    if type == None:
+        return
 
-  if len(args) == 0:
-    args = ['build']
-    print '''
+    if len(args) == 0:
+        args = ['build']
+        print '''
 No command given, assuming "build". For a list of commands run:
 
   %s help
 ''' % scriptName
 
-  command = args[0]
-  if command in commands:
-    if commands[command].isSupported(type):
-      try:
-        opts, args = commands[command].parseArgs(type, args[1:])
-      except GetoptError, e:
-        print str(e)
-        usage(scriptName, type, command)
-        sys.exit(2)
-      for option, value in opts:
-        if option in ('-h', '--help'):
-          usage(scriptName, type, command)
-          sys.exit()
-      commands[command](baseDir, scriptName, opts, args, type)
+    command = args[0]
+    if command in commands:
+        if commands[command].isSupported(type):
+            try:
+                opts, args = commands[command].parseArgs(type, args[1:])
+            except GetoptError, e:
+                print str(e)
+                usage(scriptName, type, command)
+                sys.exit(2)
+            for option, value in opts:
+                if option in ('-h', '--help'):
+                    usage(scriptName, type, command)
+                    sys.exit()
+            commands[command](baseDir, scriptName, opts, args, type)
+        else:
+            print 'Command %s is not supported for this application type' % command
+            usage(scriptName, type)
     else:
-      print 'Command %s is not supported for this application type' % command
-      usage(scriptName, type)
-  else:
-    print 'Command %s is unrecognized' % command
-    usage(scriptName, type)
+        print 'Command %s is unrecognized' % command
+        usage(scriptName, type)
