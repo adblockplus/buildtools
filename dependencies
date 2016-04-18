@@ -1,2 +1,2 @@
 _root = hg:https://hg.adblockplus.org/ git:https://github.com/adblockplus/
-jshydra = jshydra hg:91d258341fa8 git:e985b0d
+jshydra = jshydra hg:2f88c16af976 git:104e620
