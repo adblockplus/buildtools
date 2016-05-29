@@ -124,7 +124,7 @@ class Files(dict):
             if os.path.exists(path):
                 self.read(path, target)
             else:
-                print >>sys.stderr, 'Warning: Mapped file %s doesn\'t exist' % source
+                print >>sys.stderr, "Warning: Mapped file %s doesn't exist" % source
 
     def preprocess(self, filenames, params={}):
         import jinja2

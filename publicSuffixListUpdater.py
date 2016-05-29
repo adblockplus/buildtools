@@ -37,7 +37,7 @@ def getPublicSuffixList():
 
     for line in resource:
         line = line.rstrip()
-        if line.startswith("//") or "." not in line:
+        if line.startswith('//') or '.' not in line:
             continue
         if line.startswith('*.'):
             suffixes[line[2:]] = 2

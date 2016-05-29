@@ -337,7 +337,7 @@ def signFiles(files, keyFile):
     files['META-INF/zigbert.rsa'] = buffer.read()
 
 
-def createBuild(baseDir, type="gecko", outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
+def createBuild(baseDir, type='gecko', outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
     if locales == None:
         locales = getLocales(baseDir)
     elif locales == 'all':

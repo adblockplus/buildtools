@@ -25,7 +25,7 @@ class DiffForUnknownOptionError(ConfigParser.Error):
 
 
 class ChainedConfigParser(ConfigParser.SafeConfigParser):
-    '''
+    """
       This class provides essentially the same interfaces as SafeConfigParser but
       allows chaining configuration files so that one config file provides the
       default values for the other. To specify the config file to inherit from
@@ -51,7 +51,7 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
       of the configuration file defining this option (for relative paths).
       Items returned by the items() function also have a source attribute
       serving the same purpose.
-    '''
+    """
 
     def __init__(self):
         ConfigParser.SafeConfigParser.__init__(self)

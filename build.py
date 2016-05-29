@@ -446,14 +446,14 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
         usage(scriptName, type, 'release')
         return
 
-    if type == "gecko" and len(keyFiles) == 0:
-        print >>sys.stderr, "Warning: no key file specified, creating an unsigned release build\n"
-    elif type == "gecko" and len(keyFiles) > 1:
-        print >>sys.stderr, "Error: too many key files, only one required"
+    if type == 'gecko' and len(keyFiles) == 0:
+        print >>sys.stderr, 'Warning: no key file specified, creating an unsigned release build\n'
+    elif type == 'gecko' and len(keyFiles) > 1:
+        print >>sys.stderr, 'Error: too many key files, only one required'
         usage(scriptName, type, 'release')
         return
-    elif type == "chrome" and len(keyFiles) != 2:
-        print >>sys.stderr, "Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release"
+    elif type == 'chrome' and len(keyFiles) != 2:
+        print >>sys.stderr, 'Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release'
         usage(scriptName, type, 'release')
         return
 
@@ -531,10 +531,7 @@ with addCommand(generateDocs, 'docs') as command:
 
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
-    command.description = 'Note: If you are not the project owner then you '\
-        'probably don\'t want to run this!\n\n'\
-        'Runs release automation: creates downloads for the new version, tags '\
-        'source code repository as well as downloads and buildtools repository.'
+    command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
     command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'

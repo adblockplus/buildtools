@@ -44,15 +44,15 @@ def create_sourcearchive(repo, output):
 
 
 def run(baseDir, type, version, keyFiles, downloadsRepo):
-    if type == "gecko":
+    if type == 'gecko':
         import buildtools.packagerGecko as packager
-    elif type == "chrome":
+    elif type == 'chrome':
         import buildtools.packagerChrome as packager
 
     # Replace version number in metadata file "manually", ConfigParser will mess
     # up the order of lines.
     metadata = packager.readMetadata(baseDir, type)
-    with open(metadata.option_source("general", "version"), 'r+b') as file:
+    with open(metadata.option_source('general', 'version'), 'r+b') as file:
         rawMetadata = file.read()
         rawMetadata = re.sub(
             r'^(\s*version\s*=\s*).*', r'\g<1>%s' % version,
@@ -65,11 +65,11 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
 
     # Read extension name from locale data
     import buildtools.packagerGecko as packagerGecko
-    if type == "gecko":
+    if type == 'gecko':
         locales_base = baseDir
     else:
         # This is somewhat of a hack but reading out locale import config here would be too much
-        locales_base = os.path.join(baseDir, "adblockplus")
+        locales_base = os.path.join(baseDir, 'adblockplus')
 
     locales = packagerGecko.readLocaleMetadata(locales_base, [packagerGecko.defaultLocale])
     extensionName = locales[packagerGecko.defaultLocale]['name']
@@ -80,13 +80,13 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
 
     # Create a release build
     downloads = []
-    if type == "gecko":
+    if type == 'gecko':
         keyFile = keyFiles[0] if keyFiles else None
         metadata = packager.readMetadata(baseDir, type)
         buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'xpi'))
         packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
         downloads.append(buildPath)
-    elif type == "chrome":
+    elif type == 'chrome':
         # We actually have to create three different builds: signed and unsigned
         # Chrome builds (the latter for Chrome Web Store), and a signed Safari build.
         metadata = packager.readMetadata(baseDir, type)
@@ -98,9 +98,9 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
         packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
 
         import buildtools.packagerSafari as packagerSafari
-        metadataSafari = packagerSafari.readMetadata(baseDir, "safari")
+        metadataSafari = packagerSafari.readMetadata(baseDir, 'safari')
         buildPathSafari = os.path.join(downloadsRepo, packagerSafari.getDefaultFileName(metadataSafari, version, 'safariextz'))
-        packagerSafari.createBuild(baseDir, type="safari", outFile=buildPathSafari, releaseBuild=True, keyFile=keyFiles[1])
+        packagerSafari.createBuild(baseDir, type='safari', outFile=buildPathSafari, releaseBuild=True, keyFile=keyFiles[1])
         downloads.append(buildPathSafari)
 
     # Create source archive

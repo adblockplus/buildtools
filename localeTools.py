@@ -37,59 +37,59 @@ langMappingChrome = {
 }
 
 chromeLocales = [
-    "am",
-    "ar",
-    "bg",
-    "bn",
-    "ca",
-    "cs",
-    "da",
-    "de",
-    "el",
-    "en-GB",
-    "en-US",
-    "es-419",
-    "es",
-    "et",
-    "fa",
-    "fi",
-    "fil",
-    "fr",
-    "gu",
-    "he",
-    "hi",
-    "hr",
-    "hu",
-    "id",
-    "it",
-    "ja",
-    "kn",
-    "ko",
-    "lt",
-    "lv",
-    "ml",
-    "mr",
-    "ms",
-    "nb",
-    "nl",
-    "pl",
-    "pt-BR",
-    "pt-PT",
-    "ro",
-    "ru",
-    "sk",
-    "sl",
-    "sr",
-    "sv",
-    "sw",
-    "ta",
-    "te",
-    "th",
-    "tr",
-    "uk",
-    "vi",
-    "zh-CN",
-    "zh-TW",
+    'am',
+    'ar',
+    'bg',
+    'bn',
+    'ca',
+    'cs',
+    'da',
+    'de',
+    'el',
+    'en-GB',
+    'en-US',
+    'es-419',
+    'es',
+    'et',
+    'fa',
+    'fi',
+    'fil',
+    'fr',
+    'gu',
+    'he',
+    'hi',
+    'hr',
+    'hu',
+    'id',
+    'it',
+    'ja',
+    'kn',
+    'ko',
+    'lt',
+    'lv',
+    'ml',
+    'mr',
+    'ms',
+    'nb',
+    'nl',
+    'pl',
+    'pt-BR',
+    'pt-PT',
+    'ro',
+    'ru',
+    'sk',
+    'sl',
+    'sr',
+    'sv',
+    'sw',
+    'ta',
+    'te',
+    'th',
+    'tr',
+    'uk',
+    'vi',
+    'zh-CN',
+    'zh-TW',
 ]
 
 
@@ -269,14 +269,14 @@ def preprocessChromeLocale(path, metadata, isMaster):
     for key, value in data.iteritems():
         if isMaster:
             # Make sure the key name is listed in the description
-            if "description" in value:
-                value["description"] = "%s: %s" % (key, value["description"])
+            if 'description' in value:
+                value['description'] = '%s: %s' % (key, value['description'])
             else:
-                value["description"] = key
+                value['description'] = key
         else:
             # Delete description from translations
-            if "description" in value:
-                del value["description"]
+            if 'description' in value:
+                del value['description']
 
     return json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2)
 
@@ -288,8 +288,8 @@ def postprocessChromeLocale(path, data):
 
     # Delete description from translations
     for key, value in parsed.iteritems():
-        if "description" in value:
-            del value["description"]
+        if 'description' in value:
+            del value['description']
 
     file = codecs.open(path, 'wb', encoding='utf-8')
     json.dump(parsed, file, ensure_ascii=False, sort_keys=True, indent=2, separators=(',', ': '))
@@ -322,7 +322,7 @@ def setupTranslations(localeConfig, projectName, key):
     for match in re.finditer(r'<tr>\s*<td\b[^<>]*>([\w\-]+)</td>', allowedLocales, re.S):
         allowed.add(match.group(1))
     if not allowed.issuperset(locales):
-        print 'Warning, following locales aren\'t allowed by server: ' + ', '.join(locales - allowed)
+        print "Warning, following locales aren't allowed by server: " + ', '.join(locales - allowed)
 
     locales = list(locales & allowed)
     locales.sort()

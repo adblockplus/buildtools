@@ -248,7 +248,7 @@ def importGeckoLocales(params, files):
                         if match:
                             value = match.group(1)
                         else:
-                            index = value.find("&")
+                            index = value.find('&')
                             if index >= 0:
                                 value = value[0:index] + value[index + 1:]
                         data[key] = {'message': value}
@@ -261,7 +261,7 @@ def importGeckoLocales(params, files):
 def truncate(text, length_limit):
     if len(text) <= length_limit:
         return text
-    return text[:length_limit - 1].rstrip() + u"\u2026"
+    return text[:length_limit - 1].rstrip() + u'\u2026'
 
 
 def fixTranslationsForCWS(files):
@@ -277,7 +277,7 @@ def fixTranslationsForCWS(files):
     limits = {}
     manifest = json.loads(files['manifest.json'])
     for key, limit in (('name', 45), ('description', 132), ('short_name', 12)):
-        match = re.search(r'__MSG_(\S+)__', manifest.get(key, ""))
+        match = re.search(r'__MSG_(\S+)__', manifest.get(key, ''))
         if match:
             limits[match.group(1)] = limit
 
