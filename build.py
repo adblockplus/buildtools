@@ -185,7 +185,9 @@ def runBuild(baseDir, scriptName, opts, args, type):
         if option in ('-l', '--locales'):
             locales = value.split(',')
         elif option in ('-b', '--build'):
-            buildNum = int(value)
+            buildNum = value
+            if type != 'gecko' and not re.search(r'^\d+$', buildNum):
+                raise TypeError('Build number must be numerical')
         elif option in ('-k', '--key'):
             keyFile = value
         elif option in ('-m', '--multi-compartment'):
