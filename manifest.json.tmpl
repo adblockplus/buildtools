@@ -14,6 +14,7 @@
   "description": "__MSG_description__",
   "default_locale": "en_US",
   "version": {{version|json}},
+  "author": {{metadata.get('general', 'author')|json}},
 
   {%- if metadata.has_section('compat') and metadata.has_option('compat', 'chrome') %}
   "minimum_chrome_version": {{metadata.get('compat', 'chrome')|json}},
@@ -53,7 +54,8 @@
 
   {%- if backgroundScripts %}
   "background": {
-    "scripts": {{backgroundScripts|json}}
+    "scripts": {{backgroundScripts|json}},
+    "persistent": true
   },
   {%- endif %}
 
