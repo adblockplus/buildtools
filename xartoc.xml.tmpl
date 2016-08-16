@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  - This Source Code Form is subject to the terms of the Mozilla Public
+  - License, v. 2.0. If a copy of the MPL was not distributed with this
+  - file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  -->
+
+{% macro file(data) %}
+<file id="{{data.id}}">
+  <name>{{data.name}}</name>
+  <type>{{data.type}}</type>
+  <mode>{{data.mode}}</mode>
+  {% if data.type == 'directory' %}
+    {% for f in data.children %}
+    {{file(f)}}
+    {% endfor %}
+  {% else %}
+    <data>
+      <archived-checksum style="sha1">{{data.checksum_compressed}}</archived-checksum>
+      <extracted-checksum style="sha1">{{data.checksum_uncompressed}}</extracted-checksum>
+      <encoding style="application/x-gzip"/>
+      <size>{{data.size_uncompressed}}</size>
+      <offset>{{data.offset}}</offset>
+      <length>{{data.size_compressed}}</length>
+    </data>
+  {% endif %}
+</file>
+{% endmacro %}
+
+<xar>
+  <toc>
+    <signature-creation-time>{{timestamp_numerical}}</signature-creation-time>
+    <checksum style="sha1">
+      <offset>{{checksum.offset}}</offset>
+      <size>{{checksum.size}}</size>
+    </checksum>
+    <creation-time>{{timestamp_iso}}</creation-time>
+    <signature style="RSA">
+      <offset>{{signature.offset}}</offset>
+      <size>{{signature.size}}</size>
+      <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <X509Data>
+          {% for certificate in certificates %}
+          <X509Certificate>{{certificate}}</X509Certificate>
+          {% endfor %}
+        </X509Data>
+      </KeyInfo>
+    </signature>
+    {% for f in files %}
+    {{file(f)}}
+    {% endfor %}
+  </toc>
+</xar>

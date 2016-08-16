@@ -110,26 +110,6 @@ def fixAbsoluteUrls(files):
             )
 
 
-def get_certificates_and_key(keyfile):
-    from Crypto.PublicKey import RSA
-
-    with open(keyfile, 'r') as file:
-        data = file.read()
-
-    certificates = []
-    key = None
-    for match in re.finditer(r'-+BEGIN (.*?)-+(.*?)-+END \1-+', data, re.S):
-        section = match.group(1)
-        if section == 'CERTIFICATE':
-            certificates.append(base64.b64decode(match.group(2)))
-        elif section == 'PRIVATE KEY':
-            key = RSA.importKey(match.group(0))
-    if not key:
-        raise Exception('Could not find private key in file')
-
-    return certificates, key
-
-
 def _get_sequence(data):
     from Crypto.Util import asn1
     sequence = asn1.DerSequence()
@@ -140,7 +120,7 @@ def _get_sequence(data):
 def get_developer_identifier(certs):
     for cert in certs:
         # See https://tools.ietf.org/html/rfc5280#section-4
-        tbscertificate = _get_sequence(cert)[0]
+        tbscertificate = _get_sequence(base64.b64decode(cert))[0]
         subject = _get_sequence(tbscertificate)[5]
 
         # We could decode the subject but since we have to apply a regular
@@ -150,92 +130,6 @@ def get_developer_identifier(certs):
             return m.group(1)
 
     raise Exception('No Safari developer certificate found in chain')
-
-
-def sign_digest(key, digest):
-    from Crypto.Hash import SHA
-    from Crypto.Signature import PKCS1_v1_5
-
-    # xar already calculated the SHA1 digest so we have to fake hashing here.
-    class FakeHash(SHA.SHA1Hash):
-        def digest(self):
-            return digest
-
-    return PKCS1_v1_5.new(key).sign(FakeHash())
-
-
-def createSignedXarArchive(outFile, files, certs, key):
-    import subprocess
-    import tempfile
-    import shutil
-
-    # write files to temporary directory and create a xar archive
-    dirname = tempfile.mkdtemp()
-    try:
-        for filename, contents in files.iteritems():
-            path = os.path.join(dirname, filename)
-
-            try:
-                os.makedirs(os.path.dirname(path))
-            except OSError:
-                pass
-
-            with open(path, 'wb') as file:
-                file.write(contents)
-
-        subprocess.check_output(
-            ['xar', '-czf', os.path.abspath(outFile), '--distribution'] + os.listdir(dirname),
-            cwd=dirname
-        )
-    finally:
-        shutil.rmtree(dirname)
-
-    certificate_filenames = []
-    try:
-        # write each certificate in DER format to a separate
-        # temporary file, that they can be passed to xar
-        for cert in certs:
-            fd, filename = tempfile.mkstemp()
-            try:
-                certificate_filenames.append(filename)
-                os.write(fd, cert)
-            finally:
-                os.close(fd)
-
-        # add certificates and placeholder signature
-        # to the xar archive, and get data to sign
-        fd, digest_filename = tempfile.mkstemp()
-        os.close(fd)
-        try:
-            subprocess.check_call(
-                [
-                    'xar', '--sign', '-f', outFile,
-                    '--data-to-sign', digest_filename,
-                    '--sig-size', str(len(sign_digest(key, '')))
-                ] + [
-                    arg for cert in certificate_filenames for arg in ('--cert-loc', cert)
-                ]
-            )
-
-            with open(digest_filename, 'rb') as file:
-                digest = file.read()
-        finally:
-            os.unlink(digest_filename)
-    finally:
-        for filename in certificate_filenames:
-            os.unlink(filename)
-
-    # sign data and inject signature into xar archive
-    fd, signature_filename = tempfile.mkstemp()
-    try:
-        try:
-            os.write(fd, sign_digest(key, digest))
-        finally:
-            os.close(fd)
-
-        subprocess.check_call(['xar', '--inject-sig', signature_filename, '-f', outFile])
-    finally:
-        os.unlink(signature_filename)
 
 
 def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, keyFile=None, devenv=False):
@@ -277,7 +171,8 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
                                                      ('general', 'testScripts'))
 
     if keyFile:
-        certs, key = get_certificates_and_key(keyFile)
+        from buildtools import xarfile
+        certs, key = xarfile.read_certificates_and_key(keyFile)
         params['developerIdentifier'] = get_developer_identifier(certs)
 
     files['lib/info.js'] = createInfoModule(params)
@@ -292,6 +187,7 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
         files[os.path.join(dirname, filename)] = files.pop(filename)
 
     if not devenv and keyFile:
-        createSignedXarArchive(outFile, files, certs, key)
+        from buildtools import xarfile
+        xarfile.create(outFile, files, keyFile)
     else:
         files.zip(outFile)
