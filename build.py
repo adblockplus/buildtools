@@ -198,8 +198,9 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
     if type == 'gecko':
         import buildtools.packagerGecko as packager
-        packager.createBuild(baseDir, type=type, outFile=outFile, locales=locales, buildNum=buildNum,
-                             releaseBuild=releaseBuild, keyFile=keyFile,
+        packager.createBuild(baseDir, type=type, outFile=outFile,
+                             locales=locales, buildNum=buildNum,
+                             releaseBuild=releaseBuild,
                              multicompartment=multicompartment)
     elif type == 'chrome':
         import buildtools.packagerChrome as packager
@@ -448,13 +449,7 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
         usage(scriptName, type, 'release')
         return
 
-    if type == 'gecko' and len(keyFiles) == 0:
-        print >>sys.stderr, 'Warning: no key file specified, creating an unsigned release build\n'
-    elif type == 'gecko' and len(keyFiles) > 1:
-        print >>sys.stderr, 'Error: too many key files, only one required'
-        usage(scriptName, type, 'release')
-        return
-    elif type == 'chrome' and len(keyFiles) != 2:
+    if type == 'chrome' and len(keyFiles) != 2:
         print >>sys.stderr, 'Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release'
         usage(scriptName, type, 'release')
         return
@@ -476,7 +471,7 @@ with addCommand(runBuild, 'build') as command:
     command.params = '[options] [output_file]'
     command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
     command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('gecko', 'chrome', 'safari'))
+    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome', 'safari'))
     command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
     command.addOption('Create a release build', short='r', long='release')
     command.supportedTypes = ('gecko', 'chrome', 'safari')
@@ -534,7 +529,7 @@ with addCommand(generateDocs, 'docs') as command:
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
     command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
-    command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('gecko', 'chrome'))
+    command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('chrome',))
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'
     command.supportedTypes = ('gecko', 'chrome')

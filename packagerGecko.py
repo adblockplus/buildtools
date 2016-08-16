@@ -287,57 +287,7 @@ def addMissingFiles(params, files):
     files['bootstrap.js'] = template.render(templateData).encode('utf-8')
 
 
-def signFiles(files, keyFile):
-    import M2Crypto
-    manifest = []
-    signature = []
-
-    def getDigest(data):
-        md5 = hashlib.md5()
-        md5.update(data)
-        sha1 = hashlib.sha1()
-        sha1.update(data)
-        return 'Digest-Algorithms: MD5 SHA1\nMD5-Digest: %s\nSHA1-Digest: %s\n' % (base64.b64encode(md5.digest()), base64.b64encode(sha1.digest()))
-
-    def addSection(manifestData, signaturePrefix):
-        manifest.append(manifestData)
-        signatureData = ''
-        if signaturePrefix:
-            signatureData += signaturePrefix
-        signatureData += getDigest(manifestData)
-        signature.append(signatureData)
-
-    addSection('Manifest-Version: 1.0\n', 'Signature-Version: 1.0\n')
-    fileNames = files.keys()
-    fileNames.sort()
-    for fileName in fileNames:
-        addSection('Name: %s\n%s' % (fileName, getDigest(files[fileName])), 'Name: %s\n' % fileName)
-    files['META-INF/manifest.mf'] = '\n'.join(manifest)
-    files['META-INF/zigbert.sf'] = '\n'.join(signature)
-
-    keyHandle = open(keyFile, 'rb')
-    keyData = keyHandle.read()
-    keyHandle.close()
-    stack = M2Crypto.X509.X509_Stack()
-    first = True
-    for match in re.finditer(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', keyData, re.S):
-        if first:
-            # Skip first certificate
-            first = False
-        else:
-            stack.push(M2Crypto.X509.load_cert_string(match.group(0)))
-
-    mime = M2Crypto.SMIME.SMIME()
-    mime.load_key(keyFile)
-    mime.set_x509_stack(stack)
-    signature = mime.sign(M2Crypto.BIO.MemoryBuffer(files['META-INF/zigbert.sf'].encode('utf-8')), M2Crypto.SMIME.PKCS7_DETACHED | M2Crypto.SMIME.PKCS7_BINARY)
-
-    buffer = M2Crypto.BIO.MemoryBuffer()
-    signature.write_der(buffer)
-    files['META-INF/zigbert.rsa'] = buffer.read()
-
-
-def createBuild(baseDir, type='gecko', outFile=None, locales=None, buildNum=None, releaseBuild=False, keyFile=None, multicompartment=False):
+def createBuild(baseDir, type='gecko', outFile=None, locales=None, buildNum=None, releaseBuild=False, multicompartment=False):
     if locales == None:
         locales = getLocales(baseDir)
     elif locales == 'all':
@@ -379,8 +329,6 @@ def createBuild(baseDir, type='gecko', outFile=None, locales=None, buildNum=None
         addMissingFiles(params, files)
     if metadata.has_section('preprocess'):
         files.preprocess([f for f, _ in metadata.items('preprocess')])
-    if keyFile:
-        signFiles(files, keyFile)
     files.zip(outFile, sortKey=lambda x: '!' if x == 'META-INF/zigbert.rsa' else x)
 
 
