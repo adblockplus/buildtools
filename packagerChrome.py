@@ -2,13 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import sys
+import errno
+import io
+import json
 import os
 import re
-import json
-import struct
-import io
 from StringIO import StringIO
+import struct
+import sys
 
 import packager
 from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuildVersion, getTemplate, Files
@@ -295,18 +296,27 @@ def fixTranslationsForCWS(files):
 
 
 def signBinary(zipdata, keyFile):
-    import M2Crypto
-    if not os.path.exists(keyFile):
-        M2Crypto.RSA.gen_key(1024, 65537, callback=lambda x: None).save_key(keyFile, cipher=None)
-    key = M2Crypto.EVP.load_key(keyFile)
-    key.sign_init()
-    key.sign_update(zipdata)
-    return key.final()
+    from Crypto.Hash import SHA
+    from Crypto.PublicKey import RSA
+    from Crypto.Signature import PKCS1_v1_5
+
+    try:
+        with open(keyFile, 'rb') as file:
+            key = RSA.importKey(file.read())
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        key = RSA.generate(2048)
+        with open(keyFile, 'wb') as file:
+            file.write(key.exportKey('PEM'))
+
+    return PKCS1_v1_5.new(key).sign(SHA.new(zipdata))
 
 
 def getPublicKey(keyFile):
-    import M2Crypto
-    return M2Crypto.EVP.load_key(keyFile).as_der()
+    from Crypto.PublicKey import RSA
+    with open(keyFile, 'rb') as file:
+        return RSA.importKey(file.read()).publickey().exportKey('DER')
 
 
 def writePackage(outputFile, pubkey, signature, zipdata):

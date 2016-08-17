@@ -2,10 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import base64
+import ConfigParser
+import json
 import os
 import re
-import json
-import ConfigParser
 from urlparse import urlparse
 
 from packager import readMetadata, getDefaultFileName, getBuildVersion, getTemplate, Files
@@ -110,41 +111,63 @@ def fixAbsoluteUrls(files):
 
 
 def get_certificates_and_key(keyfile):
-    import M2Crypto
+    from Crypto.PublicKey import RSA
 
-    certs = []
-    bio = M2Crypto.BIO.openfile(keyfile)
+    with open(keyfile, 'r') as file:
+        data = file.read()
 
-    try:
-        key = M2Crypto.RSA.load_key_bio(bio)
-        bio.reset()
-        while True:
-            try:
-                certs.append(M2Crypto.X509.load_cert_bio(bio))
-            except M2Crypto.X509.X509Error:
-                break
-    finally:
-        bio.close()
+    certificates = []
+    key = None
+    for match in re.finditer(r'-+BEGIN (.*?)-+(.*?)-+END \1-+', data, re.S):
+        section = match.group(1)
+        if section == 'CERTIFICATE':
+            certificates.append(base64.b64decode(match.group(2)))
+        elif section == 'PRIVATE KEY':
+            key = RSA.importKey(match.group(0))
+    if not key:
+        raise Exception('Could not find private key in file')
 
-    return certs, key
+    return certificates, key
+
+
+def _get_sequence(data):
+    from Crypto.Util import asn1
+    sequence = asn1.DerSequence()
+    sequence.decode(data)
+    return sequence
 
 
 def get_developer_identifier(certs):
     for cert in certs:
-        subject = cert.get_subject()
-        for entry in subject.get_entries_by_nid(subject.nid['CN']):
-            m = re.match(r'Safari Developer: \((.*?)\)', entry.get_data().as_text())
-            if m:
-                return m.group(1)
+        # See https://tools.ietf.org/html/rfc5280#section-4
+        tbscertificate = _get_sequence(cert)[0]
+        subject = _get_sequence(tbscertificate)[5]
+
+        # We could decode the subject but since we have to apply a regular
+        # expression on CN entry anyway we can just skip that.
+        m = re.search(r'Safari Developer: \((\S*?)\)', subject)
+        if m:
+            return m.group(1)
 
     raise Exception('No Safari developer certificate found in chain')
+
+
+def sign_digest(key, digest):
+    from Crypto.Hash import SHA
+    from Crypto.Signature import PKCS1_v1_5
+
+    # xar already calculated the SHA1 digest so we have to fake hashing here.
+    class FakeHash(SHA.SHA1Hash):
+        def digest(self):
+            return digest
+
+    return PKCS1_v1_5.new(key).sign(FakeHash())
 
 
 def createSignedXarArchive(outFile, files, certs, key):
     import subprocess
     import tempfile
     import shutil
-    import M2Crypto
 
     # write files to temporary directory and create a xar archive
     dirname = tempfile.mkdtemp()
@@ -175,29 +198,29 @@ def createSignedXarArchive(outFile, files, certs, key):
             fd, filename = tempfile.mkstemp()
             try:
                 certificate_filenames.append(filename)
-                os.write(fd, cert.as_der())
+                os.write(fd, cert)
             finally:
                 os.close(fd)
 
         # add certificates and placeholder signature
         # to the xar archive, and get data to sign
-        fd, digestinfo_filename = tempfile.mkstemp()
+        fd, digest_filename = tempfile.mkstemp()
         os.close(fd)
         try:
             subprocess.check_call(
                 [
                     'xar', '--sign', '-f', outFile,
-                    '--digestinfo-to-sign', digestinfo_filename,
-                    '--sig-size', str(len(key.private_encrypt('', M2Crypto.RSA.pkcs1_padding)))
+                    '--data-to-sign', digest_filename,
+                    '--sig-size', str(len(sign_digest(key, '')))
                 ] + [
                     arg for cert in certificate_filenames for arg in ('--cert-loc', cert)
                 ]
             )
 
-            with open(digestinfo_filename, 'rb') as file:
-                digestinfo = file.read()
+            with open(digest_filename, 'rb') as file:
+                digest = file.read()
         finally:
-            os.unlink(digestinfo_filename)
+            os.unlink(digest_filename)
     finally:
         for filename in certificate_filenames:
             os.unlink(filename)
@@ -206,10 +229,7 @@ def createSignedXarArchive(outFile, files, certs, key):
     fd, signature_filename = tempfile.mkstemp()
     try:
         try:
-            os.write(fd, key.private_encrypt(
-                digestinfo,
-                M2Crypto.RSA.pkcs1_padding
-            ))
+            os.write(fd, sign_digest(key, digest))
         finally:
             os.close(fd)
 
