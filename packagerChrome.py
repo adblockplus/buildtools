@@ -143,7 +143,7 @@ def createInfoModule(params):
 
 
 def convertJS(params, files):
-    from jshydra.abp_rewrite import doRewrite
+    from jshydra.abp_rewrite import rewrite_js
 
     for item in params['metadata'].items('convert_js'):
         file, sources = item
@@ -168,7 +168,7 @@ def convertJS(params, files):
                 del files[sourceFile]
 
         sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
-        files[file] = doRewrite(sourceFiles, args)
+        files[file] = rewrite_js(['--arg', ' '.join(args)] + sourceFiles)
 
 
 def toJson(data):
