@@ -10,6 +10,7 @@ import re
 from StringIO import StringIO
 import struct
 import sys
+import collections
 
 import packager
 from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuildVersion, getTemplate, Files
@@ -145,30 +146,28 @@ def createInfoModule(params):
 def convertJS(params, files):
     from jshydra.abp_rewrite import rewrite_js
 
-    for item in params['metadata'].items('convert_js'):
-        file, sources = item
-        baseDir = os.path.dirname(item.source)
+    output_files = collections.OrderedDict()
+    args = collections.defaultdict(list)
 
-        # Make sure the file is inside an included directory
-        if '/' in file and not files.isIncluded(file):
+    for item in params['metadata'].items('convert_js'):
+        filename, arg = re.search(r'^(.*?)(?:\[(.*)\])?$', item[0]).groups()
+        if arg is None:
+            output_files[filename] = (item[1].split(), item.source)
+        else:
+            args[filename].append('{}={}'.format(arg, item[1]))
+
+    for filename, (input_files, origin) in output_files.iteritems():
+        if '/' in filename and not files.isIncluded(filename):
             continue
 
-        sourceFiles = sources.split()
-        args = []
-        try:
-            argsStart = sourceFiles.index('--arg')
-            args = sourceFiles[argsStart + 1:]
-            sourceFiles = sourceFiles[0:argsStart]
-        except ValueError:
-            pass
+        base_dir = os.path.dirname(origin)
+        jshydra_args = ['--arg', ' '.join(args[filename])]
 
-        # Source files of the conversion shouldn't be part of the build
-        for sourceFile in sourceFiles:
-            if sourceFile in files:
-                del files[sourceFile]
+        for input_filename in input_files:
+            jshydra_args.append(os.path.join(base_dir, input_filename))
+            files.pop(input_filename, None)
 
-        sourceFiles = map(lambda f: os.path.abspath(os.path.join(baseDir, f)), sourceFiles)
-        files[file] = rewrite_js(['--arg', ' '.join(args)] + sourceFiles)
+        files[filename] = rewrite_js(jshydra_args)
 
 
 def toJson(data):
