@@ -597,7 +597,7 @@ No command given, assuming "build". For a list of commands run:
         if commands[command].isSupported(type):
             try:
                 opts, args = commands[command].parseArgs(type, args[1:])
-            except GetoptError, e:
+            except GetoptError as e:
                 print str(e)
                 usage(scriptName, type, command)
                 sys.exit(2)

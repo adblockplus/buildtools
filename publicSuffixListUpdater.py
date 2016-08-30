@@ -21,7 +21,7 @@ def urlopen(url, attempts=3):
     for i in range(attempts):
         try:
             return urllib.urlopen(url)
-        except IOError, e:
+        except IOError as e:
             error = e
             time.sleep(5)
     raise error

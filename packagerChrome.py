@@ -253,7 +253,7 @@ def importGeckoLocales(params, files):
                             if index >= 0:
                                 value = value[0:index] + value[index + 1:]
                         data[key] = {'message': value}
-            except Exception, e:
+            except Exception as e:
                 print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 
             files[targetFile] = toJson(data)
