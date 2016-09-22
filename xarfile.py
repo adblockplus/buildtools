@@ -9,6 +9,7 @@ import zlib
 
 from Crypto.Hash import SHA
 from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
 
 from buildtools.packager import getTemplate
 
@@ -45,8 +46,6 @@ def get_hexchecksum(data):
 
 
 def get_signature(key, data):
-    from Crypto.Signature import PKCS1_v1_5
-
     return PKCS1_v1_5.new(key).sign(SHA.new(data))
 
 
