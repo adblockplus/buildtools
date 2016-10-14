@@ -20,6 +20,10 @@
   "minimum_chrome_version": {{metadata.get('compat', 'chrome')|json}},
   {%- endif %}
 
+  {%- if metadata.has_section('compat') and metadata.has_option('compat', 'edge') %}
+  "minimum_edge_version": {{metadata.get('compat', 'edge')|json}},
+  {%- endif %}
+
   {%- if pageAction %}
   "page_action": {
     "default_icon": {{pageAction.icon|json}},

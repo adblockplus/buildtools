@@ -1,0 +1,59 @@
+[default]
+# Base metadata file whose sections and keys we inherit but can override.
+inherit = metadata.common
+
+# Icons to be placed into /Assets and referenced in AppxManifest.xml.
+[appx_assets]
+# 50x50 logo for the store.
+logo_50.png = path/to/logo_50.png
+
+# 44x44 and 150x150 logos for Windows UI.
+logo_44.png = path/to/logo_44.png
+logo_150.png = path/to/big_logo.png
+
+[compat]
+# Target Edge version (for manifest.json)
+edge = 37.14332.1000.0
+# Min/max windows version (for AppxManifest.xml)
+windows = 10.0.14332.0/12.0.0.0
+
+[general]
+# App identity and publisher ID assigned by the Windows Dev Center.
+app_id = ACME.MyExt
+publisher_id = CN=4F066043-8AFE-41C9-B762-6C15E77E3F88
+
+# Base name of the plugin file (version and extension will be added to this).
+basename = myext-edge
+
+# Background color for the Appx manifest.
+background_color = pink
+
+# Permissions of the extension to place into manifest.json
+# (see https://developer.chrome.com/extensions/declare_permissions).
+permissions =
+  tabs
+  bookmarks
+  http://*/*
+  https://*/*
+
+# UI definitions.
+options = options.html
+
+# Icon for the browser toolbar. Used to produce browser_action key in
+# manifest.json (see https://developer.chrome.com/extensions/browserAction).
+browserAction = icons/icon-19.png icons/icon-38.png popup.html
+
+# Icons for manifest.json.
+icons = icon-16.png icon-32.png icon-48.png icon-64.png icon-128.png
+
+# Files that are renamed/moved when placed into the package.
+[mapping]
+target/path/file.png = source/path/icon.png
+
+# Javascript source files to be compiled/bundled by JSHydra.
+[convert_js]
+# Two files bundled into one.
+path/bundle.js = source/path/src1.js src2.js
+
+# Remove a file from a bundle defined in common.metadata.
+path/common-bundle.js -= removed/src.js

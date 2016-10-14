@@ -12,7 +12,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'chrome', 'safari', 'generic')
+knownTypes = ('gecko', 'chrome', 'safari', 'generic', 'edge')
 
 
 class Command(object):
@@ -176,40 +176,33 @@ Options:
 
 
 def runBuild(baseDir, scriptName, opts, args, type):
-    locales = None
-    buildNum = None
-    multicompartment = False
-    releaseBuild = False
-    keyFile = None
+    kwargs = {}
     for option, value in opts:
-        if option in ('-l', '--locales'):
-            locales = value.split(',')
-        elif option in ('-b', '--build'):
-            buildNum = value
-            if type != 'gecko' and not re.search(r'^\d+$', buildNum):
+        if option in {'-l', '--locales'} and type == 'gecko':
+            kwargs['locales'] = value.split(',')
+        elif option in {'-b', '--build'}:
+            kwargs['buildNum'] = value
+            if type != 'gecko' and not kwargs['buildNum'].isdigit():
                 raise TypeError('Build number must be numerical')
-        elif option in ('-k', '--key'):
-            keyFile = value
-        elif option in ('-m', '--multi-compartment'):
-            multicompartment = True
-        elif option in ('-r', '--release'):
-            releaseBuild = True
-    outFile = args[0] if len(args) > 0 else None
+        elif option in {'-k', '--key'}:
+            kwargs['keyFile'] = value
+        elif option in {'-m', '--multi-compartment'} and type == 'gecko':
+            kwargs['multicompartment'] = True
+        elif option in {'-r', '--release'}:
+            kwargs['releaseBuild'] = True
+    if len(args) > 0:
+        kwargs['outFile'] = args[0]
 
     if type == 'gecko':
         import buildtools.packagerGecko as packager
-        packager.createBuild(baseDir, type=type, outFile=outFile,
-                             locales=locales, buildNum=buildNum,
-                             releaseBuild=releaseBuild,
-                             multicompartment=multicompartment)
     elif type == 'chrome':
         import buildtools.packagerChrome as packager
-        packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
-                             releaseBuild=releaseBuild, keyFile=keyFile)
     elif type == 'safari':
         import buildtools.packagerSafari as packager
-        packager.createBuild(baseDir, type=type, outFile=outFile, buildNum=buildNum,
-                             releaseBuild=releaseBuild, keyFile=keyFile)
+    elif type == 'edge':
+        import buildtools.packagerEdge as packager
+
+    packager.createBuild(baseDir, type=type, **kwargs)
 
 
 def runAutoInstall(baseDir, scriptName, opts, args, type):
@@ -474,7 +467,7 @@ with addCommand(runBuild, 'build') as command:
     command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome', 'safari'))
     command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko', 'chrome', 'safari')
+    command.supportedTypes = ('gecko', 'chrome', 'safari', 'edge')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
     command.shortDescription = 'Install extension automatically'

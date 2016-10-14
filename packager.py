@@ -8,7 +8,6 @@
 import sys
 import os
 import re
-import codecs
 import subprocess
 import json
 import zipfile
@@ -70,11 +69,12 @@ def getBuildVersion(baseDir, metadata, releaseBuild, buildNum=None):
 def getTemplate(template, autoEscape=False):
     import jinja2
 
-    templatePath = buildtools.__path__[0]
+    template_path = os.path.join(buildtools.__path__[0], 'templates')
+    loader = jinja2.FileSystemLoader(template_path)
     if autoEscape:
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath), autoescape=True)
+        env = jinja2.Environment(loader=loader, autoescape=True)
     else:
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(templatePath))
+        env = jinja2.Environment(loader=loader)
     env.filters.update({'json': json.dumps})
     return env.get_template(template)
 
@@ -134,13 +134,10 @@ class Files(dict):
             template = env.from_string(self[filename].decode('utf-8'))
             self[filename] = template.render(params).encode('utf-8')
 
-    def zip(self, outFile, sortKey=None):
-        zip = zipfile.ZipFile(outFile, 'w', zipfile.ZIP_DEFLATED)
-        names = self.keys()
-        names.sort(key=sortKey)
-        for name in names:
-            zip.writestr(name, self[name])
-        zip.close()
+    def zip(self, outFile, sortKey=None, compression=zipfile.ZIP_DEFLATED):
+        with zipfile.ZipFile(outFile, 'w', compression) as zf:
+            for name in sorted(self, key=sortKey):
+                zf.writestr(name, self[name])
 
     def zipToString(self, sortKey=None):
         buffer = StringIO()

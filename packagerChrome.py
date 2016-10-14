@@ -12,8 +12,8 @@ import struct
 import sys
 import collections
 
-import packager
-from packager import readMetadata, getMetadataPath, getDefaultFileName, getBuildVersion, getTemplate, Files
+from packager import (readMetadata, getDefaultFileName, getBuildVersion,
+                      getTemplate, Files)
 
 defaultLocale = 'en_US'
 
