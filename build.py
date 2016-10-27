@@ -424,11 +424,11 @@ def generateDocs(baseDir, scriptName, opts, args, type):
 
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
-    keyFiles = []
+    keyFile = None
     downloadsRepo = os.path.join(baseDir, '..', 'downloads')
     for option, value in opts:
         if option in ('-k', '--key'):
-            keyFiles.append(value)
+            keyFile = value
         elif option in ('-d', '--downloads'):
             downloadsRepo = value
 
@@ -442,13 +442,13 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
         usage(scriptName, type, 'release')
         return
 
-    if type == 'chrome' and len(keyFiles) != 2:
-        print >>sys.stderr, 'Error: wrong number of key files specified, two keys (Chrome and Safari) required for the release'
+    if type in {'chrome', 'safari'} and keyFile is None:
+        print >>sys.stderr, 'Error: you must specify a key file for this release'
         usage(scriptName, type, 'release')
         return
 
     import buildtools.releaseAutomation as releaseAutomation
-    releaseAutomation.run(baseDir, type, version, keyFiles, downloadsRepo)
+    releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
 
 
 def updatePSL(baseDir, scriptName, opts, args, type):
@@ -522,10 +522,10 @@ with addCommand(generateDocs, 'docs') as command:
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
     command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
-    command.addOption('File containing private key and certificates required to sign the release. Note that for Chrome releases this option needs to be specified twice: first a key to sign Chrome builds, then another to sign the Safari build.', short='k', long='key', value='file', types=('chrome',))
+    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types=('chrome', 'safari', 'edge'))
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'
-    command.supportedTypes = ('gecko', 'chrome')
+    command.supportedTypes = ('gecko', 'chrome', 'safari', 'edge')
 
 with addCommand(updatePSL, 'updatepsl') as command:
     command.shortDescription = 'Updates Public Suffix List'

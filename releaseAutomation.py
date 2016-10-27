@@ -9,6 +9,7 @@ import subprocess
 import tarfile
 import json
 
+from packager import readMetadata, getDefaultFileName
 
 def get_dependencies(prefix, repos):
     from ensure_dependencies import read_deps, safe_join
@@ -43,15 +44,19 @@ def create_sourcearchive(repo, output):
                 process.wait()
 
 
-def run(baseDir, type, version, keyFiles, downloadsRepo):
+def run(baseDir, type, version, keyFile, downloadsRepo):
     if type == 'gecko':
         import buildtools.packagerGecko as packager
+    elif type == 'safari':
+        import buildtools.packagerSafari as packager
+    elif type == 'edge':
+        import buildtools.packagerEdge as packager
     elif type == 'chrome':
         import buildtools.packagerChrome as packager
 
     # Replace version number in metadata file "manually", ConfigParser will mess
     # up the order of lines.
-    metadata = packager.readMetadata(baseDir, type)
+    metadata = readMetadata(baseDir, type)
     with open(metadata.option_source('general', 'version'), 'r+b') as file:
         rawMetadata = file.read()
         rawMetadata = re.sub(
@@ -76,32 +81,34 @@ def run(baseDir, type, version, keyFiles, downloadsRepo):
 
     # Now commit the change and tag it
     subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
-    subprocess.check_call(['hg', 'tag', '-R', baseDir, '-f', version])
+    tag_name = version
+    if type in {'safari', 'edge'}:
+        tag_name = '{}-{}'.format(tag_name, type)
+    subprocess.check_call(['hg', 'tag', '-R', baseDir, '-f', tag_name])
 
     # Create a release build
     downloads = []
     if type == 'gecko':
-        keyFile = keyFiles[0] if keyFiles else None
-        metadata = packager.readMetadata(baseDir, type)
-        buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'xpi'))
-        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
+        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'xpi'))
+        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True)
         downloads.append(buildPath)
     elif type == 'chrome':
-        # We actually have to create three different builds: signed and unsigned
-        # Chrome builds (the latter for Chrome Web Store), and a signed Safari build.
-        metadata = packager.readMetadata(baseDir, type)
-        buildPath = os.path.join(downloadsRepo, packager.getDefaultFileName(metadata, version, 'crx'))
-        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFiles[0])
+        # Create both signed and unsigned Chrome builds (the latter for Chrome Web Store).
+        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'crx'))
+        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
         downloads.append(buildPath)
 
-        buildPathUnsigned = os.path.join(baseDir, packager.getDefaultFileName(metadata, version, 'zip'))
+        buildPathUnsigned = os.path.join(baseDir, getDefaultFileName(metadata, version, 'zip'))
         packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
-
-        import buildtools.packagerSafari as packagerSafari
-        metadataSafari = packagerSafari.readMetadata(baseDir, 'safari')
-        buildPathSafari = os.path.join(downloadsRepo, packagerSafari.getDefaultFileName(metadataSafari, version, 'safariextz'))
-        packagerSafari.createBuild(baseDir, type='safari', outFile=buildPathSafari, releaseBuild=True, keyFile=keyFiles[1])
-        downloads.append(buildPathSafari)
+    elif type == 'safari':
+        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'safariextz'))
+        packager.createBuild(baseDir, type='safari', outFile=buildPath, releaseBuild=True, keyFile=keyFile)
+        downloads.append(buildPath)
+    elif type == 'edge':
+        # We only offer the Edge extension for use through the Windows Store
+        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'appx'))
+        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True)
+        downloads.append(buildPath)
 
     # Create source archive
     archivePath = os.path.splitext(buildPath)[0] + '-source.tgz'

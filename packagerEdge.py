@@ -93,7 +93,7 @@ def create_appx_manifest(params, files, release_build=False):
     for size in ['44', '50', '150']:
         path = '{}/logo_{}.png'.format(ASSETS_DIR, size)
         if path not in files:
-            raise KeyError(path + 'is not found in files')
+            raise KeyError(path + ' is not found in files')
         params['logo_' + size] = path.replace('/', '\\')
 
     template = _get_template_for(MANIFEST)
