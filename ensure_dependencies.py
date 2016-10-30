@@ -71,7 +71,8 @@ class Mercurial():
 
     def ignore(self, target, repo):
         config_path = os.path.join(repo, '.hg', 'hgrc')
-        ignore_path = os.path.join(repo, '.hg', 'dependencies')
+        ignore_file = os.path.join('.hg', 'dependencies')
+        ignore_path = os.path.join(repo, ignore_file)
 
         config = RawConfigParser()
         config.read(config_path)
@@ -79,7 +80,7 @@ class Mercurial():
         if not config.has_section('ui'):
             config.add_section('ui')
 
-        config.set('ui', 'ignore.dependencies', ignore_path)
+        config.set('ui', 'ignore.dependencies', ignore_file)
         with open(config_path, 'w') as stream:
             config.write(stream)
 
