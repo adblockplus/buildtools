@@ -10,11 +10,7 @@ const Cu = Components.utils;
 let {Services} = Cu.import("resource://gre/modules/Services.jsm", {});
 
 Cu.importGlobalProperties(["atob", "btoa", "File", "URL",
-    "TextDecoder", "TextEncoder"]);
-
-{%- if hasXMLHttpRequest %}
-Cu.importGlobalProperties(["XMLHttpRequest"]);
-{%- endif %}
+    "TextDecoder", "TextEncoder", "XMLHttpRequest"]);
 
 let addonData = null;
 
@@ -145,12 +141,10 @@ function require(module)
     {%- endif %}
       let url = addonData.resourceURI.spec + "lib/" + module + ".js";
       scopes[module] = {
-        Cc, Ci, Cr, Cu, atob, btoa, File, URL, require,
+        Cc, Ci, Cr, Cu, atob, btoa, File, URL, TextDecoder, TextEncoder,
+        XMLHttpRequest, require,
         {% if hasShutdownHandlers %}
         onShutdown,
-        {% endif %}
-        {%- if hasXMLHttpRequest %}
-        XMLHttpRequest,
         {% endif %}
         exports: {}};
       {%- if multicompartment %}

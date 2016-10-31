@@ -237,7 +237,6 @@ def addMissingFiles(params, files):
         'hasChrome': False,
         'hasChromeRequires': False,
         'hasShutdownHandlers': False,
-        'hasXMLHttpRequest': False,
         'chromeWindows': [],
         'requires': set(),
         'jsonRequires': params['jsonRequires'],
@@ -252,8 +251,6 @@ def addMissingFiles(params, files):
             templateData['requires'].add(match.group(1))
             if name.startswith('chrome/content/'):
                 templateData['hasChromeRequires'] = True
-        if name.startswith('lib/') and re.search(r'\bXMLHttpRequest\b', content):
-            templateData['hasXMLHttpRequest'] = True
         if not '/' in name or name.startswith('lib/'):
             if re.search(r'(?:^|\s)onShutdown\.', content):
                 templateData['hasShutdownHandlers'] = True
