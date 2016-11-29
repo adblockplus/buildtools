@@ -139,7 +139,10 @@ def createManifest(params, files):
 
 
 def createInfoModule(params):
-    template = getTemplate('chromeInfo.js.tmpl')
+    if params['type'] == 'gecko-webext':
+        template = getTemplate('geckoInfo.js.tmpl')
+    else:
+        template = getTemplate('chromeInfo.js.tmpl')
     return template.render(params).encode('utf-8')
 
 
@@ -349,7 +352,11 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
     if outFile == None:
-        outFile = getDefaultFileName(metadata, version, 'crx' if keyFile else 'zip')
+        if type == 'gecko-webext':
+            file_extension = 'xpi'
+        else:
+            file_extension = 'crx' if keyFile else 'zip'
+        outFile = getDefaultFileName(metadata, version, file_extension)
 
     params = {
         'type': type,

@@ -24,6 +24,20 @@
   "minimum_edge_version": {{metadata.get('compat', 'edge')|json}},
   {%- endif %}
 
+  {%- if type == 'gecko-webext' %}
+  "applications":
+  {
+    "gecko":
+    {
+      "id": {{metadata.get('general', 'id')|json}}
+      {%- if metadata.has_section('compat') and metadata.has_option('compat', 'gecko') %}
+      ,
+      "strict_min_version": {{metadata.get('compat', 'gecko')|json}}
+      {%- endif %}
+    }
+  },
+  {%- endif %}
+
   {%- if pageAction %}
   "page_action": {
     "default_icon": {{pageAction.icon|json}},
@@ -64,7 +78,14 @@
   {%- endif %}
 
   {%- if metadata.has_option('general', 'options') %}
+  {%- if type != 'edge' %}
+  "options_ui": {
+    "page": {{metadata.get('general', 'options')|json}},
+    "open_in_tab": true
+  },
+  {%- else %}
   "options_page": {{metadata.get('general', 'options')|json}},
+  {%- endif %}
   {%- endif %}
 
   {%- if metadata.has_option('general', 'devtools') %}

@@ -12,7 +12,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'chrome', 'safari', 'generic', 'edge')
+knownTypes = ('gecko', 'gecko-webext', 'chrome', 'safari', 'generic', 'edge')
 
 
 class Command(object):
@@ -195,7 +195,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
     if type == 'gecko':
         import buildtools.packagerGecko as packager
-    elif type == 'chrome':
+    elif type in {'chrome', 'gecko-webext'}:
         import buildtools.packagerChrome as packager
     elif type == 'safari':
         import buildtools.packagerSafari as packager
@@ -254,7 +254,7 @@ def readLocaleConfig(baseDir, type, metadata):
             'target_platforms': {'gecko'},
             'default_locale': packager.defaultLocale
         }
-    elif type == 'chrome':
+    elif type in {'chrome', 'gecko-webext'}:
         import buildtools.packagerChrome as packager
         localeDir = os.path.join(baseDir, '_locales')
         localeConfig = {
@@ -467,7 +467,7 @@ with addCommand(runBuild, 'build') as command:
     command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome', 'safari'))
     command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko', 'chrome', 'safari', 'edge')
+    command.supportedTypes = ('gecko', 'gecko-webext', 'chrome', 'safari', 'edge')
 
 with addCommand(runAutoInstall, 'autoinstall') as command:
     command.shortDescription = 'Install extension automatically'
@@ -479,7 +479,7 @@ with addCommand(runAutoInstall, 'autoinstall') as command:
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
     command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = ('chrome', 'safari')
+    command.supportedTypes = ('gecko-webext', 'chrome', 'safari')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'
