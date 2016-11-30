@@ -144,30 +144,44 @@ def createInfoModule(params):
 
 
 def convertJS(params, files):
-    from jshydra.abp_rewrite import rewrite_js
-
     output_files = collections.OrderedDict()
-    args = collections.defaultdict(list)
+    args = {}
 
     for item in params['metadata'].items('convert_js'):
-        filename, arg = re.search(r'^(.*?)(?:\[(.*)\])?$', item[0]).groups()
+        name, value = item
+        filename, arg = re.search(r'^(.*?)(?:\[(.*)\])?$', name).groups()
         if arg is None:
-            output_files[filename] = (item[1].split(), item.source)
+            output_files[filename] = (value.split(), item.source)
         else:
-            args[filename].append('{}={}'.format(arg, item[1]))
+            args.setdefault(filename, {})[arg] = value
+
+    template = getTemplate('modules.js.tmpl')
 
     for filename, (input_files, origin) in output_files.iteritems():
         if '/' in filename and not files.isIncluded(filename):
             continue
 
+        current_args = args.get(filename, {})
+        current_args['autoload'] = [module for module in
+                                    current_args.get('autoload', '').split(',')
+                                    if module != '']
+
         base_dir = os.path.dirname(origin)
-        jshydra_args = ['--arg', ' '.join(args[filename])]
+        modules = []
 
         for input_filename in input_files:
-            jshydra_args.append(os.path.join(base_dir, input_filename))
+            module_name = os.path.splitext(os.path.basename(input_filename))[0]
+            prefix = os.path.basename(os.path.dirname(input_filename))
+            if prefix != 'lib':
+                module_name = '{}_{}'.format(prefix, module_name)
+            with open(os.path.join(base_dir, input_filename), 'r') as file:
+                modules.append((module_name, file.read().decode('utf-8')))
             files.pop(input_filename, None)
 
-        files[filename] = rewrite_js(jshydra_args)
+        files[filename] = template.render(
+            args=current_args,
+            modules=modules
+        ).encode('utf-8')
 
 
 def toJson(data):

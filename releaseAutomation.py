@@ -11,6 +11,7 @@ import json
 
 from packager import readMetadata, getDefaultFileName
 
+
 def get_dependencies(prefix, repos):
     from ensure_dependencies import read_deps, safe_join
     repo = repos[prefix]
