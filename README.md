@@ -6,6 +6,9 @@ Tools used to produce builds and releases of the Adblock Plus browser
 extensions. Intended to be used as a dependency by the extension repositories,
 not directly.
 
+## Requirements
+
+- [The Jinja2 module](http://jinja.pocoo.org/docs) (>= 2.8)
 
 ## Usage
 
