@@ -119,7 +119,7 @@ def test_full_content_types_map():
         'html': 'text/html',
         'js': 'application/javascript',
         'json': 'application/json',
-        'otf': 'application/x-font-otf',
+        'otf': 'application/octet-stream',
         'png': 'image/png',
         'xml': 'application/xml'
     }

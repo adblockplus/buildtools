@@ -117,10 +117,12 @@ def create_content_types_map(filenames):
         BLOCKMAP: 'application/vnd.ms-appx.blockmap+xml',
         MANIFEST: 'application/vnd.ms-appx.manifest+xml'
     }
+    types = mimetypes.MimeTypes()
+    types.add_type('application/octet-stream', '.otf')
     for filename in filenames:
         ext = os.path.splitext(filename)[1]
         if ext:
-            content_type = mimetypes.guess_type(filename, strict=False)[0]
+            content_type = types.guess_type(filename, strict=False)[0]
             if content_type is not None:
                 params['defaults'][ext[1:]] = content_type
         if filename in overrides:
