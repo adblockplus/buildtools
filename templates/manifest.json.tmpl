@@ -30,9 +30,16 @@
     "gecko":
     {
       "id": {{metadata.get('general', 'id')|json}}
+
       {%- if metadata.has_section('compat') and metadata.has_option('compat', 'gecko') %}
       ,
       "strict_min_version": {{metadata.get('compat', 'gecko')|json}}
+      {%- endif %}
+
+      {%- set updateURLSetting = 'updateURL' if releaseBuild else 'devbuildUpdateURL' %}
+      {%- if metadata.has_option('general', updateURLSetting) %}
+      ,
+      "update_url": {{metadata.get('general', updateURLSetting)|json}}
       {%- endif %}
     }
   },
