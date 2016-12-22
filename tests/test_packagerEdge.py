@@ -167,6 +167,7 @@ def test_create_build(tmpdir, srcdir):
     assert 'AppxManifest.xml' in names
     assert 'AppxBlockMap.xml' in names
     assert '[Content_Types].xml' in names
+    assert 'Extension/lib/info.js' in names
 
     assert 'devbuild-marker' not in appx.read('AppxManifest.xml')
     assert appx.read('Assets/logo_44.png') == '44'
