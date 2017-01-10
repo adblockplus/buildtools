@@ -130,19 +130,96 @@ def test_full_content_types_map():
 
 
 def test_create_appx_manifest(metadata, files):
-    manifest = packagerEdge.create_appx_manifest(
-        {'metadata': metadata}, files, release_build=True,
-    )
-    with open(os.path.join(TEST_DIR, 'AppManifest.xml.expect')) as fp:
-        manifest_expect = fp.read()
-    assert manifest.strip() == manifest_expect.strip()
+    namespaces = {
+        'ns': 'http://schemas.microsoft.com/'
+              'appx/manifest/foundation/windows10',
+        'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',
+        'uap3': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/3',
+    }
 
+    def first(elem):
+        return elem[0]
 
-def test_create_devbuild_appx_manifest(metadata, files):
-    manifest = packagerEdge.create_appx_manifest(
-        {'metadata': metadata}, files, release_build=False,
-    )
-    assert 'devbuild-marker' in manifest
+    def text(elem):
+        return elem.text
+
+    def attr(attr):
+        def wrapper(elem):
+            return elem.attrib[attr]
+        return wrapper
+
+    base = [
+        ('.//*', [len], 21.0),
+        ('./ns:Identity', [first, attr('Name')], 'EyeoGmbH.AdblockPlus'),
+        ('./ns:Identity', [first, attr('Publisher')],
+            'CN=4F066043-8AFE-41C9-B762-6C15E77E3F88'),
+        ('./ns:Identity', [first, attr('Version')], '1.2.3.0'),
+        ('./ns:Properties/ns:PublisherDisplayName', [first, text],
+            'Eyeo GmbH'),
+        ('./ns:Properties/ns:Logo', [first, text], 'Assets\\logo_50.png'),
+        ('./ns:Dependencies/ns:TargetDeviceFamily',
+            [first, attr('MinVersion')],
+            '10.0.14332.0'),
+        ('./ns:Dependencies/ns:TargetDeviceFamily',
+            [first, attr('MaxVersionTested')],
+            '12.0.0.0'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('Square150x150Logo')],
+            'Assets\\logo_150.png'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('Square44x44Logo')],
+            'Assets\\logo_44.png'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('Description')],
+            'Adblock Plus is the most popular ad blocker ever, and also '
+            'supports websites by not blocking unobstrusive ads by '
+            'default (configurable).'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('BackgroundColor')],
+            'red'),
+    ]
+
+    devbuild = base + [
+        ('./ns:Properties/ns:DisplayName', [first, text], 'devbuild-marker'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('DisplayName')],
+            'devbuild-marker'),
+        ('./ns:Applications/ns:Application/ns:Extensions/uap3:Extension/'
+            'uap3:AppExtension',
+            [first, attr('Id')],
+            'EdgeExtension'),
+        ('./ns:Applications/ns:Application/ns:Extensions/uap3:Extension/'
+            'uap3:AppExtension',
+            [first, attr('DisplayName')],
+            'devbuild-marker'),
+    ]
+
+    release = base + [
+        ('./ns:Properties/ns:DisplayName', [first, text], 'Adblock Plus'),
+        ('./ns:Applications/ns:Application/uap:VisualElements',
+            [first, attr('DisplayName')],
+            'Adblock Plus'),
+        ('./ns:Applications/ns:Application/ns:Extensions/uap3:Extension/'
+            'uap3:AppExtension',
+            [first, attr('Id')],
+            '1.0'),
+        ('./ns:Applications/ns:Application/ns:Extensions/uap3:Extension/'
+            'uap3:AppExtension',
+            [first, attr('DisplayName')],
+            'Adblock Plus'),
+    ]
+
+    for release_build, pairs in [(False, devbuild), (True, release)]:
+        manifest = ET.fromstring(packagerEdge.create_appx_manifest(
+            {'metadata': metadata},
+            files,
+            release_build=release_build))
+        for expression, modifiers, value in pairs:
+            res = reduce(
+                lambda val, func: func(val),
+                modifiers,
+                manifest.findall(expression, namespaces=namespaces))
+            assert res == value
 
 
 def test_move_files_to_extension():
