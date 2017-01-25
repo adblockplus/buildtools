@@ -318,9 +318,11 @@ def setupTranslations(localeConfig, projectName, key):
                     locales.add(mapLocale('BCP-47', match2.group(1)))
 
     allowed = set()
-    allowedLocales = urllib2.urlopen('http://crowdin.net/page/language-codes').read()
-    for match in re.finditer(r'<tr>\s*<td\b[^<>]*>([\w\-]+)</td>', allowedLocales, re.S):
-        allowed.add(match.group(1))
+    allowedLocales = json.load(urllib2.urlopen(
+        'https://crowdin.com/languages/languages_list?callback='
+    ))
+    for locale in allowedLocales:
+        allowed.add(locale["code"])
     if not allowed.issuperset(locales):
         print "Warning, following locales aren't allowed by server: " + ', '.join(locales - allowed)
 
