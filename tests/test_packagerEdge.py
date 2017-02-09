@@ -150,7 +150,6 @@ def test_create_appx_manifest(metadata, files):
 
     base = [
         ('.//*', [len], 21.0),
-        ('./ns:Identity', [first, attr('Name')], 'EyeoGmbH.AdblockPlus'),
         ('./ns:Identity', [first, attr('Publisher')],
             'CN=4F066043-8AFE-41C9-B762-6C15E77E3F88'),
         ('./ns:Identity', [first, attr('Version')], '1.2.3.0'),
@@ -180,6 +179,8 @@ def test_create_appx_manifest(metadata, files):
     ]
 
     devbuild = base + [
+        ('./ns:Identity', [first, attr('Name')],
+            'EyeoGmbH.AdblockPlusdevelopmentbuild'),
         ('./ns:Properties/ns:DisplayName', [first, text], 'devbuild-marker'),
         ('./ns:Applications/ns:Application/uap:VisualElements',
             [first, attr('DisplayName')],
@@ -195,6 +196,7 @@ def test_create_appx_manifest(metadata, files):
     ]
 
     release = base + [
+        ('./ns:Identity', [first, attr('Name')], 'EyeoGmbH.AdblockPlus'),
         ('./ns:Properties/ns:DisplayName', [first, text], 'Adblock Plus'),
         ('./ns:Applications/ns:Application/uap:VisualElements',
             [first, attr('DisplayName')],

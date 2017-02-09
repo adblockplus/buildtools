@@ -85,12 +85,15 @@ def create_appx_manifest(params, files, release_build=False):
     params.update(metadata.items('general'))
     params['version'] = pad_version(params['version'])
 
-    metadata_id_suffix = 'release' if release_build else 'devbuild'
-    metadata_id = 'extension_id_' + metadata_id_suffix
-    if metadata.has_option('general', metadata_id):
-        params['app_extension_id'] = metadata.get('general', metadata_id)
+    metadata_suffix = 'release' if release_build else 'devbuild'
+    app_extension_id = 'extension_id_' +metadata_suffix
+    if metadata.has_option('general', app_extension_id):
+        params['app_extension_id'] = metadata.get('general', app_extension_id)
     else:
         params['app_extension_id'] = 'EdgeExtension'
+
+    app_id = 'app_id_' + metadata_suffix
+    params['app_id'] = metadata.get('general', app_id)
 
     translation = load_translation(files, defaultLocale)
     name_key = 'name' if release_build else 'name_devbuild'
