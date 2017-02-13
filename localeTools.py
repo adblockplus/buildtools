@@ -322,7 +322,7 @@ def setupTranslations(localeConfig, projectName, key):
         'https://crowdin.com/languages/languages_list?callback='
     ))
     for locale in allowedLocales:
-        allowed.add(locale["code"])
+        allowed.add(locale['code'])
     if not allowed.issuperset(locales):
         print "Warning, following locales aren't allowed by server: " + ', '.join(locales - allowed)
 

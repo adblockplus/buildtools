@@ -86,7 +86,7 @@ def create_appx_manifest(params, files, release_build=False):
     params['version'] = pad_version(params['version'])
 
     metadata_suffix = 'release' if release_build else 'devbuild'
-    app_extension_id = 'extension_id_' +metadata_suffix
+    app_extension_id = 'extension_id_' + metadata_suffix
     if metadata.has_option('general', app_extension_id):
         params['app_extension_id'] = metadata.get('general', app_extension_id)
     else:
