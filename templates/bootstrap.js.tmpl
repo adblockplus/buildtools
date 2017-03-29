@@ -27,6 +27,17 @@ function startup(params, reason)
   {%- set hasShutdownHandlers = True %}
   {%- endif %}
 
+  {%- if hasWebExtension %}
+  let port = params.webExtension.startup().then(({browser}) =>
+  {
+    return new Promise((resolve, reject) =>
+    {
+      browser.runtime.onConnect.addListener(resolve);
+    });
+  });
+  require.scopes.webextension = {exports:  port};
+  {%- endif %}
+
   require("main");
 }
 

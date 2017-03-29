@@ -29,6 +29,9 @@
     {%- if not metadata.has_option('general', 'needMultiprocessShims') %}
     <em:multiprocessCompatible>true</em:multiprocessCompatible>
     {%- endif %}
+    {%- if hasWebExtension %}
+    <em:hasEmbeddedWebExtension>true</em:hasEmbeddedWebExtension>
+    {%- endif %}
 
     {%- if metadata.has_option('general', 'updateURL') %}
     <em:updateURL>

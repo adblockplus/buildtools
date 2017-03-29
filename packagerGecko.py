@@ -55,7 +55,10 @@ def getChromeSubdirs(baseDir, locales):
 
 
 def getPackageFiles(params):
-    result = set(('chrome', 'components', 'modules', 'lib', 'resources', 'chrome.manifest', 'icon.png', 'icon64.png',))
+    result = {
+        'chrome', 'components', 'modules', 'lib', 'resources', 'webextension',
+        'chrome.manifest', 'icon.png', 'icon64.png'
+    }
 
     baseDir = params['baseDir']
     for file in os.listdir(baseDir):
@@ -241,6 +244,7 @@ def addMissingFiles(params, files):
         'requires': set(),
         'jsonRequires': params['jsonRequires'],
         'metadata': params['metadata'],
+        'hasWebExtension': params['hasWebExtension'],
         'multicompartment': params['multicompartment'],
         'applications': dict((v, k) for k, v in KNOWN_APPS.iteritems()),
     }
@@ -306,6 +310,7 @@ def createBuild(baseDir, type='gecko', outFile=None, locales=None, buildNum=None
         'metadata': metadata,
         'contributors': contributors,
         'multicompartment': multicompartment,
+        'hasWebExtension': os.path.isdir(os.path.join(baseDir, 'webextension')),
         'jsonRequires': {},
     }
 
