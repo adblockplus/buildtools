@@ -181,11 +181,6 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
 
     files['manifest.json'] = packagerChrome.createManifest(params, files)
 
-    if metadata.has_option('general', 'backgroundScripts'):
-        bg_scripts = metadata.get('general', 'backgroundScripts').split()
-        if 'lib/info.js' in bg_scripts and 'lib/info.js' not in files:
-            files['lib/info.js'] = packagerChrome.createInfoModule(params)
-
     move_files_to_extension(files)
 
     if metadata.has_section('appx_assets'):

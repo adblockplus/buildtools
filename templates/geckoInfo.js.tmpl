@@ -4,25 +4,21 @@
 
 "use strict";
 
-(function() {
-  let info = require.scopes.info = {
-    addonName: {{ metadata.get('general', 'basename')|json }},
-    addonVersion: {{ version|json }},
+exports.addonName = {{ basename|json }};
+exports.addonVersion = {{ version|json }};
 
-    application: "unknown",
-    applicationVersion: "0",
+exports.application = "unknown";
+exports.applicationVersion = "0";
 
-    platform: "gecko",
-    platformVersion: "0"
-  };
+exports.platform = "gecko";
+exports.platformVersion = "0";
 
-  let match = /\brv:(\d+(?:\.\d+)?)\b/.exec(navigator.userAgent);
-  if (match)
-    info.platformVersion = match[1];
+let match = /\brv:(\d+(?:\.\d+)?)\b/.exec(navigator.userAgent);
+if (match)
+  exports.platformVersion = match[1];
 
-  browser.runtime.getBrowserInfo().then(function(browserInfo)
-  {
-    info.application = browserInfo.name.toLowerCase();
-    info.applicationVersion = browserInfo.version;
-  });
-})();
+browser.runtime.getBrowserInfo().then(browserInfo =>
+{
+  exports.application = browserInfo.name.toLowerCase();
+  exports.applicationVersion = browserInfo.version;
+});

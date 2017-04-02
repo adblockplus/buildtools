@@ -138,14 +138,6 @@ def createManifest(params, files):
     return manifest.encode('utf-8')
 
 
-def createInfoModule(params):
-    if params['type'] == 'gecko-webext':
-        template = getTemplate('geckoInfo.js.tmpl')
-    else:
-        template = getTemplate('chromeInfo.js.tmpl')
-    return template.render(params).encode('utf-8')
-
-
 def convertJS(params, files):
     output_files = collections.OrderedDict()
     args = {}
@@ -183,7 +175,10 @@ def convertJS(params, files):
 
         files[filename] = template.render(
             args=current_args,
-            modules=modules
+            basename=params['metadata'].get('general', 'basename'),
+            modules=modules,
+            type=params['type'],
+            version=params['metadata'].get('general', 'version')
         ).encode('utf-8')
 
 
@@ -395,11 +390,6 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
         import random
         files.read(os.path.join(buildtools.__path__[0], 'chromeDevenvPoller__.js'), relpath='devenvPoller__.js')
         files['devenvVersion__'] = str(random.random())
-
-    if (metadata.has_option('general', 'backgroundScripts') and
-        'lib/info.js' in metadata.get('general', 'backgroundScripts').split() and
-        'lib/info.js' not in files):
-        files['lib/info.js'] = createInfoModule(params)
 
     if metadata.has_option('general', 'testScripts'):
         files['qunit/index.html'] = createScriptPage(params, 'testIndex.html.tmpl',
