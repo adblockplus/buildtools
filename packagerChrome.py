@@ -23,14 +23,15 @@ def getIgnoredFiles(params):
 
 
 def getPackageFiles(params):
-    result = set(('_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui', 'ext'))
+    result = {'_locales', 'icons', 'jquery-ui', 'lib', 'skin', 'ui', 'ext'}
 
     if params['devenv']:
         result.add('qunit')
 
     baseDir = params['baseDir']
+
     for file in os.listdir(baseDir):
-        if file.endswith('.js') or file.endswith('.html') or file.endswith('.xml'):
+        if os.path.splitext(file)[1] in {'.json', '.js', '.html', '.xml'}:
             result.add(file)
     return result
 
