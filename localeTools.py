@@ -213,9 +213,9 @@ def removeFromFile(path, key):
     fileHandle.close()
 
     if path.endswith('.dtd'):
-        data = re.sub(r'<!ENTITY\s+%s\s+"[^"]*">\s*' % key, '', data, re.S)
+        data = re.sub(r'<!ENTITY\s+%s\s+"[^"]*">\s*' % key, '', data)
     else:
-        data = re.sub(r'(^|\n)%s=[^\n]*\n' % key, r'\1', data, re.S)
+        data = re.sub(r'(^|\n)%s=[^\n]*\n' % key, r'\1', data)
 
     fileHandle = codecs.open(path, 'wb', encoding='utf-8')
     fileHandle.write(data)
