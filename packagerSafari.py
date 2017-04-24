@@ -100,16 +100,6 @@ def createInfoModule(params):
     return template.render(params).encode('utf-8')
 
 
-def fixAbsoluteUrls(files):
-    for filename, content in files.iteritems():
-        if os.path.splitext(filename)[1].lower() == '.html':
-            files[filename] = re.sub(
-                r'(<[^<>]*?\b(?:href|src)\s*=\s*["\']?)\/+',
-                r'\1' + '/'.join(['..'] * filename.count('/') + ['']),
-                content, re.S | re.I
-            )
-
-
 def _get_sequence(data):
     from Crypto.Util import asn1
     sequence = asn1.DerSequence()
@@ -179,8 +169,6 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
     files['background.html'] = createScriptPage(params, 'background.html.tmpl',
                                                 ('general', 'backgroundScripts'))
     files['Info.plist'] = createManifest(params, files)
-
-    fixAbsoluteUrls(files)
 
     dirname = metadata.get('general', 'basename') + '.safariextension'
     for filename in files.keys():
