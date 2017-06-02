@@ -19,8 +19,10 @@ require.modules["info"] = function(module, exports)
 {
 {% if type == "gecko-webext" %}
 {% include "geckoInfo.js.tmpl" %}
-{% elif type == "chrome" or type == "edge" %}
+{% elif type == "chrome" %}
 {% include "chromeInfo.js.tmpl" %}
+{% elif type == "edge" %}
+{% include "edgeInfo.js.tmpl" %}
 {% endif %}
 return module.exports;
 };
