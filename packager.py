@@ -91,19 +91,18 @@ class Files(dict):
         dict.__setitem__(self, key, value)
 
     def isIncluded(self, relpath):
+        return relpath.split('/')[0] in self.includedFiles
+
+    def is_ignored(self, relpath):
         parts = relpath.split('/')
-        if not parts[0] in self.includedFiles:
-            return False
-        for part in parts:
-            if part in self.ignoredFiles:
-                return False
-        return True
+        return any(part in self.ignoredFiles for part in parts)
 
     def read(self, path, relpath='', skip=()):
         if os.path.isdir(path):
             for file in os.listdir(path):
                 name = relpath + ('/' if relpath != '' else '') + file
-                if name not in skip and self.isIncluded(name):
+                included = self.isIncluded(name) and not self.is_ignored(name)
+                if name not in skip and included:
                     self.read(os.path.join(path, file), name, skip)
         else:
             with open(path, 'rb') as file:
@@ -115,9 +114,9 @@ class Files(dict):
         for item in mappings:
             target, source = item
 
-            # Make sure the file is inside an included directory
-            if '/' in target and not self.isIncluded(target):
+            if '/' in target and self.is_ignored(target):
                 continue
+
             parts = source.split('/')
             path = os.path.join(os.path.dirname(item.source), *parts)
             if os.path.exists(path):
