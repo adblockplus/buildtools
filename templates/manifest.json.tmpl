@@ -117,5 +117,9 @@
   },
   {%- endif %}
 
+  {%- if metadata.has_option('general', 'contentSecurityPolicy') %}
+  "content_security_policy": {{metadata.get('general', 'contentSecurityPolicy')|json}},
+  {%- endif %}
+
   "_dummy": false
 }
