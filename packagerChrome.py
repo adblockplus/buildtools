@@ -392,9 +392,10 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
         files.read(os.path.join(buildtools.__path__[0], 'chromeDevenvPoller__.js'), relpath='devenvPoller__.js')
         files['devenvVersion__'] = str(random.random())
 
-    if metadata.has_option('general', 'testScripts'):
-        files['qunit/index.html'] = createScriptPage(params, 'testIndex.html.tmpl',
-                                                     ('general', 'testScripts'))
+        if metadata.has_option('general', 'testScripts'):
+            files['qunit/index.html'] = createScriptPage(
+                params, 'testIndex.html.tmpl', ('general', 'testScripts')
+            )
 
     zipdata = files.zipToString()
     signature = None
