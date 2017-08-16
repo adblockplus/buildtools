@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import print_function
+
 import os
 import re
 import codecs
@@ -45,7 +47,76 @@ def create_sourcearchive(repo, output):
                 process.wait()
 
 
+def repo_has_uncommitted():
+    """Checks if the given repository is clean"""
+    buff = subprocess.check_output(['hg', 'status'])
+
+    if len(buff):
+        print('Dirty / uncommitted changes in repository!')
+        return True
+
+    return False
+
+
+def repo_has_outgoing():
+    """Checks whether there would be outgoing changesets to the given path"""
+    try:
+        subprocess.check_output(['hg', 'outgoing'])
+        print('Detected outgoing changesets!')
+        return True
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 1:
+            return False
+        raise
+
+
+def repo_has_incoming(*repo_paths):
+    """Checks whether the local repositories are up-to-date"""
+    incoming = False
+
+    for repo_path in repo_paths:
+        try:
+            subprocess.check_output(['hg', 'incoming', '-R', repo_path])
+            print('Detected incoming changesets in "{}"'.format(repo_path))
+            incoming = True
+        except subprocess.CalledProcessError as e:
+            if e.returncode != 1:
+                raise
+
+    return incoming
+
+
+def continue_with_outgoing():
+    """Asks the user if they want to continue despite facing warnings"""
+
+    print('If you proceed with the release, they will be included in the '
+          'release and pushed.')
+    print('Are you sure about continuing the release process?')
+
+    while True:
+        choice = raw_input('Please choose (yes / no): ').lower().strip()
+
+        if choice == 'yes':
+            return True
+        if choice == 'no':
+            return False
+
+
+def can_safely_release(*repo_paths):
+    """Run repository-checks in order to bail out early if necessary"""
+    if repo_has_uncommitted():
+        return False
+    if repo_has_incoming(*repo_paths):
+        return False
+    if repo_has_outgoing():
+        return continue_with_outgoing()
+
+
 def run(baseDir, type, version, keyFile, downloadsRepo):
+    if not can_safely_release(baseDir, downloadsRepo):
+        print('Aborting release.')
+        return 1
+
     if type == 'gecko':
         import buildtools.packagerGecko as packager
     elif type == 'safari':
