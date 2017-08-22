@@ -10,7 +10,7 @@ import re
 from urlparse import urlparse
 
 from packager import readMetadata, getDefaultFileName, getBuildVersion, getTemplate, Files
-from packagerChrome import convertJS, importGeckoLocales, getIgnoredFiles, getPackageFiles, defaultLocale, createScriptPage
+from packagerChrome import convertJS, import_locales, getIgnoredFiles, getPackageFiles, defaultLocale, createScriptPage
 
 
 def processFile(path, data, params):
@@ -154,7 +154,7 @@ def createBuild(baseDir, type, outFile=None, buildNum=None, releaseBuild=False, 
         )
 
     if metadata.has_section('import_locales'):
-        importGeckoLocales(params, files)
+        import_locales(params, files)
 
     if metadata.has_option('general', 'testScripts'):
         files['qunit/index.html'] = createScriptPage(params, 'testIndex.html.tmpl',

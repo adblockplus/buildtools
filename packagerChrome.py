@@ -190,7 +190,29 @@ def toJson(data):
     ).encode('utf-8') + '\n'
 
 
-def importGeckoLocales(params, files):
+def import_string_webext(data, key, source):
+    """Import a single translation from the source dictionary into data"""
+    data[key] = source
+
+
+def import_string_gecko(data, key, value):
+    """Import Gecko-style locales into data.
+
+    Only sets {'message': value} in the data-dictionary, after stripping
+    undesired Gecko-style access keys.
+    """
+    match = re.search(r'^(.*?)\s*\(&.\)$', value)
+    if match:
+        value = match.group(1)
+    else:
+        index = value.find('&')
+        if index >= 0:
+            value = value[0:index] + value[index + 1:]
+
+    data[key] = {'message': value}
+
+
+def import_locales(params, files):
     import localeTools
 
     # FIXME: localeTools doesn't use real Chrome locales, it uses dash as
@@ -227,11 +249,17 @@ def importGeckoLocales(params, files):
             data = json.loads(files[targetFile].decode('utf-8'))
 
             try:
+                # The WebExtensions (.json) and Gecko format provide
+                # translations differently and/or provide additional
+                # information like e.g. "placeholders". We want to adhere to
+                # that and preserve the addtional info.
                 if sourceFile.endswith('.json'):
                     with io.open(sourceFile, 'r', encoding='utf-8') as handle:
-                        sourceData = {k: v['message'] for k, v in json.load(handle).iteritems()}
+                        sourceData = json.load(handle)
+                    import_string = import_string_webext
                 else:
                     sourceData = localeTools.readFile(sourceFile)
+                    import_string = import_string_gecko
 
                 # Resolve wildcard imports
                 if keys == '*' or keys == '=*':
@@ -255,16 +283,7 @@ def importGeckoLocales(params, files):
                         if key in data:
                             print 'Warning: locale string %s defined multiple times' % key
 
-                        # Remove access keys
-                        value = sourceData[stringID]
-                        match = re.search(r'^(.*?)\s*\(&.\)$', value)
-                        if match:
-                            value = match.group(1)
-                        else:
-                            index = value.find('&')
-                            if index >= 0:
-                                value = value[0:index] + value[index + 1:]
-                        data[key] = {'message': value}
+                        import_string(data, key, sourceData[stringID])
             except Exception as e:
                 print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 
@@ -380,7 +399,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
         )
 
     if metadata.has_section('import_locales'):
-        importGeckoLocales(params, files)
+        import_locales(params, files)
 
     files['manifest.json'] = createManifest(params, files)
     if type == 'chrome':

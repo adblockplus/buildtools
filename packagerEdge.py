@@ -177,7 +177,7 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
         files.preprocess(metadata.options('preprocess'), {'needsExt': True})
 
     if metadata.has_section('import_locales'):
-        packagerChrome.importGeckoLocales(params, files)
+        packagerChrome.import_locales(params, files)
 
     files['manifest.json'] = packagerChrome.createManifest(params, files)
 
