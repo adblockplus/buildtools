@@ -182,7 +182,8 @@ def runBuild(baseDir, scriptName, opts, args, type):
             kwargs['locales'] = value.split(',')
         elif option in {'-b', '--build'}:
             kwargs['buildNum'] = value
-            if type != 'gecko' and not kwargs['buildNum'].isdigit():
+            no_gecko_build = type not in {'gecko', 'gecko-webext'}
+            if no_gecko_build and not kwargs['buildNum'].isdigit():
                 raise TypeError('Build number must be numerical')
         elif option in {'-k', '--key'}:
             kwargs['keyFile'] = value
