@@ -1,0 +1,11 @@
+{
+  "name": "buildtools",
+  "repository": "https://hg.adblockplus.org/buildtools",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "jsdoc": "3.5.4"
+  },
+  "scripts": {
+    "jsdoc": "jsdoc"
+  }
+}

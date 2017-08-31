@@ -411,17 +411,21 @@ def generateDocs(baseDir, scriptName, opts, args, type):
     if type == 'chrome':
         sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
 
-    config = os.path.join(os.path.dirname(__file__), 'jsdoc.conf')
-    command = ['jsdoc', '--destination', targetDir, '--configure', config] + sources
+    buildtools_path = os.path.dirname(__file__)
+    config = os.path.join(buildtools_path, 'jsdoc.conf')
+
+    command = ['npm', 'run-script', 'jsdoc', '--', '--destination', targetDir,
+               '--configure', config] + sources
     if any(opt in ('-q', '--quiet') for opt, _ in opts):
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, cwd=buildtools_path)
         stderr = process.communicate()[1]
         retcode = process.poll()
         if retcode:
             sys.stderr.write(stderr)
             raise subprocess.CalledProcessError(command, retcode)
     else:
-        subprocess.check_call(command)
+        subprocess.check_call(command, cwd=buildtools_path)
 
 
 def runReleaseAutomation(baseDir, scriptName, opts, args, type):
@@ -515,7 +519,8 @@ with addCommand(showDescriptions, 'showdesc') as command:
 
 with addCommand(generateDocs, 'docs') as command:
     command.shortDescription = 'Generate documentation (requires node.js)'
-    command.description = 'Generate documentation files and write them into the specified directory. This operation requires JsDoc 3 to be installed.'
+    command.description = ('Generate documentation files and write them into '
+                           'the specified directory.')
     command.addOption('Suppress JsDoc output', short='q', long='quiet')
     command.params = '[options] <directory>'
     command.supportedTypes = ('gecko', 'chrome')
