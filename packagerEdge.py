@@ -82,7 +82,6 @@ def create_appx_manifest(params, files, release_build=False):
     metadata = params['metadata']
     w = params['windows_version'] = {}
     w['min'], w['max'] = metadata.get('compat', 'windows').split('/')
-    params.update(metadata.items('general'))
     params['version'] = pad_version(params['version'])
 
     metadata_suffix = 'release' if release_build else 'devbuild'

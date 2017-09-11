@@ -8,12 +8,12 @@
 
   <Identity
     Name="{{app_id}}"
-    Publisher="{{publisher_id}}"
+    Publisher="{{metadata.get('general', 'publisher_id')}}"
     Version="{{version}}" />
 
   <Properties>
     <DisplayName>{{display_name}}</DisplayName>
-    <PublisherDisplayName>{{author}}</PublisherDisplayName>
+    <PublisherDisplayName>{{metadata.get('general', 'author')}}</PublisherDisplayName>
     <Logo>{{logo_50}}</Logo>
   </Properties>
 
@@ -36,7 +36,7 @@
         Square150x150Logo="{{logo_150}}"
         Square44x44Logo="{{logo_44}}"
         Description="{{description}}"
-        BackgroundColor="{{background_color}}">
+        BackgroundColor="{{metadata.get('general', 'background_color')}}">
       </uap:VisualElements>
       <Extensions>
       <uap3:Extension Category="windows.appExtension">
