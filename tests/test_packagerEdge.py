@@ -213,7 +213,7 @@ def test_create_appx_manifest(metadata, files):
 
     for release_build, pairs in [(False, devbuild), (True, release)]:
         manifest = ET.fromstring(packagerEdge.create_appx_manifest(
-            {'metadata': metadata},
+            {'metadata': metadata, 'version': '1.2.3.4'},
             files,
             release_build=release_build))
         for expression, modifiers, value in pairs:

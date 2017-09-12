@@ -70,10 +70,15 @@ def load_translation(files, locale):
     return json.loads(files[path])
 
 
-def pad_version(version):
-    """Make sure version number has 4 groups of digits."""
-    groups = (version.split('.') + ['0', '0', '0'])[:4]
-    return '.'.join(groups)
+def fix_version(version):
+    """Prepare a version number for usage in AppxManifest.xml.
+
+    As required by the Windows Store, the returned version string has
+    four components with the last component being zero (e.g. 12.34.56.0).
+    """
+    components = version.split('.')[:3]
+    components.extend(['0'] * (4 - len(components)))
+    return '.'.join(components)
 
 
 def create_appx_manifest(params, files, release_build=False):
@@ -82,7 +87,7 @@ def create_appx_manifest(params, files, release_build=False):
     metadata = params['metadata']
     w = params['windows_version'] = {}
     w['min'], w['max'] = metadata.get('compat', 'windows').split('/')
-    params['version'] = pad_version(params['version'])
+    params['version'] = fix_version(params['version'])
 
     metadata_suffix = 'release' if release_build else 'devbuild'
     app_extension_id = 'extension_id_' + metadata_suffix
