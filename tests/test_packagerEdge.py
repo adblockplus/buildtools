@@ -152,7 +152,6 @@ def test_create_appx_manifest(metadata, files):
         ('.//*', [len], 21.0),
         ('./ns:Identity', [first, attr('Publisher')],
             'CN=4F066043-8AFE-41C9-B762-6C15E77E3F88'),
-        ('./ns:Identity', [first, attr('Version')], '1.2.3.0'),
         ('./ns:Properties/ns:PublisherDisplayName', [first, text],
             'Eyeo GmbH'),
         ('./ns:Properties/ns:Logo', [first, text], 'Assets\\logo_50.png'),
@@ -181,6 +180,7 @@ def test_create_appx_manifest(metadata, files):
     devbuild = base + [
         ('./ns:Identity', [first, attr('Name')],
             'EyeoGmbH.AdblockPlusdevelopmentbuild'),
+        ('./ns:Identity', [first, attr('Version')], '1.2.1000.0'),
         ('./ns:Properties/ns:DisplayName', [first, text], 'devbuild-marker'),
         ('./ns:Applications/ns:Application/uap:VisualElements',
             [first, attr('DisplayName')],
@@ -197,6 +197,7 @@ def test_create_appx_manifest(metadata, files):
 
     release = base + [
         ('./ns:Identity', [first, attr('Name')], 'EyeoGmbH.AdblockPlus'),
+        ('./ns:Identity', [first, attr('Version')], '1.2.3.0'),
         ('./ns:Properties/ns:DisplayName', [first, text], 'Adblock Plus'),
         ('./ns:Applications/ns:Application/uap:VisualElements',
             [first, attr('DisplayName')],
@@ -211,11 +212,10 @@ def test_create_appx_manifest(metadata, files):
             'Adblock Plus'),
     ]
 
-    for release_build, pairs in [(False, devbuild), (True, release)]:
+    for args, pairs in [(('1000', False), devbuild), ((None, True), release)]:
         manifest = ET.fromstring(packagerEdge.create_appx_manifest(
-            {'metadata': metadata, 'version': '1.2.3.4'},
-            files,
-            release_build=release_build))
+            {'metadata': metadata}, files, *args
+        ))
         for expression, modifiers, value in pairs:
             res = reduce(
                 lambda val, func: func(val),

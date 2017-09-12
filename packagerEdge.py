@@ -70,24 +70,27 @@ def load_translation(files, locale):
     return json.loads(files[path])
 
 
-def fix_version(version):
-    """Prepare a version number for usage in AppxManifest.xml.
+def get_appx_version(metadata, build_num):
+    """Get the version number for usage in AppxManifest.xml.
 
-    As required by the Windows Store, the returned version string has
-    four components with the last component being zero (e.g. 12.34.56.0).
+    As required by the Windows Store, the returned version string has four
+    components, where the 3rd component is replaced with the build number
+    if available, and the 4th component is always zero (e.g. 1.2.1000.0).
     """
-    components = version.split('.')[:3]
+    components = metadata.get('general', 'version').split('.')[:3]
     components.extend(['0'] * (4 - len(components)))
+    if build_num:
+        components[2] = build_num
     return '.'.join(components)
 
 
-def create_appx_manifest(params, files, release_build=False):
+def create_appx_manifest(params, files, build_num, release_build):
     """Create AppxManifest.xml."""
     params = dict(params)
     metadata = params['metadata']
     w = params['windows_version'] = {}
     w['min'], w['max'] = metadata.get('compat', 'windows').split('/')
-    params['version'] = fix_version(params['version'])
+    params['version'] = get_appx_version(metadata, build_num)
 
     metadata_suffix = 'release' if release_build else 'devbuild'
     app_extension_id = 'extension_id_' + metadata_suffix
@@ -192,7 +195,8 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
             path = os.path.join(baseDir, path)
             files.read(path, '{}/{}'.format(ASSETS_DIR, name))
 
-    files[MANIFEST] = create_appx_manifest(params, files, releaseBuild)
+    files[MANIFEST] = create_appx_manifest(params, files,
+                                           buildNum, releaseBuild)
     files[BLOCKMAP] = create_appx_blockmap(files)
     files[CONTENT_TYPES] = create_content_types_map(files.keys() + [BLOCKMAP])
 
