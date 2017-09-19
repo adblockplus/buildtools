@@ -110,6 +110,7 @@ def can_safely_release(*repo_paths):
         return False
     if repo_has_outgoing():
         return continue_with_outgoing()
+    return True
 
 
 def run(baseDir, type, version, keyFile, downloadsRepo):
