@@ -7,6 +7,7 @@ import os
 import sys
 import codecs
 import json
+import urlparse
 import urllib
 import urllib2
 from StringIO import StringIO
@@ -91,6 +92,45 @@ chromeLocales = [
     'zh-CN',
     'zh-TW',
 ]
+
+CROWDIN_AP_URL = 'https://api.crowdin.com/api/project/{}/{}'
+
+
+def crowdin_url(project_name, action, key, get={}):
+    """Create a valid url for a crowdin endpoint."""
+    url = CROWDIN_AP_URL.format(project_name, action)
+    get['key'] = key
+    get['json'] = 1
+
+    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+
+    query = urlparse.parse_qs(query)
+    query.update(get)
+
+    return urlparse.urlunparse((
+        scheme, netloc, path, params, urllib.urlencode(query), fragment
+    ))
+
+
+def crowdin_request(project_name, action, key, get={}, post_data=None,
+                    headers={}, raw=False):
+    """Perform a call to crowdin and raise an Exception on failure."""
+    request = urllib2.Request(
+        crowdin_url(project_name, action, key, get),
+        post_data,
+        headers,
+    )
+
+    try:
+        result = urllib2.urlopen(request).read()
+    except urllib2.HTTPError as e:
+        raise Exception('Server returned HTTP Error {}:\n{}'.format(e.code,
+                                                                    e.read()))
+
+    if not raw:
+        return json.loads(result)
+
+    return result
 
 
 class OrderedDict(dict):
@@ -297,23 +337,22 @@ def setupTranslations(localeConfig, projectName, key):
                     locales.add(mapLocale('BCP-47', match2.group(1)))
 
     allowed = set()
-    allowedLocales = json.load(urllib2.urlopen(
-        'https://crowdin.com/languages/languages_list?callback='
-    ))
+    allowedLocales = crowdin_request(projectName, 'supported-languages', key)
+
     for locale in allowedLocales:
-        allowed.add(locale['code'])
+        allowed.add(locale['crowdin_code'])
     if not allowed.issuperset(locales):
         print "Warning, following locales aren't allowed by server: " + ', '.join(locales - allowed)
 
     locales = list(locales & allowed)
     locales.sort()
     params = urllib.urlencode([('languages[]', locale) for locale in locales])
-    result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/edit-project?key=%s' % (projectName, key), params).read()
-    if result.find('<success') < 0:
-        raise Exception('Server indicated that the operation was not successful\n' + result)
+
+    crowdin_request(projectName, 'edit-project', key, post_data=params)
 
 
-def postFiles(files, url):
+def crowdin_prepare_upload(files):
+    """Create a post body and matching headers, which Crowdin can handle."""
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
     body = ''
     for file, data in files:
@@ -325,16 +364,18 @@ def postFiles(files, url):
     body += '--%s--\r\n' % boundary
 
     body = body.encode('utf-8')
-    request = urllib2.Request(url, StringIO(body))
-    request.add_header('Content-Type', 'multipart/form-data; boundary=%s' % boundary)
-    request.add_header('Content-Length', len(body))
-    result = urllib2.urlopen(request).read()
-    if result.find('<success') < 0:
-        raise Exception('Server indicated that the operation was not successful\n' + result)
+    return (
+        StringIO(body),
+        {
+            'Content-Type': ('multipart/form-data; ; charset=utf-8; '
+                             'boundary=' + boundary),
+            'Content-Length': len(body)
+        }
+    )
 
 
 def updateTranslationMaster(localeConfig, metadata, dir, projectName, key):
-    result = json.load(urllib2.urlopen('http://api.crowdin.net/api/project/%s/info?key=%s&json=1' % (projectName, key)))
+    result = crowdin_request(projectName, 'info', key)
 
     existing = set(map(lambda f: f['name'], result['files']))
     add = []
@@ -362,14 +403,18 @@ def updateTranslationMaster(localeConfig, metadata, dir, projectName, key):
                     add.append((newName, data))
 
     if len(add):
-        titles = urllib.urlencode([('titles[%s]' % name, re.sub(r'\.json', '', name)) for name, data in add])
-        postFiles(add, 'http://api.crowdin.net/api/project/%s/add-file?key=%s&type=chrome&%s' % (projectName, key, titles))
+        data = {'titles[{}]'.format(name): re.sub(r'\.json', '', name)
+                for name, data in add}
+        data['type'] = 'chrome'
+        data, headers = crowdin_prepare_upload(add)
+        crowdin_request(projectName, 'add-file', key, post_data=data,
+                        headers=headers)
     if len(update):
-        postFiles(update, 'http://api.crowdin.net/api/project/%s/update-file?key=%s' % (projectName, key))
+        data, headers = crowdin_prepare_upload(update)
+        crowdin_request(projectName, 'update-file', key, post_data=data,
+                        headers=headers)
     for file in existing:
-        result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/delete-file?key=%s&file=%s' % (projectName, key, file)).read()
-        if result.find('<success') < 0:
-            raise Exception('Server indicated that the operation was not successful\n' + result)
+        crowdin_request(projectName, 'delete-file', key, {'file': file})
 
 
 def uploadTranslations(localeConfig, metadata, dir, locale, projectName, key):
@@ -392,17 +437,22 @@ def uploadTranslations(localeConfig, metadata, dir, locale, projectName, key):
             if data:
                 files.append((newName, data))
     if len(files):
-        postFiles(files, 'http://api.crowdin.net/api/project/%s/upload-translation?key=%s&language=%s' % (
-            projectName, key, mapLocale(localeConfig['name_format'], locale))
-        )
+        language = mapLocale(localeConfig['name_format'], locale)
+        data, headers = crowdin_prepare_upload(files)
+        crowdin_request(projectName, 'upload-translation', key,
+                        {'language': language}, post_data=data,
+                        headers=headers)
 
 
 def getTranslations(localeConfig, projectName, key):
-    result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/export?key=%s' % (projectName, key)).read()
-    if result.find('<success') < 0:
-        raise Exception('Server indicated that the operation was not successful\n' + result)
+    """Download all available translations from crowdin.
 
-    result = urllib2.urlopen('http://api.crowdin.net/api/project/%s/download/all.zip?key=%s' % (projectName, key)).read()
+    Trigger crowdin to build the available export, wait for crowdin to
+    finish the job and download the generated zip afterwards.
+    """
+    crowdin_request(projectName, 'export', key)
+
+    result = crowdin_request(projectName, 'download/all.zip', key, raw=True)
     zip = ZipFile(StringIO(result))
     dirs = {}
 
