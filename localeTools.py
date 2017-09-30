@@ -10,6 +10,7 @@ import json
 import urlparse
 import urllib
 import urllib2
+import mimetypes
 from StringIO import StringIO
 from ConfigParser import SafeConfigParser
 from zipfile import ZipFile
@@ -93,30 +94,17 @@ chromeLocales = [
     'zh-TW',
 ]
 
-CROWDIN_AP_URL = 'https://api.crowdin.com/api/project/{}/{}'
-
-
-def crowdin_url(project_name, action, key, get={}):
-    """Create a valid url for a crowdin endpoint."""
-    url = CROWDIN_AP_URL.format(project_name, action)
-    get['key'] = key
-    get['json'] = 1
-
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-
-    query = urlparse.parse_qs(query)
-    query.update(get)
-
-    return urlparse.urlunparse((
-        scheme, netloc, path, params, urllib.urlencode(query), fragment
-    ))
+CROWDIN_AP_URL = 'https://api.crowdin.com/api/project'
 
 
 def crowdin_request(project_name, action, key, get={}, post_data=None,
                     headers={}, raw=False):
     """Perform a call to crowdin and raise an Exception on failure."""
     request = urllib2.Request(
-        crowdin_url(project_name, action, key, get),
+        '{}/{}/{}?{}'.format(CROWDIN_AP_URL,
+                             urllib.quote(project_name),
+                             urllib.quote(action),
+                             urllib.urlencode(dict(get, key=key, json=1))),
         post_data,
         headers,
     )
@@ -355,22 +343,25 @@ def crowdin_prepare_upload(files):
     """Create a post body and matching headers, which Crowdin can handle."""
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
     body = ''
-    for file, data in files:
-        body += '--%s\r\n' % boundary
-        body += 'Content-Disposition: form-data; name="files[%s]"; filename="%s"\r\n' % (file, file)
-        body += 'Content-Type: application/octet-stream\r\n'
-        body += 'Content-Transfer-Encoding: binary\r\n'
-        body += '\r\n' + data + '\r\n'
-    body += '--%s--\r\n' % boundary
+    for name, data in files:
+        mimetype = mimetypes.guess_type(name)[0]
+        body += (
+            '--{boundary}\r\n'
+            'Content-Disposition: form-data; name="files[{name}]"; '
+            'filename="{name}"\r\n'
+            'Content-Type: {mimetype}; charset=utf-8\r\n'
+            'Content-Transfer-Encoding: binary\r\n'
+            '\r\n{data}\r\n'
+            '--{boundary}--\r\n'
+        ).format(boundary=boundary, name=name, data=data, mimetype=mimetype)
 
     body = body.encode('utf-8')
     return (
         StringIO(body),
         {
-            'Content-Type': ('multipart/form-data; ; charset=utf-8; '
-                             'boundary=' + boundary),
+            'Content-Type': ('multipart/form-data; boundary=' + boundary),
             'Content-Length': len(body)
-        }
+        },
     )
 
 
@@ -403,11 +394,11 @@ def updateTranslationMaster(localeConfig, metadata, dir, projectName, key):
                     add.append((newName, data))
 
     if len(add):
-        data = {'titles[{}]'.format(name): re.sub(r'\.json', '', name)
-                for name, data in add}
-        data['type'] = 'chrome'
+        query = {'titles[{}]'.format(name): os.path.splitext(name)[0]
+                 for name, _ in add}
+        query['type'] = 'chrome'
         data, headers = crowdin_prepare_upload(add)
-        crowdin_request(projectName, 'add-file', key, post_data=data,
+        crowdin_request(projectName, 'add-file', key, query, post_data=data,
                         headers=headers)
     if len(update):
         data, headers = crowdin_prepare_upload(update)
