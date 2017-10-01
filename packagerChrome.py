@@ -11,6 +11,7 @@ from StringIO import StringIO
 import struct
 import sys
 import collections
+import glob
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
                       getTemplate, Files)
@@ -213,40 +214,14 @@ def import_string_gecko(data, key, value):
 
 
 def import_locales(params, files):
-    import localeTools
-
-    # FIXME: localeTools doesn't use real Chrome locales, it uses dash as
-    # separator instead.
-    convert_locale_code = lambda code: code.replace('-', '_')
-
-    # We need to map Chrome locales to Gecko locales. Start by mapping Chrome
-    # locales to themselves, merely with the dash as separator.
-    locale_mapping = {convert_locale_code(l): l for l in localeTools.chromeLocales}
-
-    # Convert values to Crowdin locales first (use Chrome => Crowdin mapping).
-    for chrome_locale, crowdin_locale in localeTools.langMappingChrome.iteritems():
-        locale_mapping[convert_locale_code(chrome_locale)] = crowdin_locale
-
-    # Now convert values to Gecko locales (use Gecko => Crowdin mapping).
-    reverse_mapping = {v: k for k, v in locale_mapping.iteritems()}
-    for gecko_locale, crowdin_locale in localeTools.langMappingGecko.iteritems():
-        if crowdin_locale in reverse_mapping:
-            locale_mapping[reverse_mapping[crowdin_locale]] = gecko_locale
-
-    for target, source in locale_mapping.iteritems():
-        targetFile = '_locales/%s/messages.json' % target
-        if not targetFile in files:
-            continue
-
-        for item in params['metadata'].items('import_locales'):
-            fileName, keys = item
-            parts = map(lambda n: source if n == '*' else n, fileName.split('/'))
-            sourceFile = os.path.join(os.path.dirname(item.source), *parts)
-            incompleteMarker = os.path.join(os.path.dirname(sourceFile), '.incomplete')
-            if not os.path.exists(sourceFile) or os.path.exists(incompleteMarker):
-                continue
-
-            data = json.loads(files[targetFile].decode('utf-8'))
+    for item in params['metadata'].items('import_locales'):
+        filename, keys = item
+        for sourceFile in glob.glob(os.path.join(os.path.dirname(item.source),
+                                                 *filename.split('/'))):
+            parts = sourceFile.split(os.path.sep)
+            locale = parts[-2].replace('-', '_')
+            targetFile = os.path.join('_locales', locale, 'messages.json')
+            data = json.loads(files.get(targetFile, '{}').decode('utf-8'))
 
             try:
                 # The WebExtensions (.json) and Gecko format provide
@@ -258,6 +233,7 @@ def import_locales(params, files):
                         sourceData = json.load(handle)
                     import_string = import_string_webext
                 else:
+                    import localeTools
                     sourceData = localeTools.readFile(sourceFile)
                     import_string = import_string_gecko
 
@@ -296,10 +272,7 @@ def truncate(text, length_limit):
     return text[:length_limit - 1].rstrip() + u'\u2026'
 
 
-def fixTranslationsForCWS(files):
-    # Chrome Web Store requires messages used in manifest.json to be present in
-    # all languages. It also enforces length limits for extension names and
-    # descriptions.
+def fix_translations_for_chrome(files):
     defaults = {}
     data = json.loads(files['_locales/%s/messages.json' % defaultLocale])
     for match in re.finditer(r'__MSG_(\S+)__', files['manifest.json']):
@@ -313,17 +286,30 @@ def fixTranslationsForCWS(files):
         if match:
             limits[match.group(1)] = limit
 
-    for filename in files:
-        if not filename.startswith('_locales/') or not filename.endswith('/messages.json'):
+    for path in list(files):
+        match = re.search(r'^_locales/(?:es_(AR|CL|(MX))|[^/]+)/(.*)', path)
+        if not match:
             continue
 
-        data = json.loads(files[filename])
-        for name, info in defaults.iteritems():
-            data.setdefault(name, info)
-        for name, limit in limits.iteritems():
-            if name in data:
-                data[name]['message'] = truncate(data[name]['message'], limit)
-        files[filename] = toJson(data)
+        # The Chrome Web Store requires messages used in manifest.json to
+        # be present in all languages, and enforces length limits on
+        # extension name and description.
+        is_latam, is_mexican, filename = match.groups()
+        if filename == 'messages.json':
+            data = json.loads(files[path])
+            for name, info in defaults.iteritems():
+                data.setdefault(name, info)
+            for name, limit in limits.iteritems():
+                info = data.get(name)
+                if info:
+                    info['message'] = truncate(info['message'], limit)
+            files[path] = toJson(data)
+
+        # Chrome combines Latin American dialects of Spanish into es-419.
+        if is_latam:
+            data = files.pop(path)
+            if is_mexican:
+                files['_locales/es_419/' + filename] = data
 
 
 def signBinary(zipdata, keyFile):
@@ -403,7 +389,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
 
     files['manifest.json'] = createManifest(params, files)
     if type == 'chrome':
-        fixTranslationsForCWS(files)
+        fix_translations_for_chrome(files)
 
     if devenv:
         import buildtools

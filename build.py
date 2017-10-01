@@ -252,7 +252,6 @@ def readLocaleConfig(baseDir, type, metadata):
         localeConfig = {
             'name_format': 'BCP-47',
             'file_format': 'gecko-dtd',
-            'target_platforms': {'gecko'},
             'default_locale': packager.defaultLocale
         }
     elif type in {'chrome', 'gecko-webext'}:
@@ -261,7 +260,6 @@ def readLocaleConfig(baseDir, type, metadata):
         localeConfig = {
             'name_format': 'ISO-15897',
             'file_format': 'chrome-json',
-            'target_platforms': {'chrome'},
             'default_locale': packager.defaultLocale,
         }
     else:
@@ -271,8 +269,6 @@ def readLocaleConfig(baseDir, type, metadata):
         localeConfig = {
             'name_format': metadata.get('locales', 'name_format'),
             'file_format': metadata.get('locales', 'file_format'),
-            'target_platforms': set(metadata.get('locales',
-                                                 'target_platforms').split()),
             'default_locale': metadata.get('locales', 'default_locale')
         }
 
@@ -344,7 +340,7 @@ def uploadTranslations(baseDir, scriptName, opts, args, type):
 
     import buildtools.localeTools as localeTools
     for locale, localeDir in localeConfig['locales'].iteritems():
-        if locale != localeConfig['default_locale']:
+        if locale != localeConfig['default_locale'].replace('_', '-'):
             localeTools.uploadTranslations(localeConfig, metadata, localeDir, locale,
                                            basename, key)
 

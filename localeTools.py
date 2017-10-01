@@ -16,85 +16,29 @@ from ConfigParser import SafeConfigParser
 from zipfile import ZipFile
 from xml.parsers.expat import ParserCreate, XML_PARAM_ENTITY_PARSING_ALWAYS
 
-langMappingGecko = {
-    'bn-BD': 'bn',
+CROWDIN_LANG_MAPPING = {
     'br': 'br-FR',
     'dsb': 'dsb-DE',
-    'fj-FJ': 'fj',
-    'hsb': 'hsb-DE',
-    'hi-IN': 'hi',
-    'ml': 'ml-IN',
-    'nb-NO': 'nb',
-    'rm': 'rm-CH',
-    'ta-LK': 'ta',
-    'wo-SN': 'wo',
-}
-
-langMappingChrome = {
-    'es-419': 'es-MX',
     'es': 'es-ES',
-    'sv': 'sv-SE',
-    'ml': 'ml-IN',
+    'fur': 'fur-IT',
+    'fy': 'fy-NL',
+    'ga': 'ga-IE',
     'gu': 'gu-IN',
+    'hsb': 'hsb-DE',
+    'hy': 'hy-AM',
+    'ml': 'ml-IN',
+    'nn': 'nn-NO',
+    'pa': 'pa-IN',
+    'rm': 'rm-CH',
+    'si': 'si-LK',
+    'sv': 'sv-SE',
+    'ur': 'ur-PK',
 }
-
-chromeLocales = [
-    'am',
-    'ar',
-    'bg',
-    'bn',
-    'ca',
-    'cs',
-    'da',
-    'de',
-    'el',
-    'en-GB',
-    'en-US',
-    'es-419',
-    'es',
-    'et',
-    'fa',
-    'fi',
-    'fil',
-    'fr',
-    'gu',
-    'he',
-    'hi',
-    'hr',
-    'hu',
-    'id',
-    'it',
-    'ja',
-    'kn',
-    'ko',
-    'lt',
-    'lv',
-    'ml',
-    'mr',
-    'ms',
-    'nb',
-    'nl',
-    'pl',
-    'pt-BR',
-    'pt-PT',
-    'ro',
-    'ru',
-    'sk',
-    'sl',
-    'sr',
-    'sv',
-    'sw',
-    'ta',
-    'te',
-    'th',
-    'tr',
-    'uk',
-    'vi',
-    'zh-CN',
-    'zh-TW',
-]
 
 CROWDIN_AP_URL = 'https://api.crowdin.com/api/project'
+FIREFOX_RELEASES_URL = 'http://www.mozilla.org/en-US/firefox/all.html'
+FIREFOX_LP_URL = 'https://addons.mozilla.org/en-US/firefox/language-tools/'
+CHROMIUM_DEB_URL = 'https://packages.debian.org/sid/all/chromium-l10n/filelist'
 
 
 def crowdin_request(project_name, action, key, get={}, post_data=None,
@@ -143,11 +87,6 @@ def escapeEntity(value):
 
 def unescapeEntity(value):
     return value.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
-
-
-def mapLocale(type, locale):
-    mapping = langMappingChrome if type == 'ISO-15897' else langMappingGecko
-    return mapping.get(locale, locale)
 
 
 def parseDTDString(data, path):
@@ -304,38 +243,49 @@ def postprocessChromeLocale(path, data):
 
 
 def setupTranslations(localeConfig, projectName, key):
-    # Make a new set from the locales list, mapping to Crowdin friendly format
-    locales = {mapLocale(localeConfig['name_format'], locale)
-               for locale in localeConfig['locales']}
+    locales = set()
 
-    # Fill up with locales that we don't have but the browser supports
-    if 'chrome' in localeConfig['target_platforms']:
-        for locale in chromeLocales:
-            locales.add(mapLocale('ISO-15897', locale))
+    # Languages supported by Firefox
+    data = urllib2.urlopen(FIREFOX_RELEASES_URL).read()
+    for match in re.finditer(r'&amp;lang=([\w\-]+)"', data):
+        locales.add(match.group(1))
 
-    if 'gecko' in localeConfig['target_platforms']:
-        firefoxLocales = urllib2.urlopen('http://www.mozilla.org/en-US/firefox/all.html').read()
-        for match in re.finditer(r'&amp;lang=([\w\-]+)"', firefoxLocales):
-            locales.add(mapLocale('BCP-47', match.group(1)))
-        langPacks = urllib2.urlopen('https://addons.mozilla.org/en-US/firefox/language-tools/').read()
-        for match in re.finditer(r'<tr>.*?</tr>', langPacks, re.S):
-            if match.group(0).find('Install Language Pack') >= 0:
-                match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
-                if match2:
-                    locales.add(mapLocale('BCP-47', match2.group(1)))
+    # Languages supported by Firefox Language Packs
+    data = urllib2.urlopen(FIREFOX_LP_URL).read()
+    for match in re.finditer(r'<tr>.*?</tr>', data, re.S):
+        if match.group(0).find('Install Language Pack') >= 0:
+            match2 = re.search(r'lang="([\w\-]+)"', match.group(0))
+            if match2:
+                locales.add(match2.group(1))
 
-    allowed = set()
-    allowedLocales = crowdin_request(projectName, 'supported-languages', key)
+    # Languages supported by Chrome (excluding es-419)
+    data = urllib2.urlopen(CHROMIUM_DEB_URL).read()
+    for match in re.finditer(r'locales/(?!es-419)([\w\-]+)\.pak', data):
+        locales.add(match.group(1))
 
-    for locale in allowedLocales:
-        allowed.add(locale['crowdin_code'])
+    # We don't translate indvidual dialects of languages
+    # other than English, Spanish, Portuguese and Chinese.
+    for locale in list(locales):
+        prefix = locale.split('-')[0]
+        if prefix not in {'en', 'es', 'pt', 'zh'}:
+            locales.remove(locale)
+            locales.add(prefix)
+
+    # Add languages with existing translations.
+    locales.update(localeConfig['locales'])
+
+    # Don't add the language we translate from as target translation.
+    locales.remove(localeConfig['default_locale'].replace('_', '-'))
+
+    # Convert to locales understood by Crowdin.
+    locales = {CROWDIN_LANG_MAPPING.get(locale, locale) for locale in locales}
+    allowed = {locale['crowdin_code'] for locale in
+               crowdin_request(projectName, 'supported-languages', key)}
     if not allowed.issuperset(locales):
         print "Warning, following locales aren't allowed by server: " + ', '.join(locales - allowed)
 
-    locales = list(locales & allowed)
-    locales.sort()
+    locales = sorted(locales & allowed)
     params = urllib.urlencode([('languages[]', locale) for locale in locales])
-
     crowdin_request(projectName, 'edit-project', key, post_data=params)
 
 
@@ -429,7 +379,7 @@ def uploadTranslations(localeConfig, metadata, dir, locale, projectName, key):
             if data:
                 files.append((newName, data))
     if len(files):
-        language = mapLocale(localeConfig['name_format'], locale)
+        language = CROWDIN_LANG_MAPPING.get(locale, locale)
         data, headers = crowdin_prepare_upload(files)
         crowdin_request(projectName, 'upload-translation', key,
                         {'language': language}, post_data=data,
@@ -451,8 +401,8 @@ def getTranslations(localeConfig, projectName, key):
     normalizedDefaultLocale = localeConfig['default_locale']
     if localeConfig['name_format'] == 'ISO-15897':
         normalizedDefaultLocale = normalizedDefaultLocale.replace('_', '-')
-    normalizedDefaultLocale = mapLocale(localeConfig['name_format'],
-                                        normalizedDefaultLocale)
+    normalizedDefaultLocale = CROWDIN_LANG_MAPPING.get(normalizedDefaultLocale,
+                                                       normalizedDefaultLocale)
 
     for info in zip.infolist():
         if not info.filename.endswith('.json'):
@@ -470,12 +420,7 @@ def getTranslations(localeConfig, projectName, key):
             not origFile.endswith('.properties')):
             continue
 
-        if localeConfig['name_format'] == 'ISO-15897':
-            mapping = langMappingChrome
-        else:
-            mapping = langMappingGecko
-
-        for key, value in mapping.iteritems():
+        for key, value in CROWDIN_LANG_MAPPING.iteritems():
             if value == dir:
                 dir = key
         if localeConfig['name_format'] == 'ISO-15897':
