@@ -344,7 +344,6 @@ def crowdin_prepare_upload(files):
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
     body = ''
     for name, data in files:
-        mimetype = mimetypes.guess_type(name)[0]
         body += (
             '--{boundary}\r\n'
             'Content-Disposition: form-data; name="files[{name}]"; '
@@ -353,9 +352,11 @@ def crowdin_prepare_upload(files):
             'Content-Transfer-Encoding: binary\r\n'
             '\r\n{data}\r\n'
             '--{boundary}--\r\n'
-        ).format(boundary=boundary, name=name, data=data, mimetype=mimetype)
+        ).format(boundary=boundary,
+                 name=name,
+                 data=data.encode('utf-8'),
+                 mimetype=mimetypes.guess_type(name)[0])
 
-    body = body.encode('utf-8')
     return (
         StringIO(body),
         {
