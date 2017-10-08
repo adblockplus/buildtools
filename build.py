@@ -456,6 +456,7 @@ def updatePSL(baseDir, scriptName, opts, args, type):
     import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
     publicSuffixListUpdater.updatePSL(baseDir)
 
+
 with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
     command.shortDescription = 'Show this message'
 
