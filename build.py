@@ -7,12 +7,11 @@ import sys
 import re
 import subprocess
 import shutil
-import buildtools
 from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'gecko-webext', 'chrome', 'safari', 'generic', 'edge')
+knownTypes = ('gecko-webext', 'chrome', 'safari', 'generic', 'edge')
 
 
 class Command(object):
@@ -178,25 +177,18 @@ Options:
 def runBuild(baseDir, scriptName, opts, args, type):
     kwargs = {}
     for option, value in opts:
-        if option in {'-l', '--locales'} and type == 'gecko':
-            kwargs['locales'] = value.split(',')
-        elif option in {'-b', '--build'}:
+        if option in {'-b', '--build'}:
             kwargs['buildNum'] = value
-            no_gecko_build = type not in {'gecko', 'gecko-webext'}
-            if no_gecko_build and not kwargs['buildNum'].isdigit():
+            if type != 'gecko-webext' and not kwargs['buildNum'].isdigit():
                 raise TypeError('Build number must be numerical')
         elif option in {'-k', '--key'}:
             kwargs['keyFile'] = value
-        elif option in {'-m', '--multi-compartment'} and type == 'gecko':
-            kwargs['multicompartment'] = True
         elif option in {'-r', '--release'}:
             kwargs['releaseBuild'] = True
     if len(args) > 0:
         kwargs['outFile'] = args[0]
 
-    if type == 'gecko':
-        import buildtools.packagerGecko as packager
-    elif type in {'chrome', 'gecko-webext'}:
+    if type in {'chrome', 'gecko-webext'}:
         import buildtools.packagerChrome as packager
     elif type == 'safari':
         import buildtools.packagerSafari as packager
@@ -204,26 +196,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
         import buildtools.packagerEdge as packager
 
     packager.createBuild(baseDir, type=type, **kwargs)
-
-
-def runAutoInstall(baseDir, scriptName, opts, args, type):
-    if len(args) == 0:
-        print 'Port of the Extension Auto-Installer needs to be specified'
-        usage(scriptName, type, 'autoinstall')
-        return
-
-    multicompartment = False
-    for option, value in opts:
-        if option in ('-m', '--multi-compartment'):
-            multicompartment = True
-
-    if ':' in args[0]:
-        host, port = args[0].rsplit(':', 1)
-    else:
-        host, port = ('localhost', args[0])
-
-    import buildtools.packagerGecko as packager
-    packager.autoInstall(baseDir, type, host, port, multicompartment=multicompartment)
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
@@ -246,20 +218,10 @@ def createDevEnv(baseDir, scriptName, opts, args, type):
 
 
 def readLocaleConfig(baseDir, type, metadata):
-    if type == 'gecko':
-        import buildtools.packagerGecko as packager
-        localeDir = packager.getLocalesDir(baseDir)
-        localeConfig = {
-            'name_format': 'BCP-47',
-            'file_format': 'gecko-dtd',
-            'default_locale': packager.defaultLocale
-        }
-    elif type in {'chrome', 'gecko-webext'}:
+    if type != 'generic':
         import buildtools.packagerChrome as packager
         localeDir = os.path.join(baseDir, '_locales')
         localeConfig = {
-            'name_format': 'ISO-15897',
-            'file_format': 'chrome-json',
             'default_locale': packager.defaultLocale,
         }
     else:
@@ -267,18 +229,13 @@ def readLocaleConfig(baseDir, type, metadata):
             baseDir, *metadata.get('locales', 'base_path').split('/')
         )
         localeConfig = {
-            'name_format': metadata.get('locales', 'name_format'),
-            'file_format': metadata.get('locales', 'file_format'),
             'default_locale': metadata.get('locales', 'default_locale')
         }
 
     localeConfig['base_path'] = localeDir
 
-    locales = [(locale, os.path.join(localeDir, locale))
+    locales = [(locale.replace('_', '-'), os.path.join(localeDir, locale))
                for locale in os.listdir(localeDir)]
-    if localeConfig['name_format'] == 'ISO-15897':
-        locales = [(locale.replace('_', '-'), localePath)
-                   for locale, localePath in locales]
     localeConfig['locales'] = dict(locales)
 
     return localeConfig
@@ -363,36 +320,6 @@ def getTranslations(baseDir, scriptName, opts, args, type):
     localeTools.getTranslations(localeConfig, basename, key)
 
 
-def showDescriptions(baseDir, scriptName, opts, args, type):
-    locales = None
-    for option, value in opts:
-        if option in ('-l', '--locales'):
-            locales = value.split(',')
-
-    import buildtools.packagerGecko as packager
-    if locales == None:
-        locales = packager.getLocales(baseDir)
-    elif locales == 'all':
-        locales = packager.getLocales(baseDir, True)
-
-    data = packager.readLocaleMetadata(baseDir, locales)
-    localeCodes = data.keys()
-    localeCodes.sort()
-    for localeCode in localeCodes:
-        locale = data[localeCode]
-        print ('''%s
-%s
-%s
-%s
-%s
-''' % (localeCode,
-            locale['name'] if 'name' in locale else 'None',
-            locale['description'] if 'description' in locale else 'None',
-            locale['description.short'] if 'description.short' in locale else 'None',
-            locale['description.long'] if 'description.long' in locale else 'None',
-       )).encode('utf-8')
-
-
 def generateDocs(baseDir, scriptName, opts, args, type):
     if len(args) == 0:
         print 'No target directory specified for the documentation'
@@ -464,19 +391,10 @@ with addCommand(runBuild, 'build') as command:
     command.shortDescription = 'Create a build'
     command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
     command.params = '[options] [output_file]'
-    command.addOption('Only include the given locales (if omitted: all locales not marked as incomplete)', short='l', long='locales', value='l1,l2,l3', types=('gecko'))
     command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
     command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome', 'safari'))
-    command.addOption('Create a build for leak testing', short='m', long='multi-compartment', types=('gecko'))
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko', 'gecko-webext', 'chrome', 'safari', 'edge')
-
-with addCommand(runAutoInstall, 'autoinstall') as command:
-    command.shortDescription = 'Install extension automatically'
-    command.description = 'Will automatically install the extension in a browser running Extension Auto-Installer. If host parameter is omitted assumes that the browser runs on localhost.'
-    command.params = '[<host>:]<port>'
-    command.addOption('Create a build for leak testing', short='m', long='multi-compartment')
-    command.supportedTypes = ('gecko')
+    command.supportedTypes = ('gecko-webext', 'chrome', 'safari', 'edge')
 
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
@@ -487,32 +405,21 @@ with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'
     command.description = 'Sets up translation languages for the project on crowdin.net.'
     command.params = '[options] project-key'
-    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(updateTranslationMaster, 'translate') as command:
     command.shortDescription = 'Updates translation master files'
     command.description = 'Updates the translation master files in the project on crowdin.net.'
     command.params = '[options] project-key'
-    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(uploadTranslations, 'uploadtrans') as command:
     command.shortDescription = 'Uploads existing translations'
     command.description = 'Uploads already existing translations to the project on crowdin.net.'
     command.params = '[options] project-key'
-    command.supportedTypes = ('gecko', 'chrome', 'generic')
 
 with addCommand(getTranslations, 'gettranslations') as command:
     command.shortDescription = 'Downloads translation updates'
     command.description = 'Downloads updated translations from crowdin.net.'
     command.params = '[options] project-key'
-    command.supportedTypes = ('gecko', 'chrome', 'generic')
-
-with addCommand(showDescriptions, 'showdesc') as command:
-    command.shortDescription = 'Print description strings for all locales'
-    command.description = 'Display description strings for all locales as specified in the corresponding meta.properties files.'
-    command.addOption('Only include the given locales', short='l', long='locales', value='l1,l2,l3')
-    command.params = '[options]'
-    command.supportedTypes = ('gecko')
 
 with addCommand(generateDocs, 'docs') as command:
     command.shortDescription = 'Generate documentation (requires node.js)'
@@ -520,7 +427,7 @@ with addCommand(generateDocs, 'docs') as command:
                            'the specified directory.')
     command.addOption('Suppress JsDoc output', short='q', long='quiet')
     command.params = '[options] <directory>'
-    command.supportedTypes = ('gecko', 'chrome')
+    command.supportedTypes = ('chrome',)
 
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
@@ -528,7 +435,7 @@ with addCommand(runReleaseAutomation, 'release') as command:
     command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types=('chrome', 'safari', 'edge'))
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'
-    command.supportedTypes = ('gecko', 'chrome', 'safari', 'edge')
+    command.supportedTypes = ('chrome', 'safari', 'edge')
 
 with addCommand(updatePSL, 'updatepsl') as command:
     command.shortDescription = 'Updates Public Suffix List'

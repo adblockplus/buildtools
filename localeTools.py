@@ -65,148 +65,6 @@ def crowdin_request(project_name, action, key, get={}, post_data=None,
     return result
 
 
-class OrderedDict(dict):
-    def __init__(self):
-        self.__order = []
-
-    def __setitem__(self, key, value):
-        self.__order.append(key)
-        dict.__setitem__(self, key, value)
-
-    def iteritems(self):
-        done = set()
-        for key in self.__order:
-            if not key in done and key in self:
-                yield (key, self[key])
-                done.add(key)
-
-
-def escapeEntity(value):
-    return value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
-
-
-def unescapeEntity(value):
-    return value.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
-
-
-def parseDTDString(data, path):
-    result = []
-    currentComment = [None]
-
-    parser = ParserCreate()
-    parser.UseForeignDTD(True)
-    parser.SetParamEntityParsing(XML_PARAM_ENTITY_PARSING_ALWAYS)
-
-    def ExternalEntityRefHandler(context, base, systemId, publicId):
-        subparser = parser.ExternalEntityParserCreate(context, 'utf-8')
-        subparser.Parse(data.encode('utf-8'), True)
-        return 1
-
-    def CommentHandler(data):
-        currentComment[0] = data.strip()
-
-    def EntityDeclHandler(entityName, is_parameter_entity, value, base, systemId, publicId, notationName):
-        result.append((unescapeEntity(entityName), currentComment[0], unescapeEntity(value.strip())))
-        currentComment[0] = None
-
-    parser.ExternalEntityRefHandler = ExternalEntityRefHandler
-    parser.CommentHandler = CommentHandler
-    parser.EntityDeclHandler = EntityDeclHandler
-    parser.Parse('<!DOCTYPE root SYSTEM "foo"><root/>', True)
-
-    for entry in result:
-        yield entry
-
-
-def escapeProperty(value):
-    return value.replace('\n', '\\n')
-
-
-def unescapeProperty(value):
-    return value.replace('\\n', '\n')
-
-
-def parsePropertiesString(data, path):
-    currentComment = None
-    for line in data.splitlines():
-        match = re.search(r'^\s*[#!]\s*(.*)', line)
-        if match:
-            currentComment = match.group(1)
-        elif '=' in line:
-            key, value = line.split('=', 1)
-            yield (unescapeProperty(key), currentComment, unescapeProperty(value))
-            currentComment = None
-        elif re.search(r'\S', line):
-            print >>sys.stderr, 'Unrecognized data in file %s: %s' % (path, line)
-
-
-def parseString(data, path):
-    result = {'_origData': data}
-    if path.endswith('.dtd'):
-        it = parseDTDString(data, path)
-    elif path.endswith('.properties'):
-        it = parsePropertiesString(data, path)
-    else:
-        return None
-
-    for name, comment, value in it:
-        result[name] = value
-    return result
-
-
-def readFile(path):
-    fileHandle = codecs.open(path, 'rb', encoding='utf-8')
-    data = fileHandle.read()
-    fileHandle.close()
-    return parseString(data, path)
-
-
-def generateStringEntry(key, value, path):
-    if path.endswith('.dtd'):
-        return '<!ENTITY %s "%s">\n' % (escapeEntity(key), escapeEntity(value))
-    else:
-        return '%s=%s\n' % (escapeProperty(key), escapeProperty(value))
-
-
-def toJSON(path):
-    fileHandle = codecs.open(path, 'rb', encoding='utf-8')
-    data = fileHandle.read()
-    fileHandle.close()
-
-    if path.endswith('.dtd'):
-        it = parseDTDString(data, path)
-    elif path.endswith('.properties'):
-        it = parsePropertiesString(data, path)
-    else:
-        return None
-
-    result = OrderedDict()
-    for name, comment, value in it:
-        obj = {'message': value}
-        if comment == None:
-            obj['description'] = name
-        else:
-            obj['description'] = '%s: %s' % (name, comment)
-        result[name] = obj
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-def fromJSON(path, data):
-    data = json.loads(data)
-    if not data:
-        if os.path.exists(path):
-            os.remove(path)
-        return
-
-    dir = os.path.dirname(path)
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    file = codecs.open(path, 'wb', encoding='utf-8')
-    for key, value in data.iteritems():
-        file.write(generateStringEntry(key, value['message'], path))
-    file.close()
-
-
 def preprocessChromeLocale(path, metadata, isMaster):
     fileHandle = codecs.open(path, 'rb', encoding='utf-8')
     data = json.load(fileHandle)
@@ -325,16 +183,13 @@ def updateTranslationMaster(localeConfig, metadata, dir, projectName, key):
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         if os.path.isfile(path):
-            if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
+            if file.endswith('.json'):
                 data = preprocessChromeLocale(path, metadata, True)
                 newName = file
-            elif localeConfig['file_format'] == 'chrome-json':
+            else:
                 fileHandle = codecs.open(path, 'rb', encoding='utf-8')
                 data = json.dumps({file: {'message': fileHandle.read()}})
                 fileHandle.close()
-                newName = file + '.json'
-            else:
-                data = toJSON(path)
                 newName = file + '.json'
 
             if data:
@@ -364,16 +219,13 @@ def uploadTranslations(localeConfig, metadata, dir, locale, projectName, key):
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         if os.path.isfile(path):
-            if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
+            if file.endswith('.json'):
                 data = preprocessChromeLocale(path, metadata, False)
                 newName = file
-            elif localeConfig['file_format'] == 'chrome-json':
+            else:
                 fileHandle = codecs.open(path, 'rb', encoding='utf-8')
                 data = json.dumps({file: {'message': fileHandle.read()}})
                 fileHandle.close()
-                newName = file + '.json'
-            else:
-                data = toJSON(path)
                 newName = file + '.json'
 
             if data:
@@ -398,9 +250,7 @@ def getTranslations(localeConfig, projectName, key):
     zip = ZipFile(StringIO(result))
     dirs = {}
 
-    normalizedDefaultLocale = localeConfig['default_locale']
-    if localeConfig['name_format'] == 'ISO-15897':
-        normalizedDefaultLocale = normalizedDefaultLocale.replace('_', '-')
+    normalizedDefaultLocale = localeConfig['default_locale'].replace('_', '-')
     normalizedDefaultLocale = CROWDIN_LANG_MAPPING.get(normalizedDefaultLocale,
                                                        normalizedDefaultLocale)
 
@@ -411,20 +261,14 @@ def getTranslations(localeConfig, projectName, key):
         dir, file = os.path.split(info.filename)
         if not re.match(r'^[\w\-]+$', dir) or dir == normalizedDefaultLocale:
             continue
-        if localeConfig['file_format'] == 'chrome-json' and file.count('.') == 1:
+        if file.count('.') == 1:
             origFile = file
         else:
-            origFile = re.sub(r'\.json$', '', file)
-        if (localeConfig['file_format'] == 'gecko-dtd' and
-            not origFile.endswith('.dtd') and
-            not origFile.endswith('.properties')):
-            continue
+            origFile = os.path.splitext(file)[0]
 
         for key, value in CROWDIN_LANG_MAPPING.iteritems():
             if value == dir:
                 dir = key
-        if localeConfig['name_format'] == 'ISO-15897':
-            dir = dir.replace('-', '_')
 
         data = zip.open(info.filename).read()
         if data == '[]':
@@ -437,16 +281,14 @@ def getTranslations(localeConfig, projectName, key):
         path = os.path.join(localeConfig['base_path'], dir, origFile)
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
-        if localeConfig['file_format'] == 'chrome-json' and file.endswith('.json'):
+        if file.endswith('.json'):
             postprocessChromeLocale(path, data)
-        elif localeConfig['file_format'] == 'chrome-json':
+        else:
             data = json.loads(data)
             if origFile in data:
                 fileHandle = codecs.open(path, 'wb', encoding='utf-8')
                 fileHandle.write(data[origFile]['message'])
                 fileHandle.close()
-        else:
-            fromJSON(path, data)
 
     # Remove any extra files
     for dir, files in dirs.iteritems():
@@ -455,5 +297,6 @@ def getTranslations(localeConfig, projectName, key):
             continue
         for file in os.listdir(baseDir):
             path = os.path.join(baseDir, file)
-            if os.path.isfile(path) and (file.endswith('.json') or file.endswith('.properties') or file.endswith('.dtd')) and not file in files:
+            valid_extension = file.endswith('.json')
+            if os.path.isfile(path) and valid_extension and not file in files:
                 os.remove(path)

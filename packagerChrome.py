@@ -191,75 +191,32 @@ def toJson(data):
     ).encode('utf-8') + '\n'
 
 
-def import_string_webext(data, key, source):
-    """Import a single translation from the source dictionary into data"""
-    data[key] = source
-
-
-def import_string_gecko(data, key, value):
-    """Import Gecko-style locales into data.
-
-    Only sets {'message': value} in the data-dictionary, after stripping
-    undesired Gecko-style access keys.
-    """
-    match = re.search(r'^(.*?)\s*\(&.\)$', value)
-    if match:
-        value = match.group(1)
-    else:
-        index = value.find('&')
-        if index >= 0:
-            value = value[0:index] + value[index + 1:]
-
-    data[key] = {'message': value}
-
-
 def import_locales(params, files):
     for item in params['metadata'].items('import_locales'):
         filename, keys = item
         for sourceFile in glob.glob(os.path.join(os.path.dirname(item.source),
                                                  *filename.split('/'))):
-            parts = sourceFile.split(os.path.sep)
-            locale = parts[-2].replace('-', '_')
+            locale = sourceFile.split(os.path.sep)[-2]
             targetFile = os.path.join('_locales', locale, 'messages.json')
             data = json.loads(files.get(targetFile, '{}').decode('utf-8'))
 
             try:
-                # The WebExtensions (.json) and Gecko format provide
-                # translations differently and/or provide additional
-                # information like e.g. "placeholders". We want to adhere to
-                # that and preserve the addtional info.
-                if sourceFile.endswith('.json'):
-                    with io.open(sourceFile, 'r', encoding='utf-8') as handle:
-                        sourceData = json.load(handle)
-                    import_string = import_string_webext
-                else:
-                    import localeTools
-                    sourceData = localeTools.readFile(sourceFile)
-                    import_string = import_string_gecko
+                with io.open(sourceFile, 'r', encoding='utf-8') as handle:
+                    sourceData = json.load(handle)
 
                 # Resolve wildcard imports
-                if keys == '*' or keys == '=*':
+                if keys == '*':
                     importList = sourceData.keys()
                     importList = filter(lambda k: not k.startswith('_'), importList)
-                    if keys == '=*':
-                        importList = map(lambda k: '=' + k, importList)
                     keys = ' '.join(importList)
 
                 for stringID in keys.split():
-                    noMangling = False
-                    if stringID.startswith('='):
-                        stringID = stringID[1:]
-                        noMangling = True
-
                     if stringID in sourceData:
-                        if noMangling:
-                            key = re.sub(r'\W', '_', stringID)
-                        else:
-                            key = re.sub(r'\..*', '', parts[-1]) + '_' + re.sub(r'\W', '_', stringID)
-                        if key in data:
-                            print 'Warning: locale string %s defined multiple times' % key
+                        if stringID in data:
+                            print ('Warning: locale string {} defined multiple'
+                                   ' times').format(stringID)
 
-                        import_string(data, key, sourceData[stringID])
+                        data[stringID] = sourceData[stringID]
             except Exception as e:
                 print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 

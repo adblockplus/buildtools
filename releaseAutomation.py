@@ -118,9 +118,7 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
         print('Aborting release.')
         return 1
 
-    if type == 'gecko':
-        import buildtools.packagerGecko as packager
-    elif type == 'safari':
+    if type == 'safari':
         import buildtools.packagerSafari as packager
     elif type == 'edge':
         import buildtools.packagerEdge as packager
@@ -142,15 +140,10 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
         file.truncate()
 
     # Read extension name from locale data
-    import buildtools.packagerGecko as packagerGecko
-    if type == 'gecko':
-        locales_base = baseDir
-    else:
-        # This is somewhat of a hack but reading out locale import config here would be too much
-        locales_base = os.path.join(baseDir, 'adblockplus')
-
-    locales = packagerGecko.readLocaleMetadata(locales_base, [packagerGecko.defaultLocale])
-    extensionName = locales[packagerGecko.defaultLocale]['name']
+    default_locale_path = os.path.join('_locales', packager.defaultLocale,
+                                       'messages.json')
+    with open(default_locale_path, 'r') as fp:
+        extensionName = json.load(fp)['name']
 
     # Now commit the change and tag it
     subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
@@ -161,11 +154,7 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
 
     # Create a release build
     downloads = []
-    if type == 'gecko':
-        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'xpi'))
-        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True)
-        downloads.append(buildPath)
-    elif type == 'chrome':
+    if type == 'chrome':
         # Create both signed and unsigned Chrome builds (the latter for Chrome Web Store).
         buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'crx'))
         packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)

@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Note: These are the base functions common to all packagers, the actual
-# packagers are implemented in packagerGecko and packagerChrome.
+# packagers are implemented in packagerChrome and packagerEdge.
 
 import sys
 import os
