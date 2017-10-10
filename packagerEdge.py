@@ -177,8 +177,8 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
     else:
         files.read(baseDir)
 
-    if metadata.has_section('convert_js'):
-        packagerChrome.convertJS(params, files)
+    if metadata.has_section('bundles'):
+        packagerChrome.create_bundles(params, files)
 
     if metadata.has_section('preprocess'):
         files.preprocess(metadata.options('preprocess'), {'needsExt': True})

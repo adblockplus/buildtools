@@ -3,7 +3,9 @@
   "repository": "https://hg.adblockplus.org/buildtools",
   "license": "MPL-2.0",
   "dependencies": {
-    "jsdoc": "3.5.4"
+    "jsdoc": "3.5.4",
+    "memory-fs": "0.4.1",
+    "webpack": "3.6.0"
   },
   "scripts": {
     "jsdoc": "jsdoc"
