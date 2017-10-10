@@ -118,9 +118,7 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
         print('Aborting release.')
         return 1
 
-    if type == 'safari':
-        import buildtools.packagerSafari as packager
-    elif type == 'edge':
+    if type == 'edge':
         import buildtools.packagerEdge as packager
     elif type == 'chrome':
         import buildtools.packagerChrome as packager
@@ -148,7 +146,7 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
     # Now commit the change and tag it
     subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
     tag_name = version
-    if type in {'safari', 'edge'}:
+    if type == 'edge':
         tag_name = '{}-{}'.format(tag_name, type)
     subprocess.check_call(['hg', 'tag', '-R', baseDir, '-f', tag_name])
 
@@ -162,10 +160,6 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
 
         buildPathUnsigned = os.path.join(baseDir, getDefaultFileName(metadata, version, 'zip'))
         packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
-    elif type == 'safari':
-        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'safariextz'))
-        packager.createBuild(baseDir, type='safari', outFile=buildPath, releaseBuild=True, keyFile=keyFile)
-        downloads.append(buildPath)
     elif type == 'edge':
         # We only offer the Edge extension for use through the Windows Store
         buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'appx'))

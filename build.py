@@ -11,7 +11,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko-webext', 'chrome', 'safari', 'generic', 'edge')
+knownTypes = ('gecko-webext', 'chrome', 'generic', 'edge')
 
 
 class Command(object):
@@ -190,8 +190,6 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
     if type in {'chrome', 'gecko-webext'}:
         import buildtools.packagerChrome as packager
-    elif type == 'safari':
-        import buildtools.packagerSafari as packager
     elif type == 'edge':
         import buildtools.packagerEdge as packager
 
@@ -199,10 +197,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
-    if type == 'safari':
-        import buildtools.packagerSafari as packager
-    else:
-        import buildtools.packagerChrome as packager
+    import buildtools.packagerChrome as packager
 
     file = StringIO()
     packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
@@ -370,7 +365,7 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
         usage(scriptName, type, 'release')
         return
 
-    if type in {'chrome', 'safari'} and keyFile is None:
+    if type == 'chrome' and keyFile is None:
         print >>sys.stderr, 'Error: you must specify a key file for this release'
         usage(scriptName, type, 'release')
         return
@@ -392,14 +387,14 @@ with addCommand(runBuild, 'build') as command:
     command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
     command.params = '[options] [output_file]'
     command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome', 'safari'))
+    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome',))
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko-webext', 'chrome', 'safari', 'edge')
+    command.supportedTypes = ('gecko-webext', 'chrome', 'edge')
 
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
     command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = ('gecko-webext', 'chrome', 'safari')
+    command.supportedTypes = ('gecko-webext', 'chrome')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'
@@ -432,10 +427,10 @@ with addCommand(generateDocs, 'docs') as command:
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
     command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
-    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types=('chrome', 'safari', 'edge'))
+    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types=('chrome', 'edge'))
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'
-    command.supportedTypes = ('chrome', 'safari', 'edge')
+    command.supportedTypes = ('chrome', 'edge')
 
 with addCommand(updatePSL, 'updatepsl') as command:
     command.shortDescription = 'Updates Public Suffix List'
