@@ -11,7 +11,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko-webext', 'chrome', 'generic', 'edge')
+knownTypes = ('gecko', 'chrome', 'generic', 'edge')
 
 
 class Command(object):
@@ -179,7 +179,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
     for option, value in opts:
         if option in {'-b', '--build'}:
             kwargs['buildNum'] = value
-            if type != 'gecko-webext' and not kwargs['buildNum'].isdigit():
+            if type != 'gecko' and not kwargs['buildNum'].isdigit():
                 raise TypeError('Build number must be numerical')
         elif option in {'-k', '--key'}:
             kwargs['keyFile'] = value
@@ -188,7 +188,7 @@ def runBuild(baseDir, scriptName, opts, args, type):
     if len(args) > 0:
         kwargs['outFile'] = args[0]
 
-    if type in {'chrome', 'gecko-webext'}:
+    if type in {'chrome', 'gecko'}:
         import buildtools.packagerChrome as packager
     elif type == 'edge':
         import buildtools.packagerEdge as packager
@@ -389,12 +389,12 @@ with addCommand(runBuild, 'build') as command:
     command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
     command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome',))
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko-webext', 'chrome', 'edge')
+    command.supportedTypes = ('gecko', 'chrome', 'edge')
 
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
     command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = ('gecko-webext', 'chrome')
+    command.supportedTypes = ('gecko', 'chrome')
 
 with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'

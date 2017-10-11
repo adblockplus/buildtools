@@ -152,7 +152,7 @@ def create_bundles(params, files):
     info_templates = {
         'chrome': 'chromeInfo.js.tmpl',
         'edge': 'edgeInfo.js.tmpl',
-        'gecko-webext': 'geckoInfo.js.tmpl'
+        'gecko': 'geckoInfo.js.tmpl'
     }
 
     # Historically we didn't use relative paths when requiring modules, so in
@@ -319,7 +319,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
     if outFile == None:
-        if type == 'gecko-webext':
+        if type == 'gecko':
             file_extension = 'xpi'
         else:
             file_extension = 'crx' if keyFile else 'zip'
