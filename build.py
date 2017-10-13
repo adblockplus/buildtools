@@ -11,7 +11,7 @@ from getopt import getopt, GetoptError
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = ('gecko', 'chrome', 'generic', 'edge')
+knownTypes = {'gecko', 'chrome', 'generic', 'edge'}
 
 
 class Command(object):
@@ -334,7 +334,7 @@ def generateDocs(baseDir, scriptName, opts, args, type):
 
     command = ['npm', 'run-script', 'jsdoc', '--', '--destination', targetDir,
                '--configure', config] + sources
-    if any(opt in ('-q', '--quiet') for opt, _ in opts):
+    if any(opt in {'-q', '--quiet'} for opt, _ in opts):
         process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, cwd=buildtools_path)
         stderr = process.communicate()[1]
@@ -350,9 +350,9 @@ def runReleaseAutomation(baseDir, scriptName, opts, args, type):
     keyFile = None
     downloadsRepo = os.path.join(baseDir, '..', 'downloads')
     for option, value in opts:
-        if option in ('-k', '--key'):
+        if option in {'-k', '--key'}:
             keyFile = value
-        elif option in ('-d', '--downloads'):
+        elif option in {'-d', '--downloads'}:
             downloadsRepo = value
 
     if len(args) == 0:
@@ -387,14 +387,14 @@ with addCommand(runBuild, 'build') as command:
     command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
     command.params = '[options] [output_file]'
     command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types=('chrome',))
+    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types={'chrome'})
     command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = ('gecko', 'chrome', 'edge')
+    command.supportedTypes = {'gecko', 'chrome', 'edge'}
 
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
     command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = ('gecko', 'chrome')
+    command.supportedTypes = {'gecko', 'chrome'}
 
 with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'
@@ -422,20 +422,20 @@ with addCommand(generateDocs, 'docs') as command:
                            'the specified directory.')
     command.addOption('Suppress JsDoc output', short='q', long='quiet')
     command.params = '[options] <directory>'
-    command.supportedTypes = ('chrome',)
+    command.supportedTypes = {'chrome'}
 
 with addCommand(runReleaseAutomation, 'release') as command:
     command.shortDescription = 'Run release automation'
     command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
-    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types=('chrome', 'edge'))
+    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types={'chrome', 'edge'})
     command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
     command.params = '[options] <version>'
-    command.supportedTypes = ('chrome', 'edge')
+    command.supportedTypes = {'chrome', 'edge'}
 
 with addCommand(updatePSL, 'updatepsl') as command:
     command.shortDescription = 'Updates Public Suffix List'
     command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
-    command.supportedTypes = ('chrome',)
+    command.supportedTypes = {'chrome'}
 
 
 def getType(baseDir, scriptName, args):
@@ -468,8 +468,8 @@ Ambiguous repository type, please specify -t parameter explicitly, e.g.
     else:
         print '''
 No metadata file found in this repository, a metadata file like
-metadata.%s is required.
-''' % knownTypes[0]
+metadata.* is required.
+'''
         return None
 
 
@@ -500,7 +500,7 @@ No command given, assuming "build". For a list of commands run:
                 usage(scriptName, type, command)
                 sys.exit(2)
             for option, value in opts:
-                if option in ('-h', '--help'):
+                if option in {'-h', '--help'}:
                     usage(scriptName, type, command)
                     sys.exit()
             commands[command](baseDir, scriptName, opts, args, type)
