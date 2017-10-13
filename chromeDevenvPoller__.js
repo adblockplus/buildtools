@@ -7,7 +7,7 @@
   var version = null;
   function doPoll()
   {
-    fetch(chrome.extension.getURL("devenvVersion__"))
+    fetch(browser.extension.getURL("devenvVersion__"))
       .then(function(response)
       {
         return response.text();
@@ -18,7 +18,7 @@
           version = text;
 
         if (text != version)
-          chrome.runtime.reload();
+          browser.runtime.reload();
         else
           window.setTimeout(doPoll, 5000);
       });
