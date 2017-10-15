@@ -152,7 +152,7 @@ def create_bundles(params, files):
     info_templates = {
         'chrome': 'chromeInfo.js.tmpl',
         'edge': 'edgeInfo.js.tmpl',
-        'gecko-webext': 'geckoInfo.js.tmpl'
+        'gecko': 'geckoInfo.js.tmpl'
     }
 
     # Historically we didn't use relative paths when requiring modules, so in
