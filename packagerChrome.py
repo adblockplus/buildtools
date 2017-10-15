@@ -3,15 +3,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import errno
+import glob
 import io
 import json
 import os
 import re
 from StringIO import StringIO
 import struct
+import subprocess
 import sys
-import collections
-import glob
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
                       getTemplate, Files)
@@ -140,55 +140,69 @@ def createManifest(params, files):
     return manifest.encode('utf-8')
 
 
-def convertJS(params, files):
-    output_files = collections.OrderedDict()
-    args = {}
-
-    for item in params['metadata'].items('convert_js'):
-        name, value = item
-        filename, arg = re.search(r'^(.*?)(?:\[(.*)\])?$', name).groups()
-        if arg is None:
-            output_files[filename] = (value.split(), item.source)
-        else:
-            args.setdefault(filename, {})[arg] = value
-
-    template = getTemplate('modules.js.tmpl')
-
-    for filename, (input_files, origin) in output_files.iteritems():
-        if '/' in filename and not files.isIncluded(filename):
-            continue
-
-        current_args = args.get(filename, {})
-        current_args['autoload'] = [module for module in
-                                    current_args.get('autoload', '').split(',')
-                                    if module != '']
-
-        base_dir = os.path.dirname(origin)
-        modules = []
-
-        for input_filename in input_files:
-            module_name = os.path.splitext(os.path.basename(input_filename))[0]
-            prefix = os.path.basename(os.path.dirname(input_filename))
-            if prefix != 'lib':
-                module_name = '{}_{}'.format(prefix, module_name)
-            with open(os.path.join(base_dir, input_filename), 'r') as file:
-                modules.append((module_name, file.read().decode('utf-8')))
-            files.pop(input_filename, None)
-
-        files[filename] = template.render(
-            args=current_args,
-            basename=params['metadata'].get('general', 'basename'),
-            modules=modules,
-            type=params['type'],
-            version=params['metadata'].get('general', 'version')
-        ).encode('utf-8')
-
-
 def toJson(data):
     return json.dumps(
         data, ensure_ascii=False, sort_keys=True,
         indent=2, separators=(',', ': ')
     ).encode('utf-8') + '\n'
+
+
+def create_bundles(params, files):
+    base_extension_path = params['baseDir']
+    info_templates = {
+        'chrome': 'chromeInfo.js.tmpl',
+        'edge': 'edgeInfo.js.tmpl',
+        'gecko-webext': 'geckoInfo.js.tmpl'
+    }
+
+    # Historically we didn't use relative paths when requiring modules, so in
+    # order for webpack to know where to find them we need to pass in a list of
+    # resolve paths. Going forward we should always use relative paths, once we
+    # do that consistently this can be removed. See issues 5760, 5761 and 5762.
+    resolve_paths = [os.path.join(base_extension_path, dir, 'lib')
+                     for dir in ['', 'adblockpluscore', 'adblockplusui']]
+
+    info_template = getTemplate(info_templates[params['type']])
+    info_module = info_template.render(
+        basename=params['metadata'].get('general', 'basename'),
+        version=params['metadata'].get('general', 'version')
+    ).encode('utf-8')
+
+    configuration = {
+        'bundles': [],
+        'extension_path': base_extension_path,
+        'info_module': info_module,
+        'resolve_paths': resolve_paths,
+    }
+
+    for item in params['metadata'].items('bundles'):
+        name, value = item
+        base_item_path = os.path.dirname(item.source)
+
+        bundle_file = os.path.relpath(os.path.join(base_item_path, name),
+                                      base_extension_path)
+        entry_files = [os.path.join(base_item_path, module_path)
+                       for module_path in value.split()]
+        configuration['bundles'].append({
+            'bundle_name': bundle_file,
+            'entry_points': entry_files,
+        })
+
+    cmd = ['node', os.path.join(os.path.dirname(__file__), 'webpack_runner.js')]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stdin=subprocess.PIPE)
+    output = process.communicate(input=toJson(configuration))[0]
+    if process.returncode != 0:
+        raise subprocess.CalledProcessError(process.returncode, cmd=cmd)
+    output = json.loads(output)
+
+    # Clear the mapping for any files included in a bundle, to avoid them being
+    # duplicated in the build.
+    for to_ignore in output['included']:
+        files.pop(to_ignore, None)
+
+    for bundle in output['files']:
+        files[bundle] = output['files'][bundle].encode('utf-8')
 
 
 def import_locales(params, files):
@@ -332,8 +346,8 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     files.readMappedFiles(mapped)
     files.read(baseDir, skip=[opt for opt, _ in mapped])
 
-    if metadata.has_section('convert_js'):
-        convertJS(params, files)
+    if metadata.has_section('bundles'):
+        create_bundles(params, files)
 
     if metadata.has_section('preprocess'):
         files.preprocess(
