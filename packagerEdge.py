@@ -188,6 +188,9 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
 
     files['manifest.json'] = packagerChrome.createManifest(params, files)
 
+    if devenv:
+        packagerChrome.add_devenv_requirements(files, metadata, params)
+
     move_files_to_extension(files)
 
     if metadata.has_section('appx_assets'):

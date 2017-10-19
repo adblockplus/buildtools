@@ -197,7 +197,10 @@ def runBuild(baseDir, scriptName, opts, args, type):
 
 
 def createDevEnv(baseDir, scriptName, opts, args, type):
-    import buildtools.packagerChrome as packager
+    if type == 'edge':
+        import buildtools.packagerEdge as packager
+    else:
+        import buildtools.packagerChrome as packager
 
     file = StringIO()
     packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
@@ -394,7 +397,7 @@ with addCommand(runBuild, 'build') as command:
 with addCommand(createDevEnv, 'devenv') as command:
     command.shortDescription = 'Set up a development environment'
     command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = {'gecko', 'chrome'}
+    command.supportedTypes = {'gecko', 'chrome', 'edge'}
 
 with addCommand(setupTranslations, 'setuptrans') as command:
     command.shortDescription = 'Sets up translation languages'

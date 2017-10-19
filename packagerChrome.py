@@ -12,6 +12,7 @@ from StringIO import StringIO
 import struct
 import subprocess
 import sys
+import random
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
                       getTemplate, Files)
@@ -319,6 +320,19 @@ def writePackage(outputFile, pubkey, signature, zipdata):
     file.write(zipdata)
 
 
+def add_devenv_requirements(files, metadata, params):
+    files.read(
+        os.path.join(os.path.dirname(__file__), 'chromeDevenvPoller__.js'),
+        relpath='devenvPoller__.js',
+    )
+    files['devenvVersion__'] = str(random.random())
+
+    if metadata.has_option('general', 'testScripts'):
+        files['qunit/index.html'] = createScriptPage(
+            params, 'testIndex.html.tmpl', ('general', 'testScripts')
+        )
+
+
 def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuild=False, keyFile=None, devenv=False):
     metadata = readMetadata(baseDir, type)
     version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
@@ -363,15 +377,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
         fix_translations_for_chrome(files)
 
     if devenv:
-        import buildtools
-        import random
-        files.read(os.path.join(buildtools.__path__[0], 'chromeDevenvPoller__.js'), relpath='devenvPoller__.js')
-        files['devenvVersion__'] = str(random.random())
-
-        if metadata.has_option('general', 'testScripts'):
-            files['qunit/index.html'] = createScriptPage(
-                params, 'testIndex.html.tmpl', ('general', 'testScripts')
-            )
+        add_devenv_requirements(files, metadata, params)
 
     zipdata = files.zipToString()
     signature = None
