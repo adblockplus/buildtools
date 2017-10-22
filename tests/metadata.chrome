@@ -1,0 +1,38 @@
+[general]
+version = 1.2.3
+author = eyeo GmbH
+basename = adblockpluschrome
+permissions = tabs
+  <all_urls>
+optionalPermissions = webRequest
+backgroundScripts = ext/common.js
+  ext/background.js
+testScripts = ../ext/common.js
+  ../ext/background.js
+devtools = devtools.html
+options = options.html
+managedStorageSchema = storage.json
+browserAction = icons/abp-16.png icons/abp-19.png icons/abp-53.png popup.html
+icons = icons/abp-16.png
+webAccessible = images/*.png
+
+[contentScripts]
+planets = content.js
+
+[mapping]
+logo_44.png = chrome/icons/abp-44.png
+foo/logo_50.png = chrome/icons/abp-50.png
+icons/logo_150.png = chrome/icons/abp-150.png
+
+[compat]
+chrome = 49.0
+opera = 36.0
+
+[import_locales]
+_modules/*/module.json = =*
+_modules/*/unit.properties = =*
+_imp/*/gecko.dtd = =*
+
+[bundles]
+lib/foo.js = ext/a.js
+  lib/b.js

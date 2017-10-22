@@ -9,6 +9,7 @@ not directly.
 ## Requirements
 
 - [The Jinja2 module](http://jinja.pocoo.org/docs) (>= 2.8)
+- [The Pycrypto module](http://pythonhosted.org/pycrypto/) (>= 2.6.1)
 
 ## Usage
 
@@ -28,3 +29,5 @@ easy to lint and run the tests:
 
 _(Tox will take care of installing the other dependencies such as flake8 and
 flake8-abp inside a virtualenv.)_
+
+For more information about the unit tests please refer to tests/README.md.

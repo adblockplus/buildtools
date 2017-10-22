@@ -1,0 +1,63 @@
+{
+  "author": "eyeo GmbH", 
+  "background": {
+    "persistent": true, 
+    "scripts": [
+      "ext/common.js", 
+      "ext/background.js", 
+      "devenvPoller__.js"
+    ]
+  }, 
+  "browser_action": {
+    "default_icon": {
+      "16": "icons/abp-16.png", 
+      "19": "icons/abp-19.png", 
+      "53": "icons/abp-53.png"
+    }, 
+    "default_popup": "popup.html", 
+    "default_title": "__MSG_name__"
+  }, 
+  "content_scripts": [
+    {
+      "all_frames": true, 
+      "js": [
+        "content.js"
+      ], 
+      "match_about_blank": true, 
+      "matches": [
+        "http://*/*", 
+        "https://*/*"
+      ], 
+      "run_at": "planets"
+    }
+  ], 
+  "default_locale": "en_US", 
+  "description": "__MSG_description__", 
+  "devtools_page": "devtools.html", 
+  "icons": {
+    "16": "icons/abp-16.png"
+  }, 
+  "manifest_version": 2, 
+  "minimum_chrome_version": "49.0", 
+  "minimum_edge_version": "37.14332.1000.0", 
+  "minimum_opera_version": "36.0", 
+  "name": "__MSG_name__", 
+  "optional_permissions": [
+    "webRequest"
+  ], 
+  "options_page": "options.html", 
+  "permissions": [
+    "tabs", 
+    "http://*/*", 
+    "https://*/*", 
+    "contextMenus"
+  ], 
+  "short_name": "__MSG_name__", 
+  "storage": {
+    "managed_schema": "storage.json"
+  }, 
+  "version": "1.2.3", 
+  "web_accessible_resources": [
+    "images/*.png"
+  ]
+}

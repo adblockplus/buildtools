@@ -8,7 +8,6 @@ import io
 import json
 import os
 import re
-from StringIO import StringIO
 import struct
 import subprocess
 import sys
@@ -45,13 +44,15 @@ def processFile(path, data, params):
 
 
 def makeIcons(files, filenames):
-    try:
-        from PIL import Image
-    except ImportError:
-        import Image
     icons = {}
     for filename in filenames:
-        width, height = Image.open(StringIO(files[filename])).size
+        try:
+            magic, width, height = struct.unpack_from('>8s8xii',
+                                                      files[filename])
+        except struct.error:
+            magic = None
+        if magic != '\x89PNG\r\n\x1a\n':
+            raise Exception(filename + ' is no valid PNG.')
         if(width != height):
             print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (filename, width, height)
         icons[width] = filename

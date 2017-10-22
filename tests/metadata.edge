@@ -1,6 +1,7 @@
+[default]
+inherit = metadata.chrome
+
 [general]
-version = 1.2.3
-author = Eyeo GmbH
 basename = adblockplusedge
 app_id_release = EyeoGmbH.AdblockPlus
 app_id_devbuild = EyeoGmbH.AdblockPlusdevelopmentbuild
@@ -10,14 +11,6 @@ permissions = tabs
   http://*/*
   https://*/*
   contextMenus
-  webRequest
-  webRequestBlocking
-  webNavigation
-  storage
-  unlimitedStorage
-  notifications
-options = options.html
-backgroundScripts = lib/info.js
 extension_id_release = 1.0
 
 [appx_assets]
@@ -27,7 +20,22 @@ logo_150.png = chrome/icons/abp-150.png
 
 [mapping]
 icons = chrome/icons
+icons/abp-16.png = icons/abp-16.png
+icons/abp-19.png = icons/abp-19.png
+icons/abp-53.png = icons/abp-53.png
 
 [compat]
 edge = 37.14332.1000.0
 windows = 10.0.14332.0/12.0.0.0
+
+[contentScripts]
+planets = content.js
+
+[import_locales]
+_modules/*/module.json = =*
+_modules/*/unit.properties = =*
+_imp/*/gecko.dtd = =*
+
+[bundles]
+lib/foo.js = ext/a.js
+  lib/b.js
