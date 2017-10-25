@@ -209,9 +209,10 @@ def create_bundles(params, files):
 
 def import_locales(params, files):
     for item in params['metadata'].items('import_locales'):
-        filename, keys = item
+        filename = item[0]
         for sourceFile in glob.glob(os.path.join(os.path.dirname(item.source),
                                                  *filename.split('/'))):
+            keys = item[1]
             locale = sourceFile.split(os.path.sep)[-2]
             targetFile = os.path.join('_locales', locale, 'messages.json')
             data = json.loads(files.get(targetFile, '{}').decode('utf-8'))
