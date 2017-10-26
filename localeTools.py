@@ -269,6 +269,7 @@ def getTranslations(localeConfig, projectName, key):
         for key, value in CROWDIN_LANG_MAPPING.iteritems():
             if value == dir:
                 dir = key
+        dir = dir.replace('-', '_')
 
         data = zip.open(info.filename).read()
         if data == '[]':
