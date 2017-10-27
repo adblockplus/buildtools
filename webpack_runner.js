@@ -56,7 +56,7 @@ process.stdin.on("end", () =>
       },
       entry: entry_points,
       output: {
-        path: "/",
+        path: path.resolve(""),
         filename: bundle_name
       },
       resolve: {
@@ -138,7 +138,7 @@ process.stdin.on("end", () =>
       for (let config of options)
       {
         let filepath = path.join(config.output.path, config.output.filename);
-        let relativeFilepath = path.relative("/", filepath);
+        let relativeFilepath = path.relative("", config.output.filename);
         files[relativeFilepath] = memoryFS.readFileSync(filepath, "utf-8");
         files[relativeFilepath + ".map"] = memoryFS.readFileSync(
           filepath + ".map", "utf-8"
