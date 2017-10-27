@@ -12,6 +12,7 @@ import struct
 import subprocess
 import sys
 import random
+import posixpath
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
                       getTemplate, Files)
@@ -214,7 +215,7 @@ def import_locales(params, files):
                                                  *filename.split('/'))):
             keys = item[1]
             locale = sourceFile.split(os.path.sep)[-2]
-            targetFile = os.path.join('_locales', locale, 'messages.json')
+            targetFile = posixpath.join('_locales', locale, 'messages.json')
             data = json.loads(files.get(targetFile, '{}').decode('utf-8'))
 
             try:
