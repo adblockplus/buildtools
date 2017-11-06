@@ -141,7 +141,7 @@ def run(baseDir, type, version, keyFile, downloadsRepo):
     default_locale_path = os.path.join('_locales', packager.defaultLocale,
                                        'messages.json')
     with open(default_locale_path, 'r') as fp:
-        extensionName = json.load(fp)['name']
+        extensionName = json.load(fp)['name']['message']
 
     # Now commit the change and tag it
     subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
