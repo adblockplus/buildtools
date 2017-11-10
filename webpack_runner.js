@@ -59,6 +59,9 @@ process.stdin.on("end", () =>
         path: path.resolve(""),
         filename: bundle_name
       },
+      node: {
+        global: false
+      },
       resolve: {
         modules: resolve_paths,
         alias: {
