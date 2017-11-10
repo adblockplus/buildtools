@@ -231,12 +231,19 @@ def lib_files(tmpdir):
     files['ext/a.js'] = 'require("./c.js");\nvar bar;'
     files['lib/b.js'] = 'var foo;'
     files['ext/c.js'] = 'var this_is_c;'
+    files['qunit/common.js'] = 'var qunit = {};'
+    files['qunit/tests/some_test.js'] = 'var passed = true;'
 
     tmpdir.mkdir('lib').join('b.js').write(files['lib/b.js'])
     ext_dir = tmpdir.mkdir('ext')
     ext_dir.join('a.js').write(files['ext/a.js'])
     ext_dir.join('c.js').write(files['ext/c.js'])
-
+    qunit_dir = tmpdir.mkdir('qunit')
+    qunit_dir.join('common.js').write(files['qunit/common.js'])
+    qunit_tests_dir = qunit_dir.mkdir('tests')
+    qunit_tests_dir.join('some_test.js').write(
+        files['qunit/tests/some_test.js']
+    )
     return files
 
 
@@ -320,6 +327,8 @@ def assert_devenv_scripts(package, prefix, devenv):
     assert (os.path.join(prefix, 'qunit/index.html') in filenames) == devenv
     assert (os.path.join(prefix, 'devenvPoller__.js') in filenames) == devenv
     assert (os.path.join(prefix, 'devenvVersion__') in filenames) == devenv
+    assert (os.path.join(prefix, 'qunit/tests.js') in filenames) == devenv
+    assert (os.path.join(prefix, 'qunit/tests.js.map') in filenames) == devenv
 
     if devenv:
         quint_index = package.read(os.path.join(prefix, 'qunit/index.html'))

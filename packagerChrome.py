@@ -150,7 +150,7 @@ def toJson(data):
     ).encode('utf-8') + '\n'
 
 
-def create_bundles(params, files):
+def create_bundles(params, files, bundle_tests):
     base_extension_path = params['baseDir']
     info_templates = {
         'chrome': 'chromeInfo.js.tmpl',
@@ -189,6 +189,15 @@ def create_bundles(params, files):
         configuration['bundles'].append({
             'bundle_name': bundle_file,
             'entry_points': entry_files,
+        })
+
+    if bundle_tests:
+        qunit_path = os.path.join(base_extension_path, 'qunit')
+        qunit_files = ([os.path.join(qunit_path, 'common.js')] +
+                       glob.glob(os.path.join(qunit_path, 'tests', '*.js')))
+        configuration['bundles'].append({
+            'bundle_name': 'qunit/tests.js',
+            'entry_points': qunit_files
         })
 
     cmd = ['node', os.path.join(os.path.dirname(__file__), 'webpack_runner.js')]
@@ -364,7 +373,8 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     files.read(baseDir, skip=[opt for opt, _ in mapped])
 
     if metadata.has_section('bundles'):
-        create_bundles(params, files)
+        bundle_tests = devenv and metadata.has_option('general', 'testScripts')
+        create_bundles(params, files, bundle_tests)
 
     if metadata.has_section('preprocess'):
         files.preprocess(
