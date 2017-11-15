@@ -247,44 +247,27 @@ def lib_files(tmpdir):
     return files
 
 
-def comparable_xml(xml):
-    """Create a nonambiguous representation of a given XML tree.
-
-    Note that this function is not safe against ambiguous tags
-    containing differently distributed children, e.g.:
-
-    '<a><b><c/></b><b><d/></b></a>'
-    vs.
-    '<a><b/><b><c/><d/></b></a>'
-
-    This is irrelevant for comparing the XML used by the tests of this
-    module.
-    """
-    def get_leafs_string(tree):
-        """Recursively build a string representing all xml leaf-nodes."""
-        root_str = '{}|{}|{}'.format(tree.tag, tree.tail, tree.text).strip()
-        result = []
-
-        if len(tree) > 0:
-            for subtree in tree:
-                for leaf in get_leafs_string(subtree):
-                    result.append('{}__{}'.format(root_str, leaf))
-        for k, v in tree.attrib.items():
-            result.append('{}__{}:{}'.format(root_str, k, v))
-        else:
-            result.append(root_str)
-        return result
-
-    # XML data itself shall not be sorted, hence we can safely sort
-    # our string representations in order to produce a valid unified diff.
-    return sorted(get_leafs_string(ElementTree.fromstring(xml)))
-
-
-def comparable_json(json_string):
-    """Create a nonambiguous representation of a given JSON string."""
+def comparable_json(json_data):
+    """Create a nonambiguous representation of the given JSON data."""
+    if isinstance(json_data, basestring):
+        json_data = json.loads(json_data)
     return json.dumps(
-        json.loads(json_string), sort_keys=True, indent=0
+        json_data, sort_keys=True, indent=0
     ).split('\n')
+
+
+def comparable_xml(xml):
+    """Create a nonambiguous representation of a given XML tree."""
+    def strip(s):
+        if s is None:
+            return ''
+        return s.strip()
+
+    def transform(elt):
+        subs = sorted(transform(s) for s in elt)
+        return (elt.tag, strip(elt.tail), strip(elt.text), elt.attrib, subs)
+
+    return comparable_json(transform(ElementTree.fromstring(xml)))
 
 
 def assert_manifest_content(manifest, expected_path):
