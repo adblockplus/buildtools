@@ -86,13 +86,18 @@ def createManifest(params, files):
         if len(icons) == 1:
             # ... = icon.png
             icon, popup = icons[0], None
-        elif len(icons) == 2:
-            # ... = icon.png popup.html
-            icon, popup = icons
+        elif icons[-1].endswith('.html'):
+            if len(icons) == 2:
+                # ... = icon.png popup.html
+                icon, popup = icons
+            else:
+                # ... = icon-19.png icon-38.png popup.html
+                popup = icons.pop()
+                icon = makeIcons(files, icons)
         else:
-            # ... = icon-19.png icon-38.png popup.html
-            popup = icons.pop()
+            # ... = icon-16.png icon-32.png icon-48.png
             icon = makeIcons(files, icons)
+            popup = None
 
         templateData[opt] = {'icon': icon, 'popup': popup}
 
