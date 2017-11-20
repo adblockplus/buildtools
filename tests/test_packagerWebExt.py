@@ -18,7 +18,7 @@ from Crypto.Hash import SHA
 
 from buildtools import packager
 from buildtools.packagerChrome import defaultLocale
-from buildtools.build import processArgs
+from buildtools.build import process_args
 
 LOCALES_MODULE = {
     'test.Foobar': {
@@ -134,12 +134,12 @@ def run_webext_build(ext_type, build_opt, srcdir, keyfile=None):
         'release_build': ['build', '-r'],
     }
 
-    args = ['build.py', '-t', ext_type] + cmd_mapping[build_opt]
+    args = cmd_mapping[build_opt] + ['-t', ext_type]
 
     if keyfile:
         args += ['-k', keyfile]
 
-    processArgs(str(srcdir), args)
+    process_args(str(srcdir), *args)
 
 
 def locale_files(languages, rootfolder, srcdir):

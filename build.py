@@ -2,211 +2,175 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import argparse
+import logging
 import os
-import sys
 import re
-import subprocess
 import shutil
-from getopt import getopt, GetoptError
+import subprocess
+import sys
+from functools import partial
 from StringIO import StringIO
 from zipfile import ZipFile
 
-knownTypes = {'gecko', 'chrome', 'generic', 'edge'}
+KNOWN_PLATFORMS = {'chrome', 'gecko', 'edge', 'generic'}
+
+MAIN_PARSER = argparse.ArgumentParser(
+    description=__doc__,
+    formatter_class=argparse.RawDescriptionHelpFormatter)
+
+SUB_PARSERS = MAIN_PARSER.add_subparsers(title='Commands', dest='action',
+                                         metavar='[command]')
+
+ALL_COMMANDS = []
 
 
-class Command(object):
-    name = property(lambda self: self._name)
-    shortDescription = property(
-        lambda self: self._shortDescription,
-        lambda self, value: self.__dict__.update({'_shortDescription': value})
+def make_argument(*args, **kwargs):
+    def _make_argument(*args, **kwargs):
+        parser = kwargs.pop('parser')
+        parser.add_argument(*args, **kwargs)
+
+    return partial(_make_argument, *args, **kwargs)
+
+
+def argparse_command(valid_platforms=None, arguments=()):
+    def wrapper(func):
+        def func_wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        short_desc, long_desc = func.__doc__.split(os.linesep + os.linesep, 1)
+
+        ALL_COMMANDS.append({
+            'name': func.__name__,
+            'description': long_desc,
+            'help_text': short_desc,
+            'valid_platforms': valid_platforms or KNOWN_PLATFORMS,
+            'function': func,
+            'arguments': arguments,
+        })
+        return func_wrapper
+
+    return wrapper
+
+
+def make_subcommand(name, description, help_text, function, arguments):
+    new_parser = SUB_PARSERS.add_parser(
+        name, description=description, help=help_text,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    description = property(
-        lambda self: self._description,
-        lambda self, value: self.__dict__.update({'_description': value})
-    )
-    params = property(
-        lambda self: self._params,
-        lambda self, value: self.__dict__.update({'_params': value})
-    )
-    supportedTypes = property(
-        lambda self: self._supportedTypes,
-        lambda self, value: self.__dict__.update({'_supportedTypes': value})
-    )
-    options = property(lambda self: self._options)
 
-    def __init__(self, handler, name):
-        self._handler = handler
-        self._name = name
-        self._shortDescription = ''
-        self._description = ''
-        self._params = ''
-        self._supportedTypes = None
-        self._options = []
-        self.addOption('Show this message and exit', short='h', long='help')
+    for argument in arguments:
+        argument(parser=new_parser)
 
-    def __enter__(self):
-        return self
+    new_parser.set_defaults(function=function)
+    return new_parser
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
 
-    def __call__(self, baseDir, scriptName, opts, args, type):
-        return self._handler(baseDir, scriptName, opts, args, type)
+def build_available_subcommands(base_dir):
+    """Build subcommands, which are available for the repository in base_dir.
 
-    def isSupported(self, type):
-        return self._supportedTypes == None or type in self._supportedTypes
+    Search 'base_dir' for existing metadata.<type> files and make <type> an
+    avaible choice for the subcommands, intersected with their respective valid
+    platforms.
 
-    def addOption(self, description, short=None, long=None, value=None, types=None):
-        self._options.append((description, short, long, value, types))
+    If no valid platform is found for a subcommand, it get's omitted.
+    """
+    if build_available_subcommands._result is not None:
+        # Tests might run this code multiple times, make sure the collection
+        # of platforms is only run once.
+        return build_available_subcommands._result
 
-    def parseArgs(self, type, args):
-        shortOptions = map(
-            lambda o: o[1] + ':' if o[3] != None else o[1],
-            filter(
-                lambda o: o[1] != None and (o[4] == None or type in o[4]),
-                self._options
+    types = set()
+    for p in KNOWN_PLATFORMS:
+        if os.path.exists(os.path.join(base_dir, 'metadata.' + p)):
+            types.add(p)
+
+    if len(types) == 0:
+        logging.error('No metadata file found in this repository. Expecting '
+                      'one or more of {} to be present.'.format(
+                          ', '.join('metadata.' + p for p in KNOWN_PLATFORMS)))
+        build_available_subcommands._result = False
+        return False
+
+    for command_params in ALL_COMMANDS:
+        platforms = types.intersection(command_params.pop('valid_platforms'))
+        if len(platforms) > 1:
+            command_params['arguments'] += (
+                make_argument('-t', '--type', dest='platform', required=True,
+                              choices=platforms),
             )
-        )
-        longOptions = map(
-            lambda o: o[2] + '=' if o[3] != None else o[2],
-            filter(
-                lambda o: o[2] != None and (o[4] == None or type in o[4]),
-                self._options
-            )
-        )
-        return getopt(args, ''.join(shortOptions), longOptions)
+            make_subcommand(**command_params)
+        elif len(platforms) == 1:
+            sub_parser = make_subcommand(**command_params)
+            sub_parser.set_defaults(platform=platforms.pop())
+
+    build_available_subcommands._result = True
+    return True
 
 
-commandsList = []
-commands = {}
+build_available_subcommands._result = None
 
 
-def addCommand(handler, name):
-    if isinstance(name, basestring):
-        aliases = ()
-    else:
-        name, aliases = (name[0], name[1:])
+@argparse_command(
+    valid_platforms={'chrome', 'gecko', 'edge'},
+    arguments=(
+        make_argument(
+            '-b', '--build-num', dest='build_num',
+            help=('Use given build number (if omitted the build number will '
+                  'be retrieved from Mercurial)')),
+        make_argument(
+            '-k', '--key', dest='key_file',
+            help=('File containing private key and certificates required to '
+                  'sign the package')),
+        make_argument(
+            '-r', '--release', action='store_true',
+            help='Create a release build'),
+        make_argument('output_file', nargs='?')
+    )
+)
+def build(base_dir, build_num, key_file, release, output_file, platform,
+          **kwargs):
+    """
+    Create a build.
 
-    global commandsList, commands
-    command = Command(handler, name)
-    commandsList.append(command)
-    commands[name] = command
-    for alias in aliases:
-        commands[alias] = command
-    return command
-
-
-def splitByLength(string, maxLen):
-    parts = []
-    currentPart = ''
-    for match in re.finditer(r'\s*(\S+)', string):
-        if len(match.group(0)) + len(currentPart) < maxLen:
-            currentPart += match.group(0)
-        else:
-            parts.append(currentPart)
-            currentPart = match.group(1)
-    if len(currentPart):
-        parts.append(currentPart)
-    return parts
-
-
-def usage(scriptName, type, commandName=None):
-    if commandName == None:
-        global commandsList
-        descriptions = []
-        for command in commandsList:
-            if not command.isSupported(type):
-                continue
-            commandText = ('%s %s' % (command.name, command.params)).ljust(39)
-            descriptionParts = splitByLength(command.shortDescription, 29)
-            descriptions.append('  %s [-t %s] %s %s' % (scriptName, type, commandText, descriptionParts[0]))
-            for part in descriptionParts[1:]:
-                descriptions.append('  %s     %s  %s %s' % (' ' * len(scriptName), ' ' * len(type), ' ' * len(commandText), part))
-        print '''Usage:
-
-%(descriptions)s
-
-For details on a command run:
-
-  %(scriptName)s [-t %(type)s] <command> --help
-''' % {
-            'scriptName': scriptName,
-            'type': type,
-            'descriptions': '\n'.join(descriptions)
-        }
-    else:
-        global commands
-        command = commands[commandName]
-        description = '\n'.join(map(lambda s: '\n'.join(splitByLength(s, 80)), command.description.split('\n')))
-        options = []
-        for descr, short, long, value, types in command.options:
-            if types != None and type not in types:
-                continue
-            if short == None:
-                shortText = ''
-            elif value == None:
-                shortText = '-%s' % short
-            else:
-                shortText = '-%s %s' % (short, value)
-            if long == None:
-                longText = ''
-            elif value == None:
-                longText = '--%s' % long
-            else:
-                longText = '--%s=%s' % (long, value)
-            descrParts = splitByLength(descr, 46)
-            options.append('  %s %s %s' % (shortText.ljust(11), longText.ljust(19), descrParts[0]))
-            for part in descrParts[1:]:
-                options.append('  %s %s %s' % (' ' * 11, ' ' * 19, part))
-        print '''%(scriptName)s [-t %(type)s] %(name)s %(params)s
-
-%(description)s
-
-Options:
-%(options)s
-''' % {
-            'scriptName': scriptName,
-            'type': type,
-            'name': command.name,
-            'params': command.params,
-            'description': description,
-            'options': '\n'.join(options)
-        }
-
-
-def runBuild(baseDir, scriptName, opts, args, type):
+    Creates an extension build with given file name. If output_file is missing
+    a default name will be chosen.
+    """
     kwargs = {}
-    for option, value in opts:
-        if option in {'-b', '--build'}:
-            kwargs['buildNum'] = value
-            if type != 'gecko' and not kwargs['buildNum'].isdigit():
-                raise TypeError('Build number must be numerical')
-        elif option in {'-k', '--key'}:
-            kwargs['keyFile'] = value
-        elif option in {'-r', '--release'}:
-            kwargs['releaseBuild'] = True
-    if len(args) > 0:
-        kwargs['outFile'] = args[0]
-
-    if type in {'chrome', 'gecko'}:
-        import buildtools.packagerChrome as packager
-    elif type == 'edge':
+    if platform == 'edge':
         import buildtools.packagerEdge as packager
+    else:
+        import buildtools.packagerChrome as packager
 
-    packager.createBuild(baseDir, type=type, **kwargs)
+    kwargs['keyFile'] = key_file
+    kwargs['outFile'] = output_file
+    kwargs['releaseBuild'] = release
+    kwargs['buildNum'] = build_num
+
+    packager.createBuild(base_dir, type=platform, **kwargs)
 
 
-def createDevEnv(baseDir, scriptName, opts, args, type):
-    if type == 'edge':
+@argparse_command(
+    valid_platforms={'chrome', 'gecko', 'edge'}
+)
+def devenv(base_dir, platform, **kwargs):
+    """
+    Set up a development environment.
+
+    Will set up or update the devenv folder as an unpacked extension folder '
+    for development.
+    """
+    if platform == 'edge':
         import buildtools.packagerEdge as packager
     else:
         import buildtools.packagerChrome as packager
 
     file = StringIO()
-    packager.createBuild(baseDir, type=type, outFile=file, devenv=True, releaseBuild=True)
+    packager.createBuild(base_dir, type=platform, outFile=file, devenv=True,
+                         releaseBuild=True)
 
     from buildtools.packager import getDevEnvPath
-    devenv_dir = getDevEnvPath(baseDir, type)
+    devenv_dir = getDevEnvPath(base_dir, platform)
 
     shutil.rmtree(devenv_dir, ignore_errors=True)
 
@@ -215,129 +179,147 @@ def createDevEnv(baseDir, scriptName, opts, args, type):
         zip_file.extractall(devenv_dir)
 
 
-def readLocaleConfig(baseDir, type, metadata):
-    if type != 'generic':
+def read_locale_config(base_dir, platform, metadata):
+    if platform != 'generic':
         import buildtools.packagerChrome as packager
-        localeDir = os.path.join(baseDir, '_locales')
-        localeConfig = {
+        locale_dir = os.path.join(base_dir, '_locales')
+        locale_config = {
             'default_locale': packager.defaultLocale,
         }
     else:
-        localeDir = os.path.join(
-            baseDir, *metadata.get('locales', 'base_path').split('/')
+        locale_dir = os.path.join(
+            base_dir, *metadata.get('locales', 'base_path').split('/')
         )
-        localeConfig = {
+        locale_config = {
             'default_locale': metadata.get('locales', 'default_locale')
         }
 
-    localeConfig['base_path'] = localeDir
+    locale_config['base_path'] = locale_dir
 
-    locales = [(locale.replace('_', '-'), os.path.join(localeDir, locale))
-               for locale in os.listdir(localeDir)]
-    localeConfig['locales'] = dict(locales)
+    locales = [(locale.replace('_', '-'), os.path.join(locale_dir, locale))
+               for locale in os.listdir(locale_dir)]
+    locale_config['locales'] = dict(locales)
 
-    return localeConfig
+    return locale_config
 
 
-def setupTranslations(baseDir, scriptName, opts, args, type):
-    if len(args) < 1:
-        print 'Project key is required to update translation master files.'
-        usage(scriptName, type, 'setuptrans')
-        return
+project_key_argument = make_argument(
+    'project_key', help='The crowdin project key.'
+)
 
-    key = args[0]
 
+@argparse_command(
+    arguments=(project_key_argument, )
+)
+def setuptrans(base_dir, project_key, platform, **kwargs):
+    """
+    Set up translation languages.
+
+    Set up translation languages for the project on crowdin.com.
+    """
     from buildtools.packager import readMetadata
-    metadata = readMetadata(baseDir, type)
+    metadata = readMetadata(base_dir, platform)
 
     basename = metadata.get('general', 'basename')
-    localeConfig = readLocaleConfig(baseDir, type, metadata)
+    locale_config = read_locale_config(base_dir, platform, metadata)
 
     import buildtools.localeTools as localeTools
-    localeTools.setupTranslations(localeConfig, basename, key)
+    localeTools.setupTranslations(locale_config, basename, project_key)
 
 
-def updateTranslationMaster(baseDir, scriptName, opts, args, type):
-    if len(args) < 1:
-        print 'Project key is required to update translation master files.'
-        usage(scriptName, type, 'translate')
-        return
+@argparse_command(
+    arguments=(project_key_argument, )
+)
+def translate(base_dir, project_key, platform, **kwargs):
+    """
+    Update translation master files.
 
-    key = args[0]
-
+    Update the translation master files in the project on crowdin.com.
+    """
     from buildtools.packager import readMetadata
-    metadata = readMetadata(baseDir, type)
+    metadata = readMetadata(base_dir, platform)
 
     basename = metadata.get('general', 'basename')
-    localeConfig = readLocaleConfig(baseDir, type, metadata)
+    locale_config = read_locale_config(base_dir, platform, metadata)
 
-    defaultLocaleDir = os.path.join(localeConfig['base_path'],
-                                    localeConfig['default_locale'])
+    default_locale_dir = os.path.join(locale_config['base_path'],
+                                      locale_config['default_locale'])
 
     import buildtools.localeTools as localeTools
-    localeTools.updateTranslationMaster(localeConfig, metadata, defaultLocaleDir,
-                                        basename, key)
+    localeTools.updateTranslationMaster(locale_config, metadata,
+                                        default_locale_dir, basename,
+                                        project_key)
 
 
-def uploadTranslations(baseDir, scriptName, opts, args, type):
-    if len(args) < 1:
-        print 'Project key is required to upload existing translations.'
-        usage(scriptName, type, 'uploadtrans')
-        return
+@argparse_command(
+    arguments=(project_key_argument, )
+)
+def uploadtrans(base_dir, project_key, platform, **kwargs):
+    """
+    Upload existing translations.
 
-    key = args[0]
-
+    Upload already existing translations to the project on crowdin.com.
+    """
     from buildtools.packager import readMetadata
-    metadata = readMetadata(baseDir, type)
+    metadata = readMetadata(base_dir, platform)
 
     basename = metadata.get('general', 'basename')
-    localeConfig = readLocaleConfig(baseDir, type, metadata)
+    locale_config = read_locale_config(base_dir, platform, metadata)
 
     import buildtools.localeTools as localeTools
-    for locale, localeDir in localeConfig['locales'].iteritems():
-        if locale != localeConfig['default_locale'].replace('_', '-'):
-            localeTools.uploadTranslations(localeConfig, metadata, localeDir, locale,
-                                           basename, key)
+    for locale, locale_dir in locale_config['locales'].iteritems():
+        if locale != locale_config['default_locale'].replace('_', '-'):
+            localeTools.uploadTranslations(locale_config, metadata, locale_dir,
+                                           locale, basename, project_key)
 
 
-def getTranslations(baseDir, scriptName, opts, args, type):
-    if len(args) < 1:
-        print 'Project key is required to update translation master files.'
-        usage(scriptName, type, 'translate')
-        return
+@argparse_command(
+    arguments=(project_key_argument, )
+)
+def gettranslations(base_dir, project_key, platform, **kwargs):
+    """
+    Download translation updates.
 
-    key = args[0]
-
+    Download updated translations from crowdin.com.
+    """
     from buildtools.packager import readMetadata
-    metadata = readMetadata(baseDir, type)
+    metadata = readMetadata(base_dir, platform)
 
     basename = metadata.get('general', 'basename')
-    localeConfig = readLocaleConfig(baseDir, type, metadata)
+    locale_config = read_locale_config(base_dir, platform, metadata)
 
     import buildtools.localeTools as localeTools
-    localeTools.getTranslations(localeConfig, basename, key)
+    localeTools.getTranslations(locale_config, basename, project_key)
 
 
-def generateDocs(baseDir, scriptName, opts, args, type):
-    if len(args) == 0:
-        print 'No target directory specified for the documentation'
-        usage(scriptName, type, 'docs')
-        return
-    targetDir = args[0]
+@argparse_command(
+    valid_platforms={'chrome'},
+    arguments=(
+        make_argument('target_dir'),
+        make_argument('-q', '--quiet', help='Suppress JsDoc output',
+                      action='store_true', default=False),
+    )
+)
+def docs(base_dir, target_dir, quiet, platform, **kwargs):
+    """
+    Generate documentation (requires node.js).
 
-    source_dir = os.path.join(baseDir, 'lib')
-    sources = [source_dir]
+    Generate documentation files and write them into the specified directory.
+    """
+    source_dir = os.path.join(base_dir, 'lib')
 
-    # JSDoc struggles wih huge objects: https://github.com/jsdoc3/jsdoc/issues/976
-    if type == 'chrome':
-        sources = [os.path.join(source_dir, filename) for filename in os.listdir(source_dir) if filename != 'publicSuffixList.js']
+    # JSDoc struggles wih huge objects:
+    # https://github.com/jsdoc3/jsdoc/issues/976
+    sources = [os.path.join(source_dir, filename)
+               for filename in os.listdir(source_dir)
+               if filename != 'publicSuffixList.js']
 
     buildtools_path = os.path.dirname(__file__)
     config = os.path.join(buildtools_path, 'jsdoc.conf')
 
-    command = ['npm', 'run-script', 'jsdoc', '--', '--destination', targetDir,
+    command = ['npm', 'run-script', 'jsdoc', '--', '--destination', target_dir,
                '--configure', config] + sources
-    if any(opt in {'-q', '--quiet'} for opt, _ in opts):
+    if quiet:
         process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, cwd=buildtools_path)
         stderr = process.communicate()[1]
@@ -349,167 +331,71 @@ def generateDocs(baseDir, scriptName, opts, args, type):
         subprocess.check_call(command, cwd=buildtools_path)
 
 
-def runReleaseAutomation(baseDir, scriptName, opts, args, type):
-    keyFile = None
-    downloadsRepo = os.path.join(baseDir, '..', 'downloads')
-    for option, value in opts:
-        if option in {'-k', '--key'}:
-            keyFile = value
-        elif option in {'-d', '--downloads'}:
-            downloadsRepo = value
+def valid_version_format(value):
+    if re.search(r'[^\d\.]', value):
+        raise argparse.ArgumentTypeError('Wrong version number format')
 
-    if len(args) == 0:
-        print 'No version number specified for the release'
-        usage(scriptName, type, 'release')
-        return
-    version = args[0]
-    if re.search(r'[^\d\.]', version):
-        print 'Wrong version number format'
-        usage(scriptName, type, 'release')
-        return
+    return value
 
-    if type == 'chrome' and keyFile is None:
-        print >>sys.stderr, 'Error: you must specify a key file for this release'
-        usage(scriptName, type, 'release')
+
+@argparse_command(
+    valid_platforms={'chrome', 'edge'},
+    arguments=(
+        make_argument(
+            '-k', '--key', dest='key_file',
+            help=('File containing private key and certificates required to '
+                  'sign the release.')),
+        make_argument(
+            '-d', '--downloads-repository', dest='downloads_repository',
+            help=('Directory containing downloads repository (if omitted '
+                  '../downloads is assumed)')),
+        make_argument(
+            'version', help='Version number of the release',
+            type=valid_version_format)
+    )
+)
+def release(base_dir, downloads_repository, key_file, platform, version,
+            **kwargs):
+    """
+    Run release automation.
+
+    Note: If you are not the project owner then you probably don't want to run
+    this!
+
+    Run release automation: create downloads for the new version, tag source
+    code repository as well as downloads and buildtools repository.
+    """
+    if downloads_repository is None:
+        downloads_repository = os.path.join(base_dir, os.pardir, 'downloads')
+
+    if platform == 'chrome' and key_file is None:
+        logging.error('You must specify a key file for this release')
         return
 
     import buildtools.releaseAutomation as releaseAutomation
-    releaseAutomation.run(baseDir, type, version, keyFile, downloadsRepo)
+    releaseAutomation.run(base_dir, platform, version, key_file,
+                          downloads_repository)
 
 
-def updatePSL(baseDir, scriptName, opts, args, type):
+@argparse_command(valid_platforms={'chrome'})
+def updatepsl(base_dir, **kwargs):
+    """Update Public Suffix List.
+
+    Downloads Public Suffix List (see http://publicsuffix.org/) and generates
+    lib/publicSuffixList.js from it.
+    """
     import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
-    publicSuffixListUpdater.updatePSL(baseDir)
+    publicSuffixListUpdater.updatePSL(base_dir)
 
 
-with addCommand(lambda baseDir, scriptName, opts, args, type: usage(scriptName, type), ('help', '-h', '--help')) as command:
-    command.shortDescription = 'Show this message'
+def process_args(base_dir, *args):
+    if build_available_subcommands(base_dir):
+        MAIN_PARSER.set_defaults(base_dir=base_dir)
 
-with addCommand(runBuild, 'build') as command:
-    command.shortDescription = 'Create a build'
-    command.description = 'Creates an extension build with given file name. If output_file is missing a default name will be chosen.'
-    command.params = '[options] [output_file]'
-    command.addOption('Use given build number (if omitted the build number will be retrieved from Mercurial)', short='b', long='build', value='num')
-    command.addOption('File containing private key and certificates required to sign the package', short='k', long='key', value='file', types={'chrome'})
-    command.addOption('Create a release build', short='r', long='release')
-    command.supportedTypes = {'gecko', 'chrome', 'edge'}
+        # If no args are provided, this module is run directly from the command
+        # line. argparse will take care of consuming sys.argv.
+        arguments = MAIN_PARSER.parse_args(args if len(args) > 0 else None)
 
-with addCommand(createDevEnv, 'devenv') as command:
-    command.shortDescription = 'Set up a development environment'
-    command.description = 'Will set up or update the devenv folder as an unpacked extension folder for development.'
-    command.supportedTypes = {'gecko', 'chrome', 'edge'}
-
-with addCommand(setupTranslations, 'setuptrans') as command:
-    command.shortDescription = 'Sets up translation languages'
-    command.description = 'Sets up translation languages for the project on crowdin.net.'
-    command.params = '[options] project-key'
-
-with addCommand(updateTranslationMaster, 'translate') as command:
-    command.shortDescription = 'Updates translation master files'
-    command.description = 'Updates the translation master files in the project on crowdin.net.'
-    command.params = '[options] project-key'
-
-with addCommand(uploadTranslations, 'uploadtrans') as command:
-    command.shortDescription = 'Uploads existing translations'
-    command.description = 'Uploads already existing translations to the project on crowdin.net.'
-    command.params = '[options] project-key'
-
-with addCommand(getTranslations, 'gettranslations') as command:
-    command.shortDescription = 'Downloads translation updates'
-    command.description = 'Downloads updated translations from crowdin.net.'
-    command.params = '[options] project-key'
-
-with addCommand(generateDocs, 'docs') as command:
-    command.shortDescription = 'Generate documentation (requires node.js)'
-    command.description = ('Generate documentation files and write them into '
-                           'the specified directory.')
-    command.addOption('Suppress JsDoc output', short='q', long='quiet')
-    command.params = '[options] <directory>'
-    command.supportedTypes = {'chrome'}
-
-with addCommand(runReleaseAutomation, 'release') as command:
-    command.shortDescription = 'Run release automation'
-    command.description = 'Note: If you are not the project owner then you '        "probably don't want to run this!\n\n"        'Runs release automation: creates downloads for the new version, tags '        'source code repository as well as downloads and buildtools repository.'
-    command.addOption('File containing private key and certificates required to sign the release.', short='k', long='key', value='file', types={'chrome', 'edge'})
-    command.addOption('Directory containing downloads repository (if omitted ../downloads is assumed)', short='d', long='downloads', value='dir')
-    command.params = '[options] <version>'
-    command.supportedTypes = {'chrome', 'edge'}
-
-with addCommand(updatePSL, 'updatepsl') as command:
-    command.shortDescription = 'Updates Public Suffix List'
-    command.description = 'Downloads Public Suffix List (see http://publicsuffix.org/) and generates lib/publicSuffixList.js from it.'
-    command.supportedTypes = {'chrome'}
-
-
-def getType(baseDir, scriptName, args):
-    # Look for an explicit type parameter (has to be the first parameter)
-    if len(args) >= 2 and args[0] == '-t':
-        type = args[1]
-        del args[1]
-        del args[0]
-        if type not in knownTypes:
-            print '''
-Unknown type %s specified, supported types are: %s
-''' % (type, ', '.join(knownTypes))
-            return None
-        return type
-
-    # Try to guess repository type
-    types = []
-    for t in knownTypes:
-        if os.path.exists(os.path.join(baseDir, 'metadata.%s' % t)):
-            types.append(t)
-
-    if len(types) == 1:
-        return types[0]
-    elif len(types) > 1:
-        print '''
-Ambiguous repository type, please specify -t parameter explicitly, e.g.
-%s -t %s build
-''' % (scriptName, types[0])
-        return None
-    else:
-        print '''
-No metadata file found in this repository, a metadata file like
-metadata.* is required.
-'''
-        return None
-
-
-def processArgs(baseDir, args):
-    global commands
-
-    scriptName = os.path.basename(args[0])
-    args = args[1:]
-    type = getType(baseDir, scriptName, args)
-    if type == None:
-        return
-
-    if len(args) == 0:
-        args = ['build']
-        print '''
-No command given, assuming "build". For a list of commands run:
-
-  %s help
-''' % scriptName
-
-    command = args[0]
-    if command in commands:
-        if commands[command].isSupported(type):
-            try:
-                opts, args = commands[command].parseArgs(type, args[1:])
-            except GetoptError as e:
-                print str(e)
-                usage(scriptName, type, command)
-                sys.exit(2)
-            for option, value in opts:
-                if option in {'-h', '--help'}:
-                    usage(scriptName, type, command)
-                    sys.exit()
-            commands[command](baseDir, scriptName, opts, args, type)
-        else:
-            print 'Command %s is not supported for this application type' % command
-            usage(scriptName, type)
-    else:
-        print 'Command %s is unrecognized' % command
-        usage(scriptName, type)
+        function = arguments.function
+        del arguments.function
+        function(**vars(arguments))
