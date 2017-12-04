@@ -15,7 +15,7 @@ import random
 import posixpath
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
-                      getTemplate, Files)
+                      getTemplate, get_extension, Files)
 
 defaultLocale = 'en_US'
 
@@ -355,10 +355,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     version = getBuildVersion(baseDir, metadata, releaseBuild, buildNum)
 
     if outFile == None:
-        if type == 'gecko':
-            file_extension = 'xpi'
-        else:
-            file_extension = 'crx' if keyFile else 'zip'
+        file_extension = get_extension(type, keyFile is not None)
         outFile = getDefaultFileName(metadata, version, file_extension)
 
     params = {

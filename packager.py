@@ -16,9 +16,30 @@ from chainedconfigparser import ChainedConfigParser
 
 import buildtools
 
+EXTENSIONS = {
+    'edge': 'appx',
+    'gecko': 'xpi',
+    'chrome': {'unsigned': 'zip', 'signed': 'crx'},
+}
+
 
 def getDefaultFileName(metadata, version, ext):
     return '%s-%s.%s' % (metadata.get('general', 'basename'), version, ext)
+
+
+def get_extension(platform, has_key_file=False):
+    extension = EXTENSIONS[platform]
+
+    try:
+        if has_key_file:
+            key = 'signed'
+        else:
+            key = 'unsigned'
+        extension = extension[key]
+    except (KeyError, TypeError):
+        pass
+
+    return extension
 
 
 def getMetadataPath(baseDir, type):

@@ -12,6 +12,7 @@ import sys
 from functools import partial
 from StringIO import StringIO
 from zipfile import ZipFile
+from buildtools.localeTools import read_locale_config
 
 KNOWN_PLATFORMS = {'chrome', 'gecko', 'edge', 'generic'}
 
@@ -33,7 +34,7 @@ def make_argument(*args, **kwargs):
     return partial(_make_argument, *args, **kwargs)
 
 
-def argparse_command(valid_platforms=None, arguments=()):
+def argparse_command(valid_platforms=None, multi_platform=False, arguments=()):
     def wrapper(func):
         def func_wrapper(*args, **kwargs):
             return func(*args, **kwargs)
@@ -45,11 +46,11 @@ def argparse_command(valid_platforms=None, arguments=()):
             'description': long_desc,
             'help_text': short_desc,
             'valid_platforms': valid_platforms or KNOWN_PLATFORMS,
+            'multi_platform': multi_platform,
             'function': func,
             'arguments': arguments,
         })
         return func_wrapper
-
     return wrapper
 
 
@@ -93,11 +94,21 @@ def build_available_subcommands(base_dir):
         return False
 
     for command_params in ALL_COMMANDS:
+        multi_platform = command_params.pop('multi_platform')
         platforms = types.intersection(command_params.pop('valid_platforms'))
         if len(platforms) > 1:
+            if multi_platform:
+                help_text = ('Multiple types may be specifed (each preceded '
+                             'by -t/--type)')
+                action = 'append'
+            else:
+                help_text = None
+                action = 'store'
+
             command_params['arguments'] += (
                 make_argument('-t', '--type', dest='platform', required=True,
-                              choices=platforms),
+                              choices=platforms, action=action,
+                              help=help_text),
             )
             make_subcommand(**command_params)
         elif len(platforms) == 1:
@@ -177,30 +188,6 @@ def devenv(base_dir, platform, **kwargs):
     file.seek(0)
     with ZipFile(file, 'r') as zip_file:
         zip_file.extractall(devenv_dir)
-
-
-def read_locale_config(base_dir, platform, metadata):
-    if platform != 'generic':
-        import buildtools.packagerChrome as packager
-        locale_dir = os.path.join(base_dir, '_locales')
-        locale_config = {
-            'default_locale': packager.defaultLocale,
-        }
-    else:
-        locale_dir = os.path.join(
-            base_dir, *metadata.get('locales', 'base_path').split('/')
-        )
-        locale_config = {
-            'default_locale': metadata.get('locales', 'default_locale')
-        }
-
-    locale_config['base_path'] = locale_dir
-
-    locales = [(locale.replace('_', '-'), os.path.join(locale_dir, locale))
-               for locale in os.listdir(locale_dir)]
-    locale_config['locales'] = dict(locales)
-
-    return locale_config
 
 
 project_key_argument = make_argument(
@@ -339,7 +326,7 @@ def valid_version_format(value):
 
 
 @argparse_command(
-    valid_platforms={'chrome', 'edge'},
+    valid_platforms={'chrome', 'gecko', 'edge'}, multi_platform=True,
     arguments=(
         make_argument(
             '-k', '--key', dest='key_file',
@@ -368,7 +355,7 @@ def release(base_dir, downloads_repository, key_file, platform, version,
     if downloads_repository is None:
         downloads_repository = os.path.join(base_dir, os.pardir, 'downloads')
 
-    if platform == 'chrome' and key_file is None:
+    if 'chrome' in platform and key_file is None:
         logging.error('You must specify a key file for this release')
         return
 

@@ -41,6 +41,30 @@ FIREFOX_LP_URL = 'https://addons.mozilla.org/en-US/firefox/language-tools/'
 CHROMIUM_DEB_URL = 'https://packages.debian.org/sid/all/chromium-l10n/filelist'
 
 
+def read_locale_config(baseDir, platform, metadata):
+    if platform != 'generic':
+        import buildtools.packagerChrome as packager
+        localeDir = os.path.join(baseDir, '_locales')
+        localeConfig = {
+            'default_locale': packager.defaultLocale,
+        }
+    else:
+        localeDir = os.path.join(
+            baseDir, *metadata.get('locales', 'base_path').split('/')
+        )
+        localeConfig = {
+            'default_locale': metadata.get('locales', 'default_locale')
+        }
+
+    localeConfig['base_path'] = localeDir
+
+    locales = [(locale.replace('_', '-'), os.path.join(localeDir, locale))
+               for locale in os.listdir(localeDir)]
+    localeConfig['locales'] = dict(locales)
+
+    return localeConfig
+
+
 def crowdin_request(project_name, action, key, get={}, post_data=None,
                     headers={}, raw=False):
     """Perform a call to crowdin and raise an Exception on failure."""

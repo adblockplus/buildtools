@@ -5,13 +5,19 @@
 from __future__ import print_function
 
 import os
+import operator
 import re
 import codecs
+import logging
 import subprocess
+import sys
 import tarfile
 import json
 
-from packager import readMetadata, getDefaultFileName
+from packager import readMetadata, getDefaultFileName, get_extension
+from localeTools import read_locale_config
+
+SOURCE_ARCHIVE = 'adblockplus-{}-source.tgz'
 
 
 def get_dependencies(prefix, repos):
@@ -113,68 +119,180 @@ def can_safely_release(*repo_paths):
     return True
 
 
-def run(baseDir, type, version, keyFile, downloadsRepo):
-    if not can_safely_release(baseDir, downloadsRepo):
-        print('Aborting release.')
-        return 1
+def compare_versions(a, b):
+    """Compare two version numbers."""
+    a_digits = [int(v) for v in a.split('.')]
+    b_digits = [int(v) for v in b.split('.')]
 
-    if type == 'edge':
-        import buildtools.packagerEdge as packager
-    elif type == 'chrome':
-        import buildtools.packagerChrome as packager
+    def safe_get(items, index):
+        return items[index] if index < len(items) else 0
 
-    # Replace version number in metadata file "manually", ConfigParser will mess
-    # up the order of lines.
-    metadata = readMetadata(baseDir, type)
-    with open(metadata.option_source('general', 'version'), 'r+b') as file:
-        rawMetadata = file.read()
+    for i in range(max(len(a_digits), len(b_digits))):
+        result = safe_get(a_digits, i) - safe_get(b_digits, i)
+        if result != 0:
+            return result
+    return 0
+
+
+def release_combination_is_possible(version, platforms, base_dir):
+    """Determine whether a release for the given parameters is possible.
+
+    Examine existing tags in order to find either higher or matching versions.
+    The release is impossible if a) a higher version for a requested platform
+    exists, or if b) a matching version exists and the requested set of
+    platforms differs from what was already released.
+    """
+    def higher_tag_version(tag, version, platforms):
+        return (compare_versions(tag[0], version) > 0 and
+                set(tag[1:]).intersection(platforms))
+
+    def incomplete_platforms_for_version(tag, version, platforms):
+        intersection = set(tag[1:]).intersection(platforms)
+        return (compare_versions(tag[0], version) == 0 and
+                intersection and set(platforms) != set(tag[1:]))
+
+    # only consider tags of the form "1.2[.x ...]-platform[-platform ...]
+    platform_tags = re.compile(r'^(\d+(?:(?:\.\d+)*)(?:-\w+)+)$', re.MULTILINE)
+    tags = [
+        c for c in [
+            t.split('-') for t in
+            platform_tags.findall(subprocess.check_output(
+                ['hg', 'tags', '-R', base_dir, '-q']))
+        ] if compare_versions(c[0], version) >= 0
+    ]
+
+    for tag in tags:
+        if higher_tag_version(tag, version, platforms):
+            reason = ('The higher version {} has already been released for '
+                      'the platforms {}.').format(tag[0], ', '.join(platforms))
+            return False, reason, None
+
+        if incomplete_platforms_for_version(tag, version, platforms):
+            reason = ('You have to re-release version {} for exactly all '
+                      'of: {}').format(version, ', '.join(tag[1:]))
+            return False, reason, None
+
+    return (True, None,
+            any(compare_versions(tag[0], version) == 0 for tag in tags))
+
+
+def update_metadata(metadata, version):
+    """Replace version number in metadata file "manually".
+
+    The ConfigParser would mess up the order of lines.
+    """
+    with open(metadata.option_source('general', 'version'), 'r+b') as fp:
+        rawMetadata = fp.read()
         rawMetadata = re.sub(
             r'^(\s*version\s*=\s*).*', r'\g<1>%s' % version,
             rawMetadata, flags=re.I | re.M
         )
 
-        file.seek(0)
-        file.write(rawMetadata)
-        file.truncate()
+        fp.seek(0)
+        fp.write(rawMetadata)
+        fp.truncate()
 
-    # Read extension name from locale data
-    default_locale_path = os.path.join('_locales', packager.defaultLocale,
+
+def create_build(platform, base_dir, target_path, version, key_file=None):
+    """Create a build for the target platform and version."""
+    if platform == 'edge':
+        import buildtools.packagerEdge as packager
+    else:
+        import buildtools.packagerChrome as packager
+
+    metadata = readMetadata(base_dir, platform)
+    update_metadata(metadata, version)
+
+    build_path = os.path.join(
+        target_path,
+        getDefaultFileName(metadata, version,
+                           get_extension(platform, key_file is not None))
+    )
+
+    packager.createBuild(base_dir, type=platform, outFile=build_path,
+                         releaseBuild=True, keyFile=key_file)
+
+    return build_path
+
+
+def release_commit(base_dir, extension_name, version, platforms):
+    """Create a release commit with a representative message."""
+    subprocess.check_output([
+        'hg', 'commit', '-R', base_dir, '-m',
+        'Noissue - Releasing {} {} for {}'.format(
+            extension_name, version,
+            ', '.join([p.capitalize() for p in platforms]))],
+        stderr=subprocess.STDOUT)
+
+
+def release_tag(base_dir, tag_name, extension_name):
+    """Create a tag, along with a commit message for that tag."""
+    subprocess.check_call([
+        'hg', 'tag', '-R', base_dir, '-f', tag_name,
+        '-m', 'Noissue - Adding release tag for {} {}'.format(
+            extension_name, tag_name)])
+
+
+def run(baseDir, platforms, version, keyFile, downloads_repo):
+    if not can_safely_release(baseDir, downloads_repo):
+        print('Aborting release.')
+        return 1
+
+    target_platforms = sorted(platforms)
+    release_identifier = '-'.join([version] + [p for p in target_platforms])
+
+    release_possible, reason, re_release = release_combination_is_possible(
+        version, platforms, baseDir)
+
+    if not release_possible:
+        logging.error(reason)
+        return 2
+
+    downloads = []
+    # Read extension name from first provided platform
+    locale_config = read_locale_config(
+        baseDir, target_platforms[0],
+        readMetadata(baseDir, target_platforms[0]))
+    default_locale_path = os.path.join(locale_config['base_path'],
+                                       locale_config['default_locale'],
                                        'messages.json')
     with open(default_locale_path, 'r') as fp:
-        extensionName = json.load(fp)['name']['message']
+        extension_name = json.load(fp)['name']['message']
 
-    # Now commit the change and tag it
-    subprocess.check_call(['hg', 'commit', '-R', baseDir, '-m', 'Releasing %s %s' % (extensionName, version)])
-    tag_name = version
-    if type == 'edge':
-        tag_name = '{}-{}'.format(tag_name, type)
-    subprocess.check_call(['hg', 'tag', '-R', baseDir, '-f', tag_name])
+    for platform in target_platforms:
+        used_key_file = None
+        if platform == 'chrome':
+            # Currently, only chrome builds are provided by us as signed
+            # packages. Create an unsigned package in base_dir which should be
+            # uploaded to the Chrome Web Store
+            create_build(platform, baseDir, baseDir, version)
+            used_key_file = keyFile
 
-    # Create a release build
-    downloads = []
-    if type == 'chrome':
-        # Create both signed and unsigned Chrome builds (the latter for Chrome Web Store).
-        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'crx'))
-        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True, keyFile=keyFile)
-        downloads.append(buildPath)
+        downloads.append(
+            create_build(platform, baseDir, downloads_repo, version,
+                         used_key_file)
+        )
 
-        buildPathUnsigned = os.path.join(baseDir, getDefaultFileName(metadata, version, 'zip'))
-        packager.createBuild(baseDir, type=type, outFile=buildPathUnsigned, releaseBuild=True, keyFile=None)
-    elif type == 'edge':
-        # We only offer the Edge extension for use through the Windows Store
-        buildPath = os.path.join(downloadsRepo, getDefaultFileName(metadata, version, 'appx'))
-        packager.createBuild(baseDir, type=type, outFile=buildPath, releaseBuild=True)
-        downloads.append(buildPath)
+    # Only create one commit, one tag and one source archive for all
+    # platforms
+    archive_path = os.path.join(
+        downloads_repo,
+        'adblockplus-{}-source.tgz'.format(release_identifier),
+    )
+    create_sourcearchive(baseDir, archive_path)
+    downloads.append(archive_path)
+    try:
+        release_commit(baseDir, extension_name, version, target_platforms)
+    except subprocess.CalledProcessError as e:
+        if not (re_release and 'nothing changed' in e.output):
+            raise
 
-    # Create source archive
-    archivePath = os.path.splitext(buildPath)[0] + '-source.tgz'
-    create_sourcearchive(baseDir, archivePath)
-    downloads.append(archivePath)
+    release_tag(baseDir, release_identifier, extension_name)
 
     # Now add the downloads and commit
-    subprocess.check_call(['hg', 'add', '-R', downloadsRepo] + downloads)
-    subprocess.check_call(['hg', 'commit', '-R', downloadsRepo, '-m', 'Releasing %s %s' % (extensionName, version)])
+    subprocess.check_call(['hg', 'add', '-R', downloads_repo] + downloads)
+    release_commit(downloads_repo, extension_name, version, target_platforms)
 
     # Push all changes
     subprocess.check_call(['hg', 'push', '-R', baseDir])
-    subprocess.check_call(['hg', 'push', '-R', downloadsRepo])
+    subprocess.check_call(['hg', 'push', '-R', downloads_repo])
