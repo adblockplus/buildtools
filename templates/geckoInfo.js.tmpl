@@ -17,19 +17,8 @@ let match = /\brv:(\d+(?:\.\d+)?)\b/.exec(navigator.userAgent);
 if (match)
   exports.platformVersion = match[1];
 
-// Firefox 50 does not support runtime.getBrowserInfo
-if ("getBrowserInfo" in browser.runtime)
+browser.runtime.getBrowserInfo().then(browserInfo =>
 {
-  browser.runtime.getBrowserInfo().then(browserInfo =>
-  {
-    exports.application = browserInfo.name.toLowerCase();
-    exports.applicationVersion = browserInfo.version;
-  });
-}
-else
-{
-  let browserInfo = /\bFirefox\/(\S+)/.exec(navigator.userAgent);
-  exports.application = "firefox";
-  if (browserInfo)
-    exports.applicationVersion = browserInfo[1];
-}
+  exports.application = browserInfo.name.toLowerCase();
+  exports.applicationVersion = browserInfo.version;
+});
