@@ -192,7 +192,7 @@ def crowdin_prepare_upload(files):
     return (
         StringIO(body),
         {
-            'Content-Type': ('multipart/form-data; boundary=' + boundary),
+            'Content-Type': 'multipart/form-data; boundary=' + boundary,
             'Content-Length': len(body)
         },
     )

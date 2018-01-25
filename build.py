@@ -127,12 +127,12 @@ build_available_subcommands._result = None
     arguments=(
         make_argument(
             '-b', '--build-num', dest='build_num',
-            help=('Use given build number (if omitted the build number will '
-                  'be retrieved from Mercurial)')),
+            help='Use given build number (if omitted the build number will '
+                 'be retrieved from Mercurial)'),
         make_argument(
             '-k', '--key', dest='key_file',
-            help=('File containing private key and certificates required to '
-                  'sign the package')),
+            help='File containing private key and certificates required to '
+                  'sign the package'),
         make_argument(
             '-r', '--release', action='store_true',
             help='Create a release build'),
@@ -330,12 +330,12 @@ def valid_version_format(value):
     arguments=(
         make_argument(
             '-k', '--key', dest='key_file',
-            help=('File containing private key and certificates required to '
-                  'sign the release.')),
+            help='File containing private key and certificates required to '
+                  'sign the release.'),
         make_argument(
             '-d', '--downloads-repository', dest='downloads_repository',
-            help=('Directory containing downloads repository (if omitted '
-                  '../downloads is assumed)')),
+            help='Directory containing downloads repository (if omitted '
+                  '../downloads is assumed)'),
         make_argument(
             'version', help='Version number of the release',
             type=valid_version_format)

@@ -54,7 +54,7 @@ def makeIcons(files, filenames):
             magic = None
         if magic != '\x89PNG\r\n\x1a\n':
             raise Exception(filename + ' is no valid PNG.')
-        if(width != height):
+        if width != height:
             print >>sys.stderr, 'Warning: %s size is %ix%i, icon should be square' % (filename, width, height)
         icons[width] = filename
     return icons
