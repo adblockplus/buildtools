@@ -33,7 +33,7 @@
   {
     "gecko":
     {
-      "id": {{metadata.get('general', 'id')|json}}
+      "id": {{app_id|json}}
 
       {%- if metadata.has_section('compat') and metadata.has_option('compat', 'gecko') %}
       ,

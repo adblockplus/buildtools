@@ -99,8 +99,7 @@ def create_appx_manifest(params, files, build_num, release_build):
     else:
         params['app_extension_id'] = 'EdgeExtension'
 
-    app_id = 'app_id_' + metadata_suffix
-    params['app_id'] = metadata.get('general', app_id)
+    params['app_id'] = packager.get_app_id(release_build, metadata)
 
     translation = load_translation(files, defaultLocale)
     name_key = 'name' if release_build else 'name_devbuild'

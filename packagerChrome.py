@@ -15,7 +15,7 @@ import random
 import posixpath
 
 from packager import (readMetadata, getDefaultFileName, getBuildVersion,
-                      getTemplate, get_extension, Files)
+                      getTemplate, get_extension, Files, get_app_id)
 
 defaultLocale = 'en_US'
 
@@ -135,6 +135,8 @@ def createManifest(params, files):
                 'match_about_blank': True,
             })
         templateData['contentScripts'] = contentScripts
+    if params['type'] == 'gecko':
+        templateData['app_id'] = get_app_id(params['releaseBuild'], metadata)
 
     manifest = template.render(templateData)
 

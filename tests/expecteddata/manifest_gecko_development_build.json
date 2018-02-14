@@ -1,7 +1,7 @@
 {
   "applications": {
     "gecko": {
-      "id": "{d10d0bf8-f5b5-c8b4-a8b2-2b9879e08c5d}", 
+      "id": "devbuild@adblockplus.org",
       "strict_min_version": "50.0", 
       "update_url": "https://downloads.adblockplus.org/devbuilds/adblockplusfirefox/updates.json"
     }
