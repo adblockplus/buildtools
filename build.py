@@ -39,7 +39,7 @@ def argparse_command(valid_platforms=None, multi_platform=False, arguments=()):
         def func_wrapper(*args, **kwargs):
             return func(*args, **kwargs)
 
-        short_desc, long_desc = func.__doc__.split(os.linesep + os.linesep, 1)
+        short_desc, long_desc = func.__doc__.split('\n\n', 1)
 
         ALL_COMMANDS.append({
             'name': func.__name__,
