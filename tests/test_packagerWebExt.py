@@ -228,7 +228,7 @@ def keyfile(tmpdir):
 @pytest.fixture
 def lib_files(tmpdir):
     files = packager.Files(['lib'], set())
-    files['ext/a.js'] = 'require("./c.js");\nvar bar;'
+    files['ext/a.js'] = 'require("./c.js");\nrequire("info");\nvar bar;'
     files['lib/b.js'] = 'var foo;'
     files['ext/c.js'] = 'var this_is_c;'
     files['qunit/common.js'] = 'var qunit = {};'
@@ -285,11 +285,16 @@ def assert_manifest_content(manifest, expected_path):
     assert len(diff) == 0, '\n'.join(diff)
 
 
-def assert_webpack_bundle(package, prefix, excluded=False):
+def assert_webpack_bundle(package, prefix, is_devbuild, excluded=False):
     libfoo = package.read(os.path.join(prefix, 'lib/foo.js'))
     libfoomap = package.read(os.path.join(prefix, 'lib/foo.js.map'))
 
     assert 'var bar;' in libfoo
+    if is_devbuild:
+        assert 'addonVersion = "1.2.3.1337";' in libfoo
+    else:
+        assert 'addonVersion = "1.2.3";' in libfoo
+
     assert 'webpack:///./ext/a.js' in libfoomap
 
     assert 'var this_is_c;' in libfoo
@@ -456,7 +461,8 @@ def test_build_webext(platform, command, keyfile, tmpdir, srcdir, capsys):
     with content_class(out_file_path) as package:
         assert_base_files(package, platform, prefix)
         assert_all_locales_present(package, prefix)
-        assert_webpack_bundle(package, prefix, platform == 'gecko')
+        assert_webpack_bundle(package, prefix, not release and not devenv,
+                              platform == 'gecko')
 
         if platform == 'chrome':
             assert_locale_upfix(package)

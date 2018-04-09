@@ -175,7 +175,7 @@ def create_bundles(params, files, bundle_tests):
     info_template = getTemplate(info_templates[params['type']])
     info_module = info_template.render(
         basename=params['metadata'].get('general', 'basename'),
-        version=params['metadata'].get('general', 'version')
+        version=params['version']
     ).encode('utf-8')
 
     configuration = {
