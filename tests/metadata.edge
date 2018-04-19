@@ -7,11 +7,14 @@ app_id_release = EyeoGmbH.AdblockPlus
 app_id_devbuild = EyeoGmbH.AdblockPlusdevelopmentbuild
 publisher_id = CN=4F066043-8AFE-41C9-B762-6C15E77E3F88
 background_color = red
-permissions = tabs
+extension_id_release = 1.0
+
+[manifest]
+permissions =
+  tabs
   http://*/*
   https://*/*
   contextMenus
-extension_id_release = 1.0
 
 [appx_assets]
 logo_44.png = chrome/icons/abp-44.png
@@ -37,5 +40,6 @@ _modules/*/unit.properties = =*
 _imp/*/gecko.dtd = =*
 
 [bundles]
-lib/foo.js = ext/a.js
+lib/foo.js =
+  ext/a.js
   lib/b.js

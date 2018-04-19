@@ -105,22 +105,11 @@ def createManifest(params, files):
         templateData['icons'] = makeIcons(files,
                                           metadata.get('general', 'icons').split())
 
-    if metadata.has_option('general', 'permissions'):
-        templateData['permissions'] = metadata.get('general', 'permissions').split()
-
-    if metadata.has_option('general', 'optionalPermissions'):
-        templateData['optionalPermissions'] = metadata.get(
-            'general', 'optionalPermissions').split()
-
     if metadata.has_option('general', 'backgroundScripts'):
         templateData['backgroundScripts'] = metadata.get(
             'general', 'backgroundScripts').split()
         if params['devenv']:
             templateData['backgroundScripts'].append('devenvPoller__.js')
-
-    if metadata.has_option('general', 'webAccessible') and metadata.get('general', 'webAccessible') != '':
-        templateData['webAccessible'] = metadata.get('general',
-                                                     'webAccessible').split()
 
     if metadata.has_section('contentScripts'):
         contentScripts = []
@@ -145,6 +134,8 @@ def createManifest(params, files):
     data = json.loads(re.sub(licenseComment, '', manifest, 1))
     if '_dummy' in data:
         del data['_dummy']
+
+    metadata.serialize_section_if_present('manifest', data)
     manifest = json.dumps(data, sort_keys=True, indent=2)
 
     return manifest.encode('utf-8')

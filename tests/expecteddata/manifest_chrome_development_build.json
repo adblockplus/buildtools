@@ -1,61 +1,72 @@
 {
-  "author": "eyeo GmbH", 
+  "author": "eyeo GmbH",
   "background": {
-    "persistent": true, 
+    "persistent": true,
     "scripts": [
-      "ext/common.js", 
+      "ext/common.js",
       "ext/background.js"
     ]
-  }, 
+  },
   "browser_action": {
     "default_icon": {
-      "16": "icons/abp-16.png", 
-      "19": "icons/abp-19.png", 
+      "16": "icons/abp-16.png",
+      "19": "icons/abp-19.png",
       "53": "icons/abp-53.png"
-    }, 
-    "default_popup": "popup.html", 
+    },
+    "default_popup": "popup.html",
     "default_title": "__MSG_name__"
-  }, 
+  },
   "content_scripts": [
     {
-      "all_frames": true, 
+      "all_frames": true,
       "js": [
         "content.js"
-      ], 
-      "match_about_blank": true, 
+      ],
+      "match_about_blank": true,
       "matches": [
-        "http://*/*", 
+        "http://*/*",
         "https://*/*"
-      ], 
+      ],
       "run_at": "planets"
     }
-  ], 
-  "default_locale": "en_US", 
-  "description": "__MSG_description__", 
-  "devtools_page": "devtools.html", 
+  ],
+  "default_locale": "en_US",
+  "description": "__MSG_description__",
+  "devtools_page": "devtools.html",
+  "externally_connectable": {
+    "accepts_tls_channel_id": true,
+    "ids": [
+      "foo",
+      "bar"
+    ],
+    "matches": [
+      "https://*.google.com/*",
+      "*://*.chromium.org/*"
+    ]
+  },
   "icons": {
     "16": "icons/abp-16.png"
-  }, 
-  "manifest_version": 2, 
-  "minimum_chrome_version": "49.0", 
-  "minimum_opera_version": "36.0", 
-  "name": "__MSG_name_devbuild__", 
+  },
+  "manifest_version": 2,
+  "minimum_chrome_version": "49.0",
+  "minimum_opera_version": "36.0",
+  "name": "__MSG_name_devbuild__",
   "optional_permissions": [
     "webRequest"
-  ], 
+  ],
   "options_ui": {
-    "open_in_tab": true, 
+    "open_in_tab": true,
     "page": "options.html"
-  }, 
+  },
   "permissions": [
-    "tabs", 
+    "tabs",
     "<all_urls>"
-  ], 
-  "short_name": "__MSG_name__", 
+  ],
+  "short_name": "__MSG_name__",
   "storage": {
     "managed_schema": "storage.json"
-  }, 
-  "version": "1.2.3.1337", 
+  },
+  "version": "1.2.3.1337",
   "web_accessible_resources": [
     "images/*.png"
   ]

@@ -2,19 +2,33 @@
 version = 1.2.3
 author = eyeo GmbH
 basename = adblockpluschrome
-permissions = tabs
-  <all_urls>
-optionalPermissions = webRequest
-backgroundScripts = ext/common.js
+backgroundScripts =
+  ext/common.js
   ext/background.js
-testScripts = ../ext/common.js
+testScripts =
+  ../ext/common.js
   ../ext/background.js
-devtools = devtools.html
 options = options.html
-managedStorageSchema = storage.json
 browserAction = icons/abp-16.png icons/abp-19.png icons/abp-53.png popup.html
 icons = icons/abp-16.png
-webAccessible = images/*.png
+
+[manifest]
+devtools_page = devtools.html
+storage.managed_schema = storage.json
+permissions =
+  tabs
+  <all_urls>
+optional_permissions =
+  webRequest
+web_accessible_resources =
+  images/*.png
+externally_connectable.matches =
+  https://*.google.com/*
+  *://*.chromium.org/*
+externally_connectable.ids =
+  foo
+  bar
+externally_connectable.accepts_tls_channel_id = bool:true
 
 [contentScripts]
 planets = content.js
@@ -34,5 +48,6 @@ _modules/*/unit.properties = =*
 _imp/*/gecko.dtd = =*
 
 [bundles]
-lib/foo.js = ext/a.js
+lib/foo.js =
+  ext/a.js
   lib/b.js

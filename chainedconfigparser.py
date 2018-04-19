@@ -93,15 +93,15 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
             except ConfigParser.NoOptionError:
                 raise DiffForUnknownOptionError(option, section)
 
-            orig_values = orig_value.split()
-            diff_values = value.split()
+            orig_values = orig_value.splitlines()
+            diff_values = value.splitlines()
 
             if is_addition:
                 new_values = orig_values + [v for v in diff_values if v not in orig_values]
             else:
                 new_values = [v for v in orig_values if v not in diff_values]
 
-            value = ' '.join(new_values)
+            value = '\n'.join(new_values)
 
         return is_diff, option, value
 
@@ -156,6 +156,72 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
             if not self.has_section(section):
                 raise ConfigParser.NoSectionError(section)
             raise ConfigParser.NoOptionError(option, section)
+
+    def serialize_section_if_present(self, section, base):
+        """Serialize a given section as a dictionary into `base`.
+
+        Parse arbitrary key/value pairs from 'section' of the current
+        configuration into a dictionary and deep merge it into `base`.
+
+        The following rules need to be considered:
+
+        * An option's key may be declared as a series of nested dictionary keys,
+          seperated by '.'.
+        * Declaring an option's value in a new line (even if only one is given)
+          will define the option's value as a list.
+        * When an option's value is defined as a list, no other nested
+          objects may follow.
+        * A list is expandable by the ConfigParser's '+=' token (Note: A
+          previously declared string will be converted into a list).
+        * Values may be marked as `number` or `bool` by prefixing them
+          accordingly (this also applies to values in a list):
+          * bool:<value>
+          * number:<value>
+
+        Example:
+                                    {
+        foo = foo                     "foo": "foo",
+        asd =                         "asd": ["asd"],
+          asd                         "bar": {
+        bar.baz = a                     "baz": ["a", "c", "d"]
+        baz.foo = a                   },
+        baz.z =                       "baz": {
+          bar                           "foo": "a",
+          bool:true             ===>    "z": ["bar", true]
+        bar.baz +=                    },
+          c                           "bad": true,
+          d                           "good": false,
+        bad = bool:true               "is": {
+        good = bool:false               "integer": 1,
+        is.integer = number:1           "float": 1.4
+        is.float = number:1.4         }
+                                    }
+        """
+        def parse_value(v):
+            if v.startswith('number:'):
+                v = v.split(':', 1)[1]
+                try:
+                    return int(v)
+                except ValueError:
+                    return float(v)
+            if v == 'bool:true':
+                return True
+            if v == 'bool:false':
+                return False
+            return v
+
+        if self.has_section(section):
+            for k, v in self.items(section):
+                parents = k.split('.')
+                tail = parents.pop()
+                current = base
+                for name in parents:
+                    current = base.setdefault(name, {})
+
+                if '\n' in v:
+                    current[tail] = [parse_value(x) for x in v.splitlines() if x]
+                else:
+                    current[tail] = parse_value(v)
 
     def readfp(self, fp, filename=None):
         raise NotImplementedError

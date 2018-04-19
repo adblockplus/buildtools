@@ -73,14 +73,6 @@
   "icons": {{icons|json}},
   {%- endif %}
 
-  {%- if permissions %}
-  "permissions": {{permissions|json}},
-  {%- endif %}
-
-  {%- if optionalPermissions %}
-    "optional_permissions": {{optionalPermissions|json}},
-  {%- endif %}
-
   {%- if backgroundScripts %}
   "background": {
     "scripts": {{backgroundScripts|json}},
@@ -99,26 +91,8 @@
   {%- endif %}
   {%- endif %}
 
-  {%- if metadata.has_option('general', 'devtools') %}
-  "devtools_page": {{metadata.get('general', 'devtools')|json}},
-  {%- endif %}
-
   {%- if contentScripts %}
   "content_scripts": {{contentScripts|json}},
-  {%- endif %}
-
-  {%- if webAccessible %}
-  "web_accessible_resources": {{webAccessible|json}},
-  {%- endif %}
-
-  {%- if metadata.has_option('general', 'managedStorageSchema') %}
-  "storage": {
-    "managed_schema": {{metadata.get('general', 'managedStorageSchema')|json}}
-  },
-  {%- endif %}
-
-  {%- if metadata.has_option('general', 'contentSecurityPolicy') %}
-  "content_security_policy": {{metadata.get('general', 'contentSecurityPolicy')|json}},
   {%- endif %}
 
   "_dummy": false
