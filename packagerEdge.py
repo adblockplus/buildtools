@@ -47,7 +47,7 @@ def _make_blockmap_entry(filename, data):
         'blocks': [
             {'hash': base64.b64encode(hashlib.sha256(block).digest())}
             for block in blocks
-        ]
+        ],
     }
 
 
@@ -131,7 +131,7 @@ def create_content_types_map(filenames):
     params = {'defaults': {}, 'overrides': {}}
     overrides = {
         BLOCKMAP: 'application/vnd.ms-appx.blockmap+xml',
-        MANIFEST: 'application/vnd.ms-appx.manifest+xml'
+        MANIFEST: 'application/vnd.ms-appx.manifest+xml',
     }
     types = mimetypes.MimeTypes()
     types.add_type('application/octet-stream', '.otf')

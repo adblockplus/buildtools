@@ -24,8 +24,8 @@ LOCALES_MODULE = {
     'test.Foobar': {
         'message': 'Ensuring dict-copy from modules for $domain$',
         'description': 'test description',
-        'placeholders': {'content': '$1', 'example': 'www.adblockplus.org'}
-    }
+        'placeholders': {'content': '$1', 'example': 'www.adblockplus.org'},
+    },
 }
 
 ALL_LANGUAGES = ['en_US', 'de', 'it']
@@ -36,7 +36,7 @@ MESSAGES_EN_US = json.dumps({
     'description': {
         'message': 'Adblock Plus is the most popular ad blocker ever, '
                    'and also supports websites by not blocking '
-                   'unobstrusive ads by default (configurable).'
+                   'unobstrusive ads by default (configurable).',
     },
 })
 
@@ -242,7 +242,7 @@ def lib_files(tmpdir):
     qunit_dir.join('common.js').write(files['qunit/common.js'])
     qunit_tests_dir = qunit_dir.mkdir('tests')
     qunit_tests_dir.join('some_test.js').write(
-        files['qunit/tests/some_test.js']
+        files['qunit/tests/some_test.js'],
     )
     return files
 
@@ -252,7 +252,7 @@ def comparable_json(json_data):
     if isinstance(json_data, basestring):
         json_data = json.loads(json_data)
     return json.dumps(
-        json_data, sort_keys=True, indent=0
+        json_data, sort_keys=True, indent=0,
     ).split('\n')
 
 
@@ -324,7 +324,7 @@ def assert_devenv_scripts(package, prefix, devenv):
         assert '../ext/background.js' in quint_index
 
         assert set(manifest['background']['scripts']) == set(
-            scripts + ['devenvPoller__.js']
+            scripts + ['devenvPoller__.js'],
         )
     else:
         assert set(manifest['background']['scripts']) == set(scripts)
@@ -421,7 +421,7 @@ def test_build_webext(platform, command, keyfile, tmpdir, srcdir, capsys):
     filenames = {
         'gecko': 'adblockplusfirefox-1.2.3{}.xpi',
         'chrome': 'adblockpluschrome-1.2.3{{}}.{}'.format(
-            {True: 'crx', False: 'zip'}[release]
+            {True: 'crx', False: 'zip'}[release],
         ),
         'edge': 'adblockplusedge-1.2.3{}.appx',
     }

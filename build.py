@@ -136,8 +136,8 @@ build_available_subcommands._result = None
         make_argument(
             '-r', '--release', action='store_true',
             help='Create a release build'),
-        make_argument('output_file', nargs='?')
-    )
+        make_argument('output_file', nargs='?'),
+    ),
 )
 def build(base_dir, build_num, key_file, release, output_file, platform,
           **kwargs):
@@ -162,7 +162,7 @@ def build(base_dir, build_num, key_file, release, output_file, platform,
 
 
 @argparse_command(
-    valid_platforms={'chrome', 'gecko', 'edge'}
+    valid_platforms={'chrome', 'gecko', 'edge'},
 )
 def devenv(base_dir, platform, **kwargs):
     """
@@ -191,12 +191,12 @@ def devenv(base_dir, platform, **kwargs):
 
 
 project_key_argument = make_argument(
-    'project_key', help='The crowdin project key.'
+    'project_key', help='The crowdin project key.',
 )
 
 
 @argparse_command(
-    arguments=(project_key_argument, )
+    arguments=(project_key_argument,),
 )
 def setuptrans(base_dir, project_key, platform, **kwargs):
     """
@@ -215,7 +215,7 @@ def setuptrans(base_dir, project_key, platform, **kwargs):
 
 
 @argparse_command(
-    arguments=(project_key_argument, )
+    arguments=(project_key_argument,),
 )
 def translate(base_dir, project_key, platform, **kwargs):
     """
@@ -239,7 +239,7 @@ def translate(base_dir, project_key, platform, **kwargs):
 
 
 @argparse_command(
-    arguments=(project_key_argument, )
+    arguments=(project_key_argument,),
 )
 def uploadtrans(base_dir, project_key, platform, **kwargs):
     """
@@ -261,7 +261,7 @@ def uploadtrans(base_dir, project_key, platform, **kwargs):
 
 
 @argparse_command(
-    arguments=(project_key_argument, )
+    arguments=(project_key_argument,),
 )
 def gettranslations(base_dir, project_key, platform, **kwargs):
     """
@@ -285,7 +285,7 @@ def gettranslations(base_dir, project_key, platform, **kwargs):
         make_argument('target_dir'),
         make_argument('-q', '--quiet', help='Suppress JsDoc output',
                       action='store_true', default=False),
-    )
+    ),
 )
 def docs(base_dir, target_dir, quiet, platform, **kwargs):
     """
@@ -338,8 +338,8 @@ def valid_version_format(value):
                   '../downloads is assumed)'),
         make_argument(
             'version', help='Version number of the release',
-            type=valid_version_format)
-    )
+            type=valid_version_format),
+    ),
 )
 def release(base_dir, downloads_repository, key_file, platform, version,
             **kwargs):

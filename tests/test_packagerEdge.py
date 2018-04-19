@@ -25,7 +25,7 @@ def blockmap2dict(xml_data):
         file.get('Name'): {
             'size': file.get('Size'),
             'lfhsize': file.get('LfhSize'),
-            'blocks': [b.get('Hash') for b in file]
+            'blocks': [b.get('Hash') for b in file],
         }
         for file in ET.fromstring(xml_data)
     }
@@ -36,7 +36,7 @@ def test_create_appx_blockmap(files):
     assert blockmap['Extension\\foo.xml'] == {
         'size': '500',
         'lfhsize': '47',
-        'blocks': ['Vhwfmzss1Ney+j/ssR2QVISvFyMNBQeS2P+UjeE/di0=']
+        'blocks': ['Vhwfmzss1Ney+j/ssR2QVISvFyMNBQeS2P+UjeE/di0='],
     }
     assert blockmap['Extension\\bar.png'] == {
         'size': '100000',
@@ -44,7 +44,7 @@ def test_create_appx_blockmap(files):
         'blocks': [
             'KPW2SxeEikUEGhoKmKxruUSexKun0bGXMppOqUFrX5E=',
             'KQHnov1SZ1z34ttdDUjX2leYtpIIGndUVoUteieS2cw=',
-        ]
+        ],
     }
 
 
@@ -79,9 +79,9 @@ def test_full_content_types_map():
         'json': 'application/json',
         'otf': 'application/octet-stream',
         'png': 'image/png',
-        'xml': 'application/xml'
+        'xml': 'application/xml',
     }
     assert ctm_dict['overrides'] == {
         '/AppxBlockMap.xml': 'application/vnd.ms-appx.blockmap+xml',
-        '/AppxManifest.xml': 'application/vnd.ms-appx.manifest+xml'
+        '/AppxManifest.xml': 'application/vnd.ms-appx.manifest+xml',
     }

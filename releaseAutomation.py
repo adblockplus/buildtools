@@ -185,7 +185,7 @@ def update_metadata(metadata, version):
         rawMetadata = fp.read()
         rawMetadata = re.sub(
             r'^(\s*version\s*=\s*).*', r'\g<1>%s' % version,
-            rawMetadata, flags=re.I | re.M
+            rawMetadata, flags=re.I | re.M,
         )
 
         fp.seek(0)
@@ -206,7 +206,7 @@ def create_build(platform, base_dir, target_path, version, key_file=None):
     build_path = os.path.join(
         target_path,
         getDefaultFileName(metadata, version,
-                           get_extension(platform, key_file is not None))
+                           get_extension(platform, key_file is not None)),
     )
 
     packager.createBuild(base_dir, type=platform, outFile=build_path,
@@ -270,7 +270,7 @@ def run(baseDir, platforms, version, keyFile, downloads_repo):
 
         downloads.append(
             create_build(platform, baseDir, downloads_repo, version,
-                         used_key_file)
+                         used_key_file),
         )
 
     # Only create one commit, one tag and one source archive for all

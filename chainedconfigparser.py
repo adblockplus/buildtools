@@ -144,7 +144,7 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
         for option, value in ConfigParser.SafeConfigParser.items(self, section, *args, **kwargs):
             items.append(Item(
                 option, value,
-                self._origin[(section, self.optionxform(option))]
+                self._origin[(section, self.optionxform(option))],
             ))
         return items
 

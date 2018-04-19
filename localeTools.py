@@ -53,7 +53,7 @@ def read_locale_config(baseDir, platform, metadata):
             baseDir, *metadata.get('locales', 'base_path').split('/')
         )
         localeConfig = {
-            'default_locale': metadata.get('locales', 'default_locale')
+            'default_locale': metadata.get('locales', 'default_locale'),
         }
 
     localeConfig['base_path'] = localeDir
@@ -193,7 +193,7 @@ def crowdin_prepare_upload(files):
         StringIO(body),
         {
             'Content-Type': 'multipart/form-data; boundary=' + boundary,
-            'Content-Length': len(body)
+            'Content-Length': len(body),
         },
     )
 

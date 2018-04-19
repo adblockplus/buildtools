@@ -64,7 +64,7 @@ def createScriptPage(params, template_name, script_option):
     template = getTemplate(template_name, autoEscape=True)
     return template.render(
         basename=params['metadata'].get('general', 'basename'),
-        scripts=params['metadata'].get(*script_option).split()
+        scripts=params['metadata'].get(*script_option).split(),
     ).encode('utf-8')
 
 
@@ -144,7 +144,7 @@ def createManifest(params, files):
 def toJson(data):
     return json.dumps(
         data, ensure_ascii=False, sort_keys=True,
-        indent=2, separators=(',', ': ')
+        indent=2, separators=(',', ': '),
     ).encode('utf-8') + '\n'
 
 
@@ -153,7 +153,7 @@ def create_bundles(params, files, bundle_tests):
     info_templates = {
         'chrome': 'chromeInfo.js.tmpl',
         'edge': 'edgeInfo.js.tmpl',
-        'gecko': 'geckoInfo.js.tmpl'
+        'gecko': 'geckoInfo.js.tmpl',
     }
 
     # Historically we didn't use relative paths when requiring modules, so in
@@ -166,7 +166,7 @@ def create_bundles(params, files, bundle_tests):
     info_template = getTemplate(info_templates[params['type']])
     info_module = info_template.render(
         basename=params['metadata'].get('general', 'basename'),
-        version=params['version']
+        version=params['version'],
     ).encode('utf-8')
 
     configuration = {
@@ -195,7 +195,7 @@ def create_bundles(params, files, bundle_tests):
                        glob.glob(os.path.join(qunit_path, 'tests', '*.js')))
         configuration['bundles'].append({
             'bundle_name': 'qunit/tests.js',
-            'entry_points': qunit_files
+            'entry_points': qunit_files,
         })
 
     cmd = ['node', os.path.join(os.path.dirname(__file__), 'webpack_runner.js')]
@@ -339,7 +339,7 @@ def add_devenv_requirements(files, metadata, params):
 
     if metadata.has_option('general', 'testScripts'):
         files['qunit/index.html'] = createScriptPage(
-            params, 'testIndex.html.tmpl', ('general', 'testScripts')
+            params, 'testIndex.html.tmpl', ('general', 'testScripts'),
         )
 
 
@@ -374,7 +374,7 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
     if metadata.has_section('preprocess'):
         files.preprocess(
             [f for f, _ in metadata.items('preprocess')],
-            {'needsExt': True}
+            {'needsExt': True},
         )
 
     if metadata.has_section('import_locales'):
