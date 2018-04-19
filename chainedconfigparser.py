@@ -216,7 +216,7 @@ class ChainedConfigParser(ConfigParser.SafeConfigParser):
                 tail = parents.pop()
                 current = base
                 for name in parents:
-                    current = base.setdefault(name, {})
+                    current = current.setdefault(name, {})
 
                 if '\n' in v:
                     current[tail] = [parse_value(x) for x in v.splitlines() if x]
