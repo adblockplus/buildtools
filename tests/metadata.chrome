@@ -49,5 +49,6 @@ _imp/*/gecko.dtd = =*
 
 [bundles]
 lib/foo.js =
+  lib/aliased.js
   ext/a.js
   lib/b.js

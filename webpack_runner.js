@@ -19,7 +19,7 @@ process.stdin.on("data", chunk => { inputChunks.push(chunk); });
 process.stdin.on("end", () =>
 {
   let {bundles, extension_path,
-       info_module, resolve_paths} = JSON.parse(inputChunks.join(""));
+       info_module, resolve_paths, aliases} = JSON.parse(inputChunks.join(""));
 
   // The contents of the info module is passed to us as a string from the Python
   // packager and we pass it through to our custom loader now so it is available
@@ -51,17 +51,7 @@ process.stdin.on("end", () =>
       },
       resolve: {
         modules: resolve_paths,
-        alias: {
-          // To use our custom loader for the info module we must first set up
-          // an alias to a file that exists.
-          info$: path.join(__dirname, "info.js"),
-          // Prevent builtin Node.js modules from being used instead of our own
-          // when the names clash. Once relative paths are used this won't be
-          // necessary.
-          url$: "url.js",
-          events$: "events.js",
-          punycode$: "punycode.js"
-        },
+        alias: aliases,
         plugins: [
           function()
           {

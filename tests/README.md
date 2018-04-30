@@ -43,6 +43,7 @@ _(Covered platforms are referred to as C=Chrome, E=Edge, F=Firefox.)_
 - Adherence to provided build-number in the manifest (CEF)
 - Other content in the manifest (CEF)
 - Correct encrypted signature of the package (C)
+- Exposure of webpack's module aliasing machinery
 
 ## Requirements
 

@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import ConfigParser
 import errno
 import glob
 import io
@@ -155,6 +156,21 @@ def create_bundles(params, files, bundle_tests):
         'edge': 'edgeInfo.js.tmpl',
         'gecko': 'geckoInfo.js.tmpl',
     }
+    aliases = {
+        # To use our custom loader for the info module we must first set up an
+        # alias to a file that exists.
+        'info$': os.path.join(os.path.dirname(__file__), 'info.js'),
+        # Prevent builtin Node.js modules from being used instead of our own
+        # when the names clash. Once relative paths are used this won't be
+        # necessary.
+        'url$': 'url.js',
+        'events$': 'events.js',
+        'punycode$': 'punycode.js',
+    }
+    try:
+        aliases.update(params['metadata'].items('module_alias'))
+    except ConfigParser.NoSectionError:
+        pass
 
     # Historically we didn't use relative paths when requiring modules, so in
     # order for webpack to know where to find them we need to pass in a list of
@@ -174,6 +190,7 @@ def create_bundles(params, files, bundle_tests):
         'extension_path': base_extension_path,
         'info_module': info_module,
         'resolve_paths': resolve_paths,
+        'aliases': aliases,
     }
 
     for item in params['metadata'].items('bundles'):

@@ -230,11 +230,19 @@ def lib_files(tmpdir):
     files = packager.Files(['lib'], set())
     files['ext/a.js'] = 'require("./c.js");\nrequire("info");\nvar bar;'
     files['lib/b.js'] = 'var foo;'
+    files['lib/aliased.js'] = 'require("mogo");'
+    files['lib/mogo.js'] = 'var this_is_mogo;'
+    files['lib/edge.js'] = 'var this_is_edge;'
     files['ext/c.js'] = 'var this_is_c;'
+    files['ext/alias_c.js'] = 'var this_is_aliased_c;'
     files['qunit/common.js'] = 'var qunit = {};'
     files['qunit/tests/some_test.js'] = 'var passed = true;'
 
-    tmpdir.mkdir('lib').join('b.js').write(files['lib/b.js'])
+    libdir = tmpdir.mkdir('lib')
+    libdir.join('b.js').write(files['lib/b.js'])
+    libdir.join('aliased.js').write(files['lib/aliased.js'])
+    libdir.join('mogo.js').write(files['lib/mogo.js'])
+    libdir.join('edge.js').write(files['lib/edge.js'])
     ext_dir = tmpdir.mkdir('ext')
     ext_dir.join('a.js').write(files['ext/a.js'])
     ext_dir.join('c.js').write(files['ext/c.js'])
@@ -299,6 +307,13 @@ def assert_webpack_bundle(package, prefix, is_devbuild, excluded=False):
 
     assert 'var this_is_c;' in libfoo
     assert 'webpack:///./ext/c.js' in libfoomap
+
+    if prefix:  # webpack 'resolve.alias' exposure
+        assert 'var this_is_edge;' in libfoo
+        assert 'webpack:///./lib/edge.js' in libfoomap
+    else:
+        assert 'var this_is_mogo;' in libfoo
+        assert 'webpack:///./lib/mogo.js' in libfoomap
 
     assert ('var foo;' in libfoo) != excluded
     assert ('webpack:///./lib/b.js' in libfoomap) != excluded
