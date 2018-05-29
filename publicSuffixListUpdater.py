@@ -36,15 +36,21 @@ def getPublicSuffixList():
     resource = urlopen(url)
 
     for line in resource:
-        line = line.rstrip()
+        line = line.decode('utf-8').rstrip()
         if line.startswith('//') or '.' not in line:
             continue
+
         if line.startswith('*.'):
-            suffixes[line[2:]] = 2
+            offset = 2
+            val = 2
         elif line.startswith('!'):
-            suffixes[line[1:]] = 0
+            offset = 1
+            val = 0
         else:
-            suffixes[line] = 1
+            offset = 0
+            val = 1
+
+        suffixes[line[offset:].encode('idna').decode('ascii')] = val
 
     return suffixes
 
