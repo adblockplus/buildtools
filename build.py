@@ -4,11 +4,15 @@
 
 import argparse
 import logging
+import io
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+from urllib import urlencode
+import urllib2
 from functools import partial
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -34,7 +38,8 @@ def make_argument(*args, **kwargs):
     return partial(_make_argument, *args, **kwargs)
 
 
-def argparse_command(valid_platforms=None, multi_platform=False, arguments=()):
+def argparse_command(valid_platforms=None, multi_platform=False,
+                     no_platform=False, arguments=()):
     def wrapper(func):
         def func_wrapper(*args, **kwargs):
             return func(*args, **kwargs)
@@ -49,6 +54,7 @@ def argparse_command(valid_platforms=None, multi_platform=False, arguments=()):
             'multi_platform': multi_platform,
             'function': func,
             'arguments': arguments,
+            'no_platform': no_platform,
         })
         return func_wrapper
     return wrapper
@@ -56,7 +62,7 @@ def argparse_command(valid_platforms=None, multi_platform=False, arguments=()):
 
 def make_subcommand(name, description, help_text, function, arguments):
     new_parser = SUB_PARSERS.add_parser(
-        name, description=description, help=help_text,
+        name.replace('_', '-'), description=description, help=help_text,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -95,6 +101,7 @@ def build_available_subcommands(base_dir):
 
     for command_params in ALL_COMMANDS:
         multi_platform = command_params.pop('multi_platform')
+        no_platform = command_params.pop('no_platform')
         platforms = types.intersection(command_params.pop('valid_platforms'))
         if len(platforms) > 1:
             if multi_platform:
@@ -104,12 +111,12 @@ def build_available_subcommands(base_dir):
             else:
                 help_text = None
                 action = 'store'
-
-            command_params['arguments'] += (
-                make_argument('-t', '--type', dest='platform', required=True,
-                              choices=platforms, action=action,
-                              help=help_text),
-            )
+            if not no_platform:
+                command_params['arguments'] += (
+                    make_argument('-t', '--type', dest='platform',
+                                  required=True, choices=platforms,
+                                  action=action, help=help_text),
+                )
             make_subcommand(**command_params)
         elif len(platforms) == 1:
             sub_parser = make_subcommand(**command_params)
@@ -373,6 +380,27 @@ def updatepsl(base_dir, **kwargs):
     """
     import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
     publicSuffixListUpdater.updatePSL(base_dir)
+
+
+@argparse_command(no_platform=True)
+def lint_gitlab_ci(base_dir, **kwargs):
+    """Lint the .gitlab-ci.yaml file.
+
+    Test the .gitlab-ci.yaml file for validity. (Note: You need to have PyYAML
+    installed.)
+    """
+    import yaml
+    filename = '.gitlab-ci.yml'
+    try:
+        with io.open(os.path.join(base_dir, filename), 'rt') as fp:
+            yaml_data = yaml.load(fp.read())
+
+        post_data = {'content': json.dumps(yaml_data)}
+        request = urllib2.Request('https://gitlab.com/api/v4/ci/lint/',
+                                  data=urlencode(post_data))
+        print urllib2.urlopen(request).read()
+    except IOError:
+        print 'No valid {} found.'.format(filename)
 
 
 def process_args(base_dir, *args):

@@ -12,6 +12,9 @@ not directly.
 - [The Pycrypto module](http://pythonhosted.org/pycrypto/) (>= 2.6.1)
 - [Node.js](https://nodejs.org/) (>= 7)
 
+To lint the gitlab CI configuration you will also need:
+- [The pyyaml module](http://pyyaml.org/) (>= 3.12)
+
 ## Usage
 
 Please refer to the documentation of the extension repositories for usage
