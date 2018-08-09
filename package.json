@@ -4,10 +4,13 @@
   "license": "MPL-2.0",
   "dependencies": {
     "jsdoc": "3.5.5",
+    "manifoldjs": "0.7.6",
     "memory-fs": "0.4.1",
     "webpack": "3.6.0"
   },
   "scripts": {
-    "jsdoc": "jsdoc"
+    "jsdoc": "jsdoc",
+    "build-edge": "manifoldjs -l error -p edgeextension -f edgeextension -d $EXT_FOLDER -m $SRC_FOLDER/manifest.json",
+    "package-edge": "manifoldjs -l error -p edgeextension package $EXT_FOLDER/MSGname/edgeextension/manifest/"
   }
 }

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  {% for extension, content_type in defaults.items() -%}
-  <Default Extension="{{ extension }}" ContentType="{{ content_type }}"/>
-  {% endfor -%}
-  {% for part_name, content_type in overrides.items() -%}
-  <Override PartName="{{ part_name }}" ContentType="{{ content_type }}"/>
-  {% endfor -%}
-</Types>

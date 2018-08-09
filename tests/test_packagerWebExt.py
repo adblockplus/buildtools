@@ -187,10 +187,10 @@ def locale_modules(tmpdir):
 @pytest.fixture
 def icons(srcdir):
     icons_dir = srcdir.mkdir('icons')
-    for filename in ['abp-16.png', 'abp-19.png', 'abp-53.png']:
+    for name in ['abp-{}.png'.format(x) for x in [16, 19, 44, 50, 53, 150]]:
         shutil.copy(
-            os.path.join(os.path.dirname(__file__), filename),
-            os.path.join(str(icons_dir), filename),
+            os.path.join(os.path.dirname(__file__), name),
+            os.path.join(str(icons_dir), name),
         )
 
 
@@ -293,7 +293,7 @@ def assert_manifest_content(manifest, expected_path):
     assert len(diff) == 0, '\n'.join(diff)
 
 
-def assert_webpack_bundle(package, prefix, is_devbuild, excluded=False):
+def assert_webpack_bundle(package, prefix, is_devbuild, platform):
     libfoo = package.read(os.path.join(prefix, 'lib/foo.js'))
     libfoomap = package.read(os.path.join(prefix, 'lib/foo.js.map'))
 
@@ -308,15 +308,15 @@ def assert_webpack_bundle(package, prefix, is_devbuild, excluded=False):
     assert 'var this_is_c;' in libfoo
     assert 'webpack:///./ext/c.js' in libfoomap
 
-    if prefix:  # webpack 'resolve.alias' exposure
+    if platform is 'edge':  # webpack 'resolve.alias' exposure
         assert 'var this_is_edge;' in libfoo
         assert 'webpack:///./lib/edge.js' in libfoomap
     else:
         assert 'var this_is_mogo;' in libfoo
         assert 'webpack:///./lib/mogo.js' in libfoomap
 
-    assert ('var foo;' in libfoo) != excluded
-    assert ('webpack:///./lib/b.js' in libfoomap) != excluded
+    assert ('var foo;' in libfoo) != (platform is 'gecko')
+    assert ('webpack:///./lib/b.js' in libfoomap) != (platform is 'gecko')
 
 
 def assert_devenv_scripts(package, prefix, devenv):
@@ -345,16 +345,16 @@ def assert_devenv_scripts(package, prefix, devenv):
         assert set(manifest['background']['scripts']) == set(scripts)
 
 
-def assert_base_files(package, platform, prefix):
+def assert_base_files(package, platform, prefix, devenv):
     filenames = set(package.namelist())
 
     if platform == 'edge':
-        assert 'AppxManifest.xml' in filenames
-        assert 'AppxBlockMap.xml' in filenames
-        assert '[Content_Types].xml' in filenames
+        assert ('AppxManifest.xml' in filenames) is not devenv
+        assert ('AppxBlockMap.xml' in filenames) is not devenv
+        assert ('[Content_Types].xml' in filenames) is not devenv
 
-        assert package.read('Assets/logo_44.png') == '44'
-        assert package.read('Extension/icons/abp-44.png') == '44'
+        if not devenv:
+            assert package.read('Extension/icons/abp-44.png') == '44'
 
     assert os.path.join(prefix, 'bar.json') in filenames
     assert os.path.join(prefix, 'manifest.json') in filenames
@@ -429,9 +429,15 @@ def test_build_webext(platform, command, keyfile, tmpdir, srcdir, capsys):
     manifests = {
         'gecko': [('', 'manifest', 'json')],
         'chrome': [('', 'manifest', 'json')],
-        'edge': [('', 'AppxManifest', 'xml'),
-                 ('Extension', 'manifest', 'json')],
     }
+
+    if not devenv:
+        manifests['edge'] = [
+            ('', 'AppxManifest', 'xml'),
+            ('Extension', 'manifest', 'json'),
+        ]
+    else:
+        manifests['edge'] = [('', 'manifest', 'json')]
 
     filenames = {
         'gecko': 'adblockplusfirefox-1.2.3{}.xpi',
@@ -441,7 +447,7 @@ def test_build_webext(platform, command, keyfile, tmpdir, srcdir, capsys):
         'edge': 'adblockplusedge-1.2.3{}.appx',
     }
 
-    if platform == 'edge':
+    if platform == 'edge' and not devenv:
         prefix = 'Extension'
     else:
         prefix = ''
@@ -474,10 +480,10 @@ def test_build_webext(platform, command, keyfile, tmpdir, srcdir, capsys):
         assert_chrome_signature(out_file_path, keyfile)
 
     with content_class(out_file_path) as package:
-        assert_base_files(package, platform, prefix)
+        assert_base_files(package, platform, prefix, devenv)
         assert_all_locales_present(package, prefix)
         assert_webpack_bundle(package, prefix, not release and not devenv,
-                              platform == 'gecko')
+                              platform)
 
         if platform == 'chrome':
             assert_locale_upfix(package)
