@@ -279,13 +279,14 @@ def run(baseDir, platforms, version, keyFile, downloads_repo):
         downloads_repo,
         'adblockplus-{}-source.tgz'.format(release_identifier),
     )
-    create_sourcearchive(baseDir, archive_path)
-    downloads.append(archive_path)
     try:
         release_commit(baseDir, extension_name, version, target_platforms)
     except subprocess.CalledProcessError as e:
         if not (re_release and 'nothing changed' in e.output):
             raise
+
+    create_sourcearchive(baseDir, archive_path)
+    downloads.append(archive_path)
 
     release_tag(baseDir, release_identifier, extension_name)
 
