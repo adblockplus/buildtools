@@ -392,7 +392,7 @@ def resolve_deps(repodir, repotype, level=0, self_update=True,
         else:
             vcs = None
             npm_outdated = not os.path.exists(
-                os.path.join(target, 'node_modules')
+                os.path.join(target, 'node_modules'),
             )
 
         recent_npm_failed = os.path.exists(os.path.join(target, NPM_LOCKFILE))
