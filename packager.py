@@ -72,7 +72,10 @@ def getBuildNum(baseDir):
             result = subprocess.check_output(['hg', 'id', '-R', baseDir, '-n'])
             return re.sub(r'\D', '', result)
         elif Git().istype(baseDir):
-            result = subprocess.check_output(['git', 'rev-list', 'HEAD'], cwd=baseDir)
+            result = subprocess.check_output(
+                ['git', 'rev-list', '--count', '--branches', '--tags'],
+                cwd=baseDir,
+            )
             return str(len(result.splitlines()))
     except subprocess.CalledProcessError:
         pass
