@@ -76,7 +76,7 @@ def getBuildNum(baseDir):
                 ['git', 'rev-list', '--count', '--branches', '--tags'],
                 cwd=baseDir,
             )
-            return str(len(result.splitlines()))
+            return result.strip()
     except subprocess.CalledProcessError:
         pass
 
