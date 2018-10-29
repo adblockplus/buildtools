@@ -125,6 +125,14 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
     if metadata.has_section('import_locales'):
         packagerChrome.import_locales(params, files)
 
+    # For some mysterious reasons manifoldjs fails with a server error
+    # when building the development build and there is any translation
+    # in az/messages.json for "name_devbuild", however, it works fine
+    # if we use the more specific language code az-latn.
+    az_translation = files.pop('_locales/az/messages.json', None)
+    if az_translation is not None:
+        files['_locales/az-latn/messages.json'] = az_translation
+
     files['manifest.json'] = packagerChrome.createManifest(params, files)
 
     if devenv:
