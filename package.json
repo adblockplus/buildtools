@@ -15,6 +15,6 @@
   "scripts": {
     "jsdoc": "jsdoc",
     "build-edge": "manifoldjs -l error -p edgeextension -f edgeextension -d $EXT_FOLDER -m $SRC_FOLDER/manifest.json",
-    "package-edge": "manifoldjs -l error -p edgeextension package $EXT_FOLDER/MSGname/edgeextension/manifest/"
+    "package-edge": "manifoldjs -l error -p edgeextension package $EXT_FOLDER/*/edgeextension/manifest/"
   }
 }

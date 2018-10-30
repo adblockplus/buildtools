@@ -4,7 +4,10 @@
 
 import os
 import shutil
+import json
+import re
 from StringIO import StringIO
+from glob import glob
 import subprocess
 import tempfile
 from xml.etree import ElementTree
@@ -140,15 +143,17 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
     if metadata.has_section('import_locales'):
         packagerChrome.import_locales(params, files)
 
-    # For some mysterious reasons manifoldjs fails with a server error
-    # when building the development build and there is any translation
-    # in az/messages.json for "name_devbuild", however, it works fine
-    # if we use the more specific language code az-latn.
-    az_translation = files.pop('_locales/az/messages.json', None)
-    if az_translation is not None:
-        files['_locales/az-latn/messages.json'] = az_translation
-
-    files['manifest.json'] = packagerChrome.createManifest(params, files)
+    # The Windows Store will reject the build unless every translation of the
+    # product name has been reserved. This is hard till impossible to manage
+    # with community translations, so we don't translate the product name for
+    # Microsoft Edge. Furthermore, manifoldjs fails with a server error if the
+    # product name is tranlated into Azerbajani.
+    data = json.loads(files['_locales/{}/messages.json'.format(defaultLocale)])
+    files['manifest.json'] = re.sub(
+        r'__MSG_(name(?:_devbuild)?)__',
+        lambda m: data[m.group(1)]['message'],
+        packagerChrome.createManifest(params, files),
+    )
 
     if devenv:
         packagerChrome.add_devenv_requirements(files, metadata, params)
@@ -174,13 +179,13 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
         cmd_env['SRC_FOLDER'] = src_dir
         cmd_env['EXT_FOLDER'] = ext_dir
 
-        manifold_folder = os.path.join(ext_dir, 'MSGname', 'edgeextension')
-        manifest_folder = os.path.join(manifold_folder, 'manifest')
-        asset_folder = os.path.join(manifest_folder, ASSETS_DIR)
-
         # prepare the extension with manifoldjs
         cmd = ['npm', 'run', '--silent', 'build-edge']
         subprocess.check_call(cmd, env=cmd_env, cwd=os.path.dirname(__file__))
+
+        manifold_folder = glob(os.path.join(ext_dir, '*', 'edgeextension'))[0]
+        manifest_folder = os.path.join(manifold_folder, 'manifest')
+        asset_folder = os.path.join(manifest_folder, ASSETS_DIR)
 
         # update incomplete appxmanifest
         intermediate_manifest = os.path.join(manifest_folder, MANIFEST)
