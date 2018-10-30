@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3" IgnorableNamespaces="uap3">
-	<Identity Name="EyeoGmbH.AdblockPlusdevelopmentbuild" Publisher="CN=4F066043-8AFE-41C9-B762-6C15E77E3F88" Version="1.2.3.1337" /> 
+	<Identity Name="EyeoGmbH.AdblockPlusdevelopmentbuild" Publisher="CN=4F066043-8AFE-41C9-B762-6C15E77E3F88" Version="1.2.1337.0" />
 
 	<Properties> 
 		<DisplayName>ms-resource:DisplayName</DisplayName> 

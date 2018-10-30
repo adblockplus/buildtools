@@ -37,8 +37,22 @@ def register_xml_namespaces(manifest_path):
     return ns
 
 
+def get_appx_version(metadata, build_num):
+    """Get the version number for usage in AppxManifest.xml.
+
+    As required by the Windows Store, the returned version string has four
+    components, where the 3rd component is replaced with the build number
+    if available, and the 4th component is always zero (e.g. 1.2.1000.0).
+    """
+    components = metadata.get('general', 'version').split('.')[:3]
+    components.extend(['0'] * (4 - len(components)))
+    if build_num:
+        components[2] = build_num
+    return '.'.join(components)
+
+
 def update_appx_manifest(manifest_path, base_dir, files, metadata,
-                         release_build):
+                         release_build, build_num):
     namespaces = register_xml_namespaces(manifest_path)
 
     v_min, v_max = metadata.get('compat', 'windows').split('/')
@@ -60,6 +74,7 @@ def update_appx_manifest(manifest_path, base_dir, files, metadata,
         ('_d:Identity', None, [
             ('Name', packager.get_app_id(release_build, metadata)),
             ('Publisher', metadata.get('general', 'publisher_id')),
+            ('Version', get_appx_version(metadata, build_num)),
         ]),
         ('_d:Properties/_d:PublisherDisplayName', author, []),
         ('_d:Properties/_d:Logo', assets[50], []),
@@ -170,7 +185,7 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
         # update incomplete appxmanifest
         intermediate_manifest = os.path.join(manifest_folder, MANIFEST)
         update_appx_manifest(intermediate_manifest, baseDir, files, metadata,
-                             releaseBuild)
+                             releaseBuild, buildNum)
 
         # cleanup placeholders, copy actual images
         shutil.rmtree(asset_folder)
