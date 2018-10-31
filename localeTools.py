@@ -44,7 +44,7 @@ CHROMIUM_DEB_URL = 'https://packages.debian.org/sid/all/chromium-l10n/filelist'
 def read_locale_config(baseDir, platform, metadata):
     if platform != 'generic':
         import buildtools.packagerChrome as packager
-        localeDir = os.path.join(baseDir, '_locales')
+        localeDir = os.path.join(baseDir, 'adblockplusui', 'locale')
         localeConfig = {
             'default_locale': packager.defaultLocale,
         }

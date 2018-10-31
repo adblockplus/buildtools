@@ -255,7 +255,7 @@ def run(baseDir, platforms, version, keyFile, downloads_repo):
         readMetadata(baseDir, target_platforms[0]))
     default_locale_path = os.path.join(locale_config['base_path'],
                                        locale_config['default_locale'],
-                                       'messages.json')
+                                       'manifest.json')
     with open(default_locale_path, 'r') as fp:
         extension_name = json.load(fp)['name']['message']
 
