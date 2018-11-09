@@ -254,11 +254,7 @@ def import_locales(params, files):
 
                 for stringID in keys.split():
                     if stringID in sourceData:
-                        if stringID in data:
-                            print ('Warning: locale string {} defined multiple'
-                                   ' times').format(stringID)
-
-                        data[stringID] = sourceData[stringID]
+                        data.setdefault(stringID, sourceData[stringID])
             except Exception as e:
                 print 'Warning: error importing locale data from %s: %s' % (sourceFile, e)
 
