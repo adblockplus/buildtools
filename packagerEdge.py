@@ -101,6 +101,20 @@ def update_appx_manifest(manifest_path, base_dir, files, metadata,
         for attr, value in attributes:
                 element.set(attr, value)
 
+    # Windows rejects to install the package if it contains localized
+    # resources for 'az', or if the manifest lists resources for 'uz'
+    # but the relevant strings aren't translated.
+    resources_dir = os.path.join(os.path.dirname(manifest_path), 'Resources')
+    resources_element = root.find('_d:Resources', namespaces)
+    for element in resources_element.findall('_d:Resource', namespaces):
+        language = element.get('Language')
+        if language:
+            folder = os.path.join(resources_dir, language)
+            if language == 'az':
+                shutil.rmtree(folder, ignore_errors=True)
+            if not os.path.exists(folder):
+                resources_element.remove(element)
+
     tree.write(manifest_path, encoding='utf-8', xml_declaration=True)
 
 

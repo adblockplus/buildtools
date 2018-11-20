@@ -14,8 +14,6 @@
 
 	<Resources>
 		<Resource Language="en-us" />
-		<Resource Language="de" />
-		<Resource Language="it" />
 		<Resource uap:Scale="200" />
 	</Resources> 
 
