@@ -235,7 +235,6 @@ def lib_files(tmpdir):
     files['lib/edge.js'] = 'var this_is_edge;'
     files['ext/c.js'] = 'var this_is_c;'
     files['ext/alias_c.js'] = 'var this_is_aliased_c;'
-    files['qunit/common.js'] = 'var qunit = {};'
     files['qunit/tests/some_test.js'] = 'var passed = true;'
 
     libdir = tmpdir.mkdir('lib')
@@ -247,7 +246,6 @@ def lib_files(tmpdir):
     ext_dir.join('a.js').write(files['ext/a.js'])
     ext_dir.join('c.js').write(files['ext/c.js'])
     qunit_dir = tmpdir.mkdir('qunit')
-    qunit_dir.join('common.js').write(files['qunit/common.js'])
     qunit_tests_dir = qunit_dir.mkdir('tests')
     qunit_tests_dir.join('some_test.js').write(
         files['qunit/tests/some_test.js'],

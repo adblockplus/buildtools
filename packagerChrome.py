@@ -207,12 +207,10 @@ def create_bundles(params, files, bundle_tests):
         })
 
     if bundle_tests:
-        qunit_path = os.path.join(base_extension_path, 'qunit')
-        qunit_files = ([os.path.join(qunit_path, 'common.js')] +
-                       glob.glob(os.path.join(qunit_path, 'tests', '*.js')))
+        test_paths = os.path.join(base_extension_path, 'qunit', 'tests', '*.js')
         configuration['bundles'].append({
             'bundle_name': 'qunit/tests.js',
-            'entry_points': qunit_files,
+            'entry_points': glob.glob(test_paths),
         })
 
     cmd = ['node', os.path.join(os.path.dirname(__file__), 'webpack_runner.js')]
