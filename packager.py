@@ -42,12 +42,13 @@ def get_extension(platform, has_key_file=False):
     return extension
 
 
-def get_app_id(release_build, metadata):
-    """Lookup the correct app_id for a build."""
+def get_build_specific_option(release_build, metadata, prefix):
     suffix = 'release' if release_build else 'devbuild'
-    app_id_option = 'app_id_' + suffix
+    return metadata.get('general', '{}_{}'.format(prefix, suffix))
 
-    return metadata.get('general', app_id_option)
+
+def get_app_id(release_build, metadata):
+    return get_build_specific_option(release_build, metadata, 'app_id')
 
 
 def getMetadataPath(baseDir, type):

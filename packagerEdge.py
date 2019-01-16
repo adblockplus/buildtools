@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 from xml.etree import ElementTree
 from zipfile import ZipFile
+import ConfigParser
 
 import packager
 import packagerChrome
@@ -70,7 +71,6 @@ def update_appx_manifest(manifest_path, base_dir, files, metadata,
         filenames.append(icon_path)
 
     assets = packagerChrome.makeIcons(files, filenames)
-
     author = metadata.get('general', 'author')
 
     overrides = [
@@ -90,6 +90,18 @@ def update_appx_manifest(manifest_path, base_dir, files, metadata,
             ('Square44x44Logo', assets[44]),
         ]),
     ]
+
+    try:
+        overrides.append((
+            '_d:Applications/_d:Application/_d:Extensions/' +
+            'uap3:Extension/uap3:AppExtension',
+            None,
+            [('Id', packager.get_build_specific_option(release_build,
+                                                       metadata,
+                                                       'extension_id'))],
+        ))
+    except ConfigParser.NoOptionError:
+        pass
 
     tree = ElementTree.parse(manifest_path)
     root = tree.getroot()

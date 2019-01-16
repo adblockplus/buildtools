@@ -23,7 +23,7 @@
 			</uap:VisualElements>
 			<Extensions>
 				<uap3:Extension Category="windows.appExtension">
-					<uap3:AppExtension DisplayName="Adblock Plus" Id="EdgeExtension" Name="com.microsoft.edge.extension" PublicFolder="Extension">
+					<uap3:AppExtension DisplayName="Adblock Plus" Id="1.0" Name="com.microsoft.edge.extension" PublicFolder="Extension">
 						<uap3:Properties>
 							<Capabilities>
 								<Capability Name="websiteInfo" />
