@@ -32,6 +32,7 @@ ALL_LANGUAGES = ['en_US', 'de', 'it']
 
 MESSAGES_EN_US = json.dumps({
     'name': {'message': 'Adblock Plus'},
+    'name_releasebuild': {'message': 'Adblock Plus - free ad blocker'},
     'name_devbuild': {'message': 'Adblock Plus development build'},
     'description': {
         'message': 'Adblock Plus is the most popular ad blocker ever, '

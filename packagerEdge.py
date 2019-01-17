@@ -176,7 +176,7 @@ def createBuild(baseDir, type='edge', outFile=None,  # noqa: preserve API.
     # product name is tranlated into Azerbajani.
     data = json.loads(files['_locales/{}/messages.json'.format(defaultLocale)])
     files['manifest.json'] = re.sub(
-        r'__MSG_(name(?:_devbuild)?)__',
+        r'__MSG_(name(?:_devbuild|_releasebuild)?)__',
         lambda m: data[m.group(1)]['message'],
         packagerChrome.createManifest(params, files),
     )
