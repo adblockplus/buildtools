@@ -4,9 +4,11 @@
   "license": "MPL-2.0",
   "dependencies": {
     "//": [
-      "'acorn' is a peer dependency of manifoldjs, we don't use it otherwise."
+      "'acorn' and 'ajv' are peer dependencies of manifoldjs, we don't use",
+      " them otherwise."
     ],
     "acorn": "^6.0.0",
+    "ajv": "^5.0.0",
     "jsdoc": "3.5.5",
     "manifoldjs": "0.7.6",
     "memory-fs": "0.4.1",
