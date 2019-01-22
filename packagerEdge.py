@@ -88,6 +88,7 @@ def update_appx_manifest(manifest_path, base_dir, files, metadata,
         ('_d:Applications/_d:Application/uap:VisualElements', None, [
             ('Square150x150Logo', assets[150]),
             ('Square44x44Logo', assets[44]),
+            ('BackgroundColor', metadata.get('general', 'background_color')),
         ]),
     ]
 

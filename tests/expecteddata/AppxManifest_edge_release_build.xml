@@ -19,7 +19,7 @@
 
 	<Applications> 
 		<Application Id="App">
-			<uap:VisualElements AppListEntry="none" BackgroundColor="transparent" Description="ms-resource:Description" DisplayName="Adblock Plus - free ad blocker" Square150x150Logo="Assets/logo_150.png" Square44x44Logo="Assets/logo_44.png">
+			<uap:VisualElements AppListEntry="none" BackgroundColor="red" Description="ms-resource:Description" DisplayName="Adblock Plus - free ad blocker" Square150x150Logo="Assets/logo_150.png" Square44x44Logo="Assets/logo_44.png">
 			</uap:VisualElements>
 			<Extensions>
 				<uap3:Extension Category="windows.appExtension">
