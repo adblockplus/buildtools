@@ -371,17 +371,6 @@ def release(base_dir, downloads_repository, key_file, platform, version,
                           downloads_repository)
 
 
-@argparse_command(valid_platforms={'chrome'})
-def updatepsl(base_dir, **kwargs):
-    """Update Public Suffix List.
-
-    Downloads Public Suffix List (see http://publicsuffix.org/) and generates
-    lib/publicSuffixList.js from it.
-    """
-    import buildtools.publicSuffixListUpdater as publicSuffixListUpdater
-    publicSuffixListUpdater.updatePSL(base_dir)
-
-
 @argparse_command(no_platform=True)
 def lint_gitlab_ci(base_dir, **kwargs):
     """Lint the .gitlab-ci.yaml file.
