@@ -52,7 +52,7 @@
   "minimum_chrome_version": "49.0",
   "minimum_edge_version": "37.14332.1000.0",
   "minimum_opera_version": "36.0",
-  "name": "Adblock Plus - free ad blocker",
+  "name": "Adblock Plus",
   "optional_permissions": [
     "webRequest"
   ],

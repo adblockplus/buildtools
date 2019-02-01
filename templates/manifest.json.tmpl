@@ -4,10 +4,12 @@
 
 {
   "manifest_version": 2,
-  {%- if releaseBuild %}
+  {%- if not releaseBuild %}
+  "name": "__MSG_name_devbuild__",
+  {%- elif type != "edge" %}
   "name": "__MSG_name_releasebuild__",
   {%- else %}
-  "name": "__MSG_name_devbuild__",
+  "name": "__MSG_name__",
   {%- endif %}
 
   "short_name": "__MSG_name__",

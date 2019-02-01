@@ -3,7 +3,7 @@
 	<Identity Name="EyeoGmbH.AdblockPlus" Publisher="CN=4F066043-8AFE-41C9-B762-6C15E77E3F88" Version="1.2.3.0" />
 
 	<Properties> 
-		<DisplayName>Adblock Plus - free ad blocker</DisplayName>
+		<DisplayName>Adblock Plus</DisplayName>
 		<PublisherDisplayName>eyeo GmbH</PublisherDisplayName> 
 		<Logo>Assets/logo_50.png</Logo> 
 	</Properties> 
@@ -19,11 +19,11 @@
 
 	<Applications> 
 		<Application Id="App">
-			<uap:VisualElements AppListEntry="none" BackgroundColor="red" Description="ms-resource:Description" DisplayName="Adblock Plus - free ad blocker" Square150x150Logo="Assets/logo_150.png" Square44x44Logo="Assets/logo_44.png">
+			<uap:VisualElements AppListEntry="none" BackgroundColor="red" Description="ms-resource:Description" DisplayName="Adblock Plus" Square150x150Logo="Assets/logo_150.png" Square44x44Logo="Assets/logo_44.png">
 			</uap:VisualElements>
 			<Extensions>
 				<uap3:Extension Category="windows.appExtension">
-					<uap3:AppExtension DisplayName="Adblock Plus - free ad blocker" Id="1.0" Name="com.microsoft.edge.extension" PublicFolder="Extension">
+					<uap3:AppExtension DisplayName="Adblock Plus" Id="1.0" Name="com.microsoft.edge.extension" PublicFolder="Extension">
 						<uap3:Properties>
 							<Capabilities>
 								<Capability Name="websiteInfo" />
