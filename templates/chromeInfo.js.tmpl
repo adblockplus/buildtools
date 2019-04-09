@@ -25,7 +25,7 @@ while (match = regexp.exec(navigator.userAgent))
     // For compatibility with legacy websites, Chrome's UA
     // also includes a Mozilla, AppleWebKit and Safari token.
     // Any further name/version pair indicates a fork.
-    application = app == "OPR" ? "opera" : app.toLowerCase();
+    application = {OPR: "opera", Edg: "edge"}[app] || app.toLowerCase();
     applicationVersion = ver;
   }
 }
