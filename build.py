@@ -9,8 +9,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
-import sys
 from urllib import urlencode
 import urllib2
 from functools import partial
@@ -284,45 +282,6 @@ def gettranslations(base_dir, project_key, platform, **kwargs):
 
     import buildtools.localeTools as localeTools
     localeTools.getTranslations(locale_config, basename, project_key)
-
-
-@argparse_command(
-    valid_platforms={'chrome'},
-    arguments=(
-        make_argument('target_dir'),
-        make_argument('-q', '--quiet', help='Suppress JsDoc output',
-                      action='store_true', default=False),
-    ),
-)
-def docs(base_dir, target_dir, quiet, platform, **kwargs):
-    """
-    Generate documentation (requires node.js).
-
-    Generate documentation files and write them into the specified directory.
-    """
-    source_dir = os.path.join(base_dir, 'lib')
-
-    # JSDoc struggles wih huge objects:
-    # https://github.com/jsdoc3/jsdoc/issues/976
-    sources = [os.path.join(source_dir, filename)
-               for filename in os.listdir(source_dir)
-               if filename != 'publicSuffixList.js']
-
-    buildtools_path = os.path.dirname(__file__)
-    config = os.path.join(buildtools_path, 'jsdoc.conf')
-
-    command = ['npm', 'run-script', 'jsdoc', '--', '--destination', target_dir,
-               '--configure', config] + sources
-    if quiet:
-        process = subprocess.Popen(command, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, cwd=buildtools_path)
-        stderr = process.communicate()[1]
-        retcode = process.poll()
-        if retcode:
-            sys.stderr.write(stderr)
-            raise subprocess.CalledProcessError(command, retcode)
-    else:
-        subprocess.check_call(command, cwd=buildtools_path)
 
 
 def valid_version_format(value):
