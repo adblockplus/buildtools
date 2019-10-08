@@ -1,9 +1,15 @@
-{# This Source Code Form is subject to the terms of the Mozilla Public
-   License, v. 2.0. If a copy of the MPL was not distributed with this
-   file, You can obtain one at http://mozilla.org/MPL/2.0/. -#}
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+"use strict";
+
+exports.addonName = {{ basename|json }};
+exports.addonVersion = {{ version|json }};
 
 exports.application = "unknown";
 exports.applicationVersion = "0";
+
 exports.platform = "gecko";
 exports.platformVersion = "0";
 

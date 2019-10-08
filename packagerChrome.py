@@ -151,6 +151,11 @@ def toJson(data):
 
 def create_bundles(params, files, bundle_tests):
     base_extension_path = params['baseDir']
+    info_templates = {
+        'chrome': 'chromeInfo.js.tmpl',
+        'edge': 'edgeInfo.js.tmpl',
+        'gecko': 'geckoInfo.js.tmpl',
+    }
     aliases = {
         # To use our custom loader for the info module we must first set up an
         # alias to a file that exists.
@@ -174,11 +179,10 @@ def create_bundles(params, files, bundle_tests):
     resolve_paths = [os.path.join(base_extension_path, dir, 'lib')
                      for dir in ['', 'adblockpluscore', 'adblockplusui']]
 
-    info_template = getTemplate('info.js.tmpl')
+    info_template = getTemplate(info_templates[params['type']])
     info_module = info_template.render(
         basename=params['metadata'].get('general', 'basename'),
         version=params['version'],
-        type=params['type'],
     ).encode('utf-8')
 
     configuration = {

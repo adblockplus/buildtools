@@ -1,10 +1,16 @@
-{# This Source Code Form is subject to the terms of the Mozilla Public
-   License, v. 2.0. If a copy of the MPL was not distributed with this
-   file, You can obtain one at http://mozilla.org/MPL/2.0/. -#}
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+"use strict";
+
+exports.addonName = {{ basename|json }};
+exports.addonVersion = {{ version|json }};
 
 exports.application = "edge";
 exports.applicationVersion = "0";
-exports.platform = "edgehtml";
+
+exports.platform = "edgehtml"
 exports.platformVersion = "0";
 
 let match = /\bEdge\/(\d+(?:\.\d+)?)\b/.exec(navigator.userAgent);
