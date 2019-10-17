@@ -392,6 +392,11 @@ def createBuild(baseDir, type='chrome', outFile=None, buildNum=None, releaseBuil
         import_locales(params, files)
 
     files['manifest.json'] = createManifest(params, files)
+    building_from_git = os.path.exists(os.path.join(baseDir, '.git'))
+    if not releaseBuild and not devenv and building_from_git:
+        cmd = ['git', 'rev-parse', 'HEAD']
+        files['.revision'] = subprocess.check_output(cmd, cwd=baseDir)
+
     if type == 'chrome':
         fix_translations_for_chrome(files)
 
