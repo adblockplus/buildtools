@@ -20,7 +20,7 @@
         if (text != version)
           browser.runtime.reload();
         else
-          window.setTimeout(doPoll, 5000);
+          self.setTimeout(doPoll, 5000);
       });
   }
 
