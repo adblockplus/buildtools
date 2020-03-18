@@ -34,7 +34,6 @@ process.stdin.on("end", () =>
   {
     options.push({
       context: extension_path,
-      devtool: "source-map",
       module: {
         rules: [{
           include: path.join(__dirname, "info.js"),
@@ -120,9 +119,6 @@ process.stdin.on("end", () =>
         let filepath = path.join(config.output.path, config.output.filename);
         let relativeFilepath = path.relative("", config.output.filename);
         files[relativeFilepath] = memoryFS.readFileSync(filepath, "utf-8");
-        files[relativeFilepath + ".map"] = memoryFS.readFileSync(
-          filepath + ".map", "utf-8"
-        );
       }
 
       // We provide a list of all the bundled files, so the packager can avoid

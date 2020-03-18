@@ -294,7 +294,6 @@ def assert_manifest_content(manifest, expected_path):
 
 def assert_webpack_bundle(package, prefix, is_devbuild, platform):
     libfoo = package.read(os.path.join(prefix, 'lib/foo.js'))
-    libfoomap = package.read(os.path.join(prefix, 'lib/foo.js.map'))
 
     assert 'var bar;' in libfoo
     if is_devbuild:
@@ -302,20 +301,14 @@ def assert_webpack_bundle(package, prefix, is_devbuild, platform):
     else:
         assert 'addonVersion = "1.2.3";' in libfoo
 
-    assert 'webpack:///./ext/a.js' in libfoomap
-
     assert 'var this_is_c;' in libfoo
-    assert 'webpack:///./ext/c.js' in libfoomap
 
     if platform is 'edge':  # webpack 'resolve.alias' exposure
         assert 'var this_is_edge;' in libfoo
-        assert 'webpack:///./lib/edge.js' in libfoomap
     else:
         assert 'var this_is_mogo;' in libfoo
-        assert 'webpack:///./lib/mogo.js' in libfoomap
 
     assert ('var foo;' in libfoo) != (platform is 'gecko')
-    assert ('webpack:///./lib/b.js' in libfoomap) != (platform is 'gecko')
 
 
 def assert_devenv_scripts(package, prefix, devenv):
@@ -330,7 +323,6 @@ def assert_devenv_scripts(package, prefix, devenv):
     assert (os.path.join(prefix, 'devenvPoller__.js') in filenames) == devenv
     assert (os.path.join(prefix, 'devenvVersion__') in filenames) == devenv
     assert (os.path.join(prefix, 'qunit/tests.js') in filenames) == devenv
-    assert (os.path.join(prefix, 'qunit/tests.js.map') in filenames) == devenv
 
     if devenv:
         quint_index = package.read(os.path.join(prefix, 'qunit/index.html'))
