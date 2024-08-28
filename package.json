@@ -12,7 +12,7 @@
     "jsdoc": "3.5.5",
     "manifoldjs": "0.7.6",
     "memory-fs": "0.4.1",
-    "webpack": "3.6.0"
+    "webpack": "5.94.0"
   },
   "scripts": {
     "jsdoc": "jsdoc",
